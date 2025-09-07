@@ -73,6 +73,7 @@ export interface SearchFilterProps {
   onSubCategoryChange: (subCategory: string | null) => void;
   toolCategories: ToolCategories;
   theme: any;
+  onCategoryClick?: (category: string | null, categoryData?: any) => void;
 }
 
 export interface DashboardHeaderProps {

@@ -1,19 +1,26 @@
 import { Category, Tool, ToolCategories } from './types';
 
 // Utility functions for dashboard components
-export const getToolsForCategory = (category: Category, selectedSubCategory: string | null): Tool[] => {
+export const getToolsForCategory = (category: Category | null, selectedSubCategory: string | null): Tool[] => {
+  if (!category) {
+    return [];
+  }
+  
   if ('subCategories' in category) {
     if (selectedSubCategory && category.subCategories[selectedSubCategory]) {
-      return category.subCategories[selectedSubCategory].tools;
+      const subCategory = category.subCategories[selectedSubCategory];
+      return subCategory && subCategory.tools ? subCategory.tools : [];
     }
     // When no subcategory is selected, return all tools from all subcategories
     const allTools: Tool[] = [];
     Object.values(category.subCategories).forEach(subCategory => {
-      allTools.push(...subCategory.tools);
+      if (subCategory && subCategory.tools && Array.isArray(subCategory.tools)) {
+        allTools.push(...subCategory.tools);
+      }
     });
     return allTools;
   }
-  return category.tools;
+  return category.tools && Array.isArray(category.tools) ? category.tools : [];
 };
 
 export const getFilteredCategories = (

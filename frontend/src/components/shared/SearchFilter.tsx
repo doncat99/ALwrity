@@ -24,7 +24,8 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
   selectedSubCategory,
   onSubCategoryChange,
   toolCategories,
-  theme
+  theme,
+  onCategoryClick
 }) => {
   // Helper function to get tool count from a category
   const getToolCount = (category: any): number => {
@@ -103,7 +104,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
           <CategoryChip
             label="All Tools"
-            onClick={() => onCategoryChange(null)}
+            onClick={() => onCategoryClick ? onCategoryClick(null, toolCategories) : onCategoryChange(null)}
             active={selectedCategory === null}
             theme={theme}
             toolCount={Object.values(toolCategories).reduce((total, category) => total + getToolCount(category), 0)}
@@ -122,7 +123,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
               >
                 <CategoryChip
                   label={category}
-                  onClick={() => onCategoryChange(category)}
+                  onClick={() => onCategoryClick ? onCategoryClick(category, cat) : onCategoryChange(category)}
                   active={selectedCategory === category}
                   theme={theme}
                   toolCount={getToolCount(cat)}

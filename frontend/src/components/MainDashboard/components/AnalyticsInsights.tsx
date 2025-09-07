@@ -92,11 +92,6 @@ const Badge = styled('span')(({ theme }) => ({
   fontSize: '0.65rem'
 }));
 
-// Subtle shimmer animation for the title text
-const shimmerText = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`;
 
 const mockData: AnalyticsData = {
   theGood: [
@@ -268,23 +263,20 @@ const AnalyticsInsights: React.FC<AnalyticsInsightsProps> = ({ data, onActionCli
   };
 
   return (
-    <Box sx={{ mt: 2, mb: 2.5 }}>
-      <Typography
-        variant="h6"
-        sx={{
-          fontWeight: 800,
-          mb: 1.5,
-          fontSize: '1.1rem',
-          background: 'linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.35))',
-          WebkitBackgroundClip: 'text',
-          backgroundClip: 'text',
-          color: 'transparent',
-          backgroundSize: '200% 100%',
-          animation: `${shimmerText} 3.2s linear infinite`,
-        }}
-      >
-        Analytics Insights
-      </Typography>
+    <Box sx={{ mt: 2, mb: 2.9 }}>
+      <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 800,
+            mb: 1.5,
+            fontSize: '1.1rem',
+            color: 'rgba(255,255,255,0.95)',
+          }}
+        >
+          Today's Analytics Insights
+        </Typography>
+      </Box>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
         {columns.map((col) => {
           const isHovered = hovered === col.key;

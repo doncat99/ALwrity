@@ -128,19 +128,27 @@ const EnhancedTodayModal: React.FC<EnhancedTodayModalProps> = ({
   };
 
   const handleWorkflowComplete = async () => {
+    console.log('Workflow Complete clicked for pillar:', pillarId);
+    console.log('Current pillar tasks:', pillarTasks);
+    
     // Mark all remaining tasks in this pillar as completed
     const incompleteTasks = pillarTasks.filter(task => 
       task.status !== 'completed' && task.status !== 'skipped'
     );
     
+    console.log('Incomplete tasks to complete:', incompleteTasks);
+    
     for (const task of incompleteTasks) {
       try {
+        console.log('Completing task:', task.id);
         await completeTask(task.id);
+        console.log('Task completed successfully:', task.id);
       } catch (error) {
         console.error(`Failed to complete task ${task.id}:`, error);
       }
     }
     
+    console.log('All tasks completed, closing modal');
     // Close the modal
     onClose();
   };

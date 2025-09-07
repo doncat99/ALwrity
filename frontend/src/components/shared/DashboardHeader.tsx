@@ -171,7 +171,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                             width: '100%',
                             height: '100%',
                             background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent)',
-                            animation: 'shimmer 2.5s infinite',
+                            animation: workflowControls.completedTasks === workflowControls.totalTasks 
+                              ? 'none' 
+                              : 'shimmer 2.5s infinite',
                             zIndex: 1,
                           },
                           '&::after': {

@@ -290,21 +290,48 @@ const PillarCard: React.FC<{
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <CardContent sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* Shooting star border animation */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: 'inherit',
+            overflow: 'hidden',
+            zIndex: 1,
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '2px',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)',
+              animation: 'shootingStar 8s linear infinite',
+            },
+            '@keyframes shootingStar': {
+              '0%': { left: '-100%' },
+              '100%': { left: '100%' },
+            },
+          }}
+        />
+        <CardContent sx={{ p: 1.5, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 2 }}>
           {/* Header */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, position: 'relative' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, position: 'relative' }}>
             <Box
               sx={{
-                p: 0.8,
+                p: 0.6,
                 borderRadius: '50%',
                 backgroundColor: 'rgba(255,255,255,0.2)',
-                mr: 1.2,
+                mr: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
             >
-              <IconComponent sx={{ fontSize: 18, color: 'white' }} />
+              <IconComponent sx={{ fontSize: 16, color: 'white' }} />
             </Box>
             <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1rem' }}>
               {pillar.title}
@@ -378,7 +405,7 @@ const PillarCard: React.FC<{
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                     style={{ overflow: 'hidden' }}
                   >
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.5 }}>
                       {pillar.id === 'plan' ? (
                         <>
                           <motion.div

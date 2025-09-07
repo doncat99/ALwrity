@@ -23,6 +23,7 @@ import ErrorDisplay from '../shared/ErrorDisplay';
 import EmptyState from '../shared/EmptyState';
 import ContentLifecyclePillars from './ContentLifecyclePillars';
 import AnalyticsInsights from './components/AnalyticsInsights';
+import ToolsModal from './components/ToolsModal';
 
 // Shared types and utilities
 import { Tool } from '../shared/types';
@@ -99,6 +100,12 @@ const MainDashboard: React.FC = () => {
   // State to track if we need to start a newly generated workflow
   const [shouldStartWorkflow, setShouldStartWorkflow] = React.useState(false);
 
+  // Tools Modal state
+  const [toolsModalOpen, setToolsModalOpen] = React.useState(false);
+  const [modalCategoryName, setModalCategoryName] = React.useState<string | null>(null);
+  const [modalCategory, setModalCategory] = React.useState<any>(null);
+  const [searchResults, setSearchResults] = React.useState<Tool[]>([]);
+
   // Handle workflow start
   const handleStartWorkflow = async () => {
     try {
@@ -168,6 +175,56 @@ const MainDashboard: React.FC = () => {
       return;
     }
     showSnackbar(`Launching ${tool.name}...`, 'info');
+  };
+
+  // Handle category click to open modal
+  const handleCategoryClick = (categoryName: string | null, categoryData?: any) => {
+    setModalCategoryName(categoryName);
+    setModalCategory(categoryData);
+    setToolsModalOpen(true);
+  };
+
+  // Handle search to show results in modal with debouncing
+  React.useEffect(() => {
+    if (searchQuery && searchQuery.length >= 2) { // Only search after 2+ characters
+      const timeoutId = setTimeout(() => {
+        // Get all tools from all categories that match search
+        const allTools: Tool[] = [];
+        Object.values(toolCategories).forEach(category => {
+          if (category) {
+            const tools = getToolsForCategory(category, null);
+            allTools.push(...tools);
+          }
+        });
+        
+        const filtered = allTools.filter(tool => 
+          tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          tool.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          tool.features.some(feature => feature.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+        
+        setSearchResults(filtered);
+        setModalCategoryName(null);
+        setModalCategory(null);
+        setToolsModalOpen(true);
+      }, 500); // 500ms delay
+
+      return () => clearTimeout(timeoutId);
+    } else if (searchQuery && searchQuery.length < 2) {
+      // Close modal if search query is too short
+      setToolsModalOpen(false);
+    }
+  }, [searchQuery, toolCategories]);
+
+  // Close modal and clear search
+  const handleCloseModal = () => {
+    setToolsModalOpen(false);
+    setModalCategoryName(null);
+    setModalCategory(null);
+    setSearchResults([]);
+    if (searchQuery) {
+      setSearchQuery('');
+    }
   };
 
   const filteredCategories = getFilteredCategories(
@@ -245,9 +302,6 @@ const MainDashboard: React.FC = () => {
             {/* Content Lifecycle Pillars - First Panel */}
             <ContentLifecyclePillars />
 
-            {/* Analytics Insights - Good/Bad/Ugly */}
-            <AnalyticsInsights />
-
             {/* Search and Filter */}
             <SearchFilter
               searchQuery={searchQuery}
@@ -259,60 +313,24 @@ const MainDashboard: React.FC = () => {
               onSubCategoryChange={setSelectedSubCategory}
               toolCategories={toolCategories}
               theme={theme}
+              onCategoryClick={handleCategoryClick}
             />
 
-            {/* Enhanced Tools Grid */}
-            <Box sx={{ mb: 4 }}>
-              {Object.entries(filteredCategories).map(([categoryName, category], categoryIndex) => (
-                <motion.div
-                  key={categoryName}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: categoryIndex * 0.1 }}
-                >
-                  <Box sx={{ mb: 5 }}>
-                    {/* Show Category Header when no specific category is selected OR when searching across all categories */}
-                    {(selectedCategory === null || searchQuery) && (
-                      <CategoryHeader
-                        categoryName={categoryName}
-                        category={category}
-                        theme={theme}
-                      />
-                    )}
+            {/* Analytics Insights - Good/Bad/Ugly */}
+            <AnalyticsInsights />
 
-                    <Grid container spacing={3}>
-                      {getToolsForCategory(category, selectedSubCategory).map((tool: Tool, toolIndex: number) => (
-                        <Grid item xs={12} sm={6} md={4} lg={3} key={tool.name}>
-                          <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: (categoryIndex * 0.1) + (toolIndex * 0.05) }}
-                          >
-                            <ToolCard
-                              tool={tool}
-                              onToolClick={handleToolClick}
-                              isFavorite={favorites.includes(tool.name)}
-                              onToggleFavorite={toggleFavorite}
-                            />
-                          </motion.div>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Box>
-                </motion.div>
-              ))}
-            </Box>
-
-            {/* Empty State */}
-            {Object.keys(filteredCategories).length === 0 && (
-              <EmptyState
-                icon={<span>🔍</span>}
-                title="No tools found matching your criteria"
-                message="Try adjusting your search or category filter"
-                onClearFilters={clearFilters}
-                clearButtonText="Clear Filters"
-              />
-            )}
+            {/* Tools Modal */}
+            <ToolsModal
+              open={toolsModalOpen}
+              onClose={handleCloseModal}
+              categoryName={modalCategoryName || undefined}
+              category={modalCategory}
+              searchQuery={searchQuery}
+              searchResults={searchResults}
+              onToolClick={handleToolClick}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+            />
           </motion.div>
         </AnimatePresence>
 
