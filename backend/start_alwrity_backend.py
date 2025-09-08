@@ -214,6 +214,30 @@ def setup_environment():
     
     print("✅ Environment setup complete")
 
+def verify_persona_tables():
+    """Verify that persona tables exist and are accessible."""
+    print("🔍 Verifying persona tables...")
+    try:
+        from services.database import get_db_session
+        from models.persona_models import WritingPersona, PlatformPersona, PersonaAnalysisResult, PersonaValidationResult
+        
+        session = get_db_session()
+        if session:
+            # Try to query all persona tables to verify they exist
+            session.query(WritingPersona).first()
+            session.query(PlatformPersona).first()
+            session.query(PersonaAnalysisResult).first()
+            session.query(PersonaValidationResult).first()
+            session.close()
+            print("✅ All persona tables verified successfully")
+            return True
+        else:
+            print("⚠️  Warning: Could not get database session")
+            return False
+    except Exception as e:
+        print(f"⚠️  Warning: Could not verify persona tables: {e}")
+        return False
+
 def start_backend(enable_reload=False):
     """Start the backend server."""
     print("🚀 Starting ALwrity Backend...")
@@ -241,7 +265,16 @@ def start_backend(enable_reload=False):
     try:
         # Import and run the app
         from app import app
+        from services.database import init_database
         import uvicorn
+        
+        # Explicitly initialize database before starting server
+        print("🗄️  Initializing database...")
+        init_database()
+        print("✅ Database initialized successfully")
+        
+        # Verify persona tables exist
+        verify_persona_tables()
         
         print("\n🌐 Backend is starting...")
         print("   📖 API Documentation: http://localhost:8000/api/docs")
