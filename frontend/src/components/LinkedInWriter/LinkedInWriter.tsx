@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { CopilotSidebar } from '@copilotkit/react-ui';
 import { useCopilotReadable, useCopilotAction, useCopilotContext } from '@copilotkit/react-core';
 import '@copilotkit/react-ui/styles.css';
@@ -13,7 +13,8 @@ import { PlatformPersonaProvider, usePlatformPersonaContext } from '../shared/Pe
 
 const useCopilotActionTyped = useCopilotAction as any;
 
-
+// Optional debug flag: set to true to enable verbose logs locally
+const DEBUG_LINKEDIN = false;
 
 interface LinkedInWriterProps {
   className?: string;
@@ -299,15 +300,15 @@ const LinkedInWriterContent: React.FC<LinkedInWriterProps> = ({ className = '' }
     }
   });
 
-  // Intelligent, stage-aware suggestions
-  const getIntelligentSuggestions = () => {
+  // Intelligent, stage-aware suggestions (memoized to prevent infinite re-rendering)
+  const getIntelligentSuggestions = useMemo(() => {
     const hasContent = draft && draft.trim().length > 0;
     const hasCTA = /\b(call now|sign up|join|try|learn more|cta|comment|share|connect|message|dm|reach out)\b/i.test(draft || '');
     const hasHashtags = /#[A-Za-z0-9_]+/.test(draft || '');
     const isLong = (draft || '').length > 500;
     
     // Debug logging for suggestions
-    console.log('[LinkedIn Writer] Generating suggestions:', {
+    if (DEBUG_LINKEDIN) console.log('[LinkedIn Writer] Generating suggestions:', {
       hasContent,
       justGeneratedContent,
       draftLength: draft?.length || 0
@@ -365,7 +366,7 @@ const LinkedInWriterContent: React.FC<LinkedInWriterProps> = ({ className = '' }
       
       // Add image generation suggestion when there's content
       if (draft && draft.trim().length > 0) {
-        console.log('[LinkedIn Writer] Adding image generation suggestion');
+        if (DEBUG_LINKEDIN) console.log('[LinkedIn Writer] Adding image generation suggestion');
         // Make image generation suggestion more prominent
         refinementSuggestions.push({ 
           title: '🖼️ Generate Post Image', 
@@ -386,10 +387,10 @@ const LinkedInWriterContent: React.FC<LinkedInWriterProps> = ({ className = '' }
         }
       }
 
-      console.log('[LinkedIn Writer] Final suggestions:', refinementSuggestions);
+      if (DEBUG_LINKEDIN) console.log('[LinkedIn Writer] Final suggestions:', refinementSuggestions);
       return refinementSuggestions;
     }
-  };
+  }, [draft, justGeneratedContent]);
 
   return (
     <div className={`linkedin-writer ${className}`} style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -398,94 +399,11 @@ const LinkedInWriterContent: React.FC<LinkedInWriterProps> = ({ className = '' }
         userPreferences={userPreferences}
         chatHistory={chatHistory}
         showPreferencesModal={showPreferencesModal}
-        showContextModal={showContextModal}
-        context={context}
         onPreferencesModalChange={setShowPreferencesModal}
-        onContextModalChange={setShowContextModal}
-        onContextChange={handleContextChange}
         onPreferencesChange={handlePreferencesChange}
-        onCopy={handleCopy}
-        onClear={handleClear}
         onClearHistory={handleClearHistory}
-        draft={draft}
         getHistoryLength={getHistoryLength}
       />
-                  {/* Persona Integration Indicator */}
-            {corePersona && !personaLoading && (
-              <div 
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#f0f8ff',
-                  borderBottom: '1px solid #e1e8ed',
-                  fontSize: '12px',
-                  color: '#666',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'help',
-                  position: 'relative'
-                }}
-                title={`🎭 YOUR PERSONALIZED WRITING ASSISTANT
-
-🤔 WHAT IS A PERSONA?
-A persona is your unique writing style profile that AI uses to create content that sounds exactly like you. It's like having a digital twin of your writing voice!
-
-🎯 HOW DOES IT HELP YOU?
-✅ Generates content that matches your natural writing style
-✅ Maintains consistent voice across all your LinkedIn posts
-✅ Saves time by understanding your preferences automatically
-✅ Optimizes content for LinkedIn's algorithm and your audience
-✅ Provides personalized suggestions based on your industry
-
-🧠 HOW WAS IT CREATED?
-Your persona was built by analyzing:
-• Your website content and writing patterns
-• Your research preferences and content goals
-• Your target audience and industry focus
-• Your communication style and tone preferences
-• LinkedIn-specific optimization requirements
-
-🤖 HOW DOES COPILOTKIT USE IT?
-The AI assistant now knows:
-• Your preferred sentence length and structure
-• Your go-to words and phrases to use/avoid
-• Your professional tone and communication style
-• LinkedIn-specific optimization strategies
-• Your engagement patterns and posting preferences
-
-🚀 HYPER-PERSONALIZATION ACHIEVED!
-Instead of generic content, you get:
-• Content that sounds authentically like you
-• Industry-specific insights and terminology
-• LinkedIn algorithm-optimized posts
-• Professional networking strategies
-• Personalized engagement tactics
-
-📊 YOUR PERSONA DETAILS:
-🎭 Name: ${corePersona.persona_name}
-📋 Style: ${corePersona.archetype}
-💭 Philosophy: ${corePersona.core_belief}
-📈 Confidence: ${corePersona.confidence_score}% accuracy
-
-🎯 LINKEDIN OPTIMIZATION:
-• Optimal length: ${platformPersona?.content_format_rules?.optimal_length || '150-300 words'}
-• Posting frequency: ${platformPersona?.engagement_patterns?.posting_frequency || '2-3 times per week'}
-• Hashtag strategy: ${platformPersona?.lexical_features?.hashtag_strategy || '3-5 relevant hashtags'}
-• Engagement style: ${platformPersona?.engagement_patterns?.interaction_style || 'conversational'}
-
-💡 TRY THIS: Ask the AI to "generate a LinkedIn post about [your topic]" and watch how it automatically applies your persona to create content that sounds like you!`}
-              >
-                <span style={{ color: '#0073b1' }}>🎭</span>
-                <span><strong>🎭 Your Writing Assistant:</strong> {corePersona.persona_name} ({corePersona.archetype})</span>
-                <span style={{ marginLeft: 'auto', fontSize: '11px' }}>
-                  {corePersona.confidence_score}% accuracy | 
-                  Platform: LinkedIn Optimized
-                </span>
-                <span style={{ fontSize: '10px', color: '#999', marginLeft: '8px' }}>
-                  (Hover for details)
-                </span>
-              </div>
-            )}
 
       {/* Lightweight progress tracker under header */}
       <div style={{ 
@@ -533,6 +451,7 @@ Instead of generic content, you get:
             onDiscardChanges={handleDiscardChanges}
             onDraftChange={handleDraftChange}
             onPreviewToggle={handlePreviewToggle}
+            topic={context ? context.split('\n')[0].substring(0, 50) : undefined}
           />
  
           
@@ -560,7 +479,7 @@ Instead of generic content, you get:
             'Great! I can see you have content to work with. Use the quick edit suggestions below to refine your post in real-time, or ask me to make specific changes.' : 
             `Hi! I'm your ALwrity Co-Pilot, your LinkedIn writing assistant${corePersona ? ` with ${corePersona.persona_name} persona optimization` : ''}. I can help you create professional posts, articles, carousels, video scripts, and comment responses. Try the new persona-aware actions for enhanced content generation!`
         }}
-        suggestions={getIntelligentSuggestions()}
+        suggestions={getIntelligentSuggestions}
         makeSystemMessage={(context: string, additional?: string) => {
           const prefs = userPreferences;
           const prefsLine = Object.keys(prefs).length ? `User preferences (remember and respect unless changed): ${JSON.stringify(prefs)}` : '';

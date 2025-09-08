@@ -41,8 +41,9 @@ class GeminiGroundedProvider:
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
         
-        # Initialize the Gemini client
+        # Initialize the Gemini client with timeout configuration
         self.client = genai.Client(api_key=self.api_key)
+        self.timeout = 30  # 30 second timeout for API calls
         logger.info("✅ Gemini Grounded Provider initialized with native Google Search grounding")
     
     async def generate_grounded_content(
@@ -82,12 +83,27 @@ class GeminiGroundedProvider:
                 temperature=temperature
             )
             
-            # Make the request with native grounding
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=grounded_prompt,
-                config=config,
-            )
+            # Make the request with native grounding and timeout
+            import asyncio
+            import concurrent.futures
+            
+            try:
+                # Run the synchronous generate_content in a thread pool to make it awaitable
+                loop = asyncio.get_event_loop()
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    response = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            executor,
+                            lambda: self.client.models.generate_content(
+                                model="gemini-2.5-flash",
+                                contents=grounded_prompt,
+                                config=config,
+                            )
+                        ),
+                        timeout=self.timeout
+                    )
+            except asyncio.TimeoutError:
+                raise Exception(f"Gemini API request timed out after {self.timeout} seconds")
             
             # Process the grounded response
             result = self._process_grounded_response(response, content_type)

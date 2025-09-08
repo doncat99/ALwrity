@@ -355,7 +355,38 @@ class ContentGenerator:
             
         except Exception as e:
             logger.error(f"Error generating grounded post content: {str(e)}")
-            raise Exception(f"Failed to generate grounded post content: {str(e)}")
+            logger.info("Attempting fallback to standard content generation...")
+            
+            # Fallback to standard content generation without grounding
+            try:
+                if not self.fallback_provider:
+                    raise Exception("No fallback provider available")
+                
+                # Build a simpler prompt for fallback generation
+                prompt = PostPromptBuilder.build_post_prompt(request)
+                
+                # Generate content using fallback provider (it's a dict with functions)
+                if 'generate_text' in self.fallback_provider:
+                    result = await self.fallback_provider['generate_text'](
+                        prompt=prompt,
+                        temperature=0.7,
+                        max_tokens=request.max_length
+                    )
+                else:
+                    raise Exception("Fallback provider doesn't have generate_text method")
+                
+                # Return result in the expected format
+                return {
+                    'content': result.get('content', '') if isinstance(result, dict) else str(result),
+                    'sources': [],
+                    'citations': [],
+                    'grounding_enabled': False,
+                    'fallback_used': True
+                }
+                
+            except Exception as fallback_error:
+                logger.error(f"Fallback generation also failed: {str(fallback_error)}")
+                raise Exception(f"Failed to generate content: {str(e)}. Fallback also failed: {str(fallback_error)}")
     
     async def generate_grounded_article_content(self, request, research_sources: List) -> Dict[str, Any]:
         """Generate grounded article content using the enhanced Gemini provider with native grounding."""

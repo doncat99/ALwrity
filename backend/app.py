@@ -57,6 +57,10 @@ from routers.linkedin import router as linkedin_router
 # Import LinkedIn image generation router
 from api.linkedin_image_generation import router as linkedin_image_router
 
+# Import hallucination detector router
+from api.hallucination_detector import router as hallucination_detector_router
+from api.writing_assistant import router as writing_assistant_router
+
 # Import user data endpoints
 # Import content planning endpoints
 from api.content_planning.api.router import router as content_planning_router
@@ -379,6 +383,10 @@ app.include_router(facebook_router)
 app.include_router(linkedin_router)
 # Include LinkedIn image generation router
 app.include_router(linkedin_image_router)
+
+# Include hallucination detector router
+app.include_router(hallucination_detector_router)
+app.include_router(writing_assistant_router)
 
 # Include user data router
 # Include content planning router

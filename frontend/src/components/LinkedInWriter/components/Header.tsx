@@ -7,16 +7,9 @@ interface HeaderProps {
   userPreferences: LinkedInPreferences;
   chatHistory: any[];
   showPreferencesModal: boolean;
-  showContextModal: boolean;
-  context: string;
   onPreferencesModalChange: (show: boolean) => void;
-  onContextModalChange: (show: boolean) => void;
-  onContextChange: (value: string) => void;
   onPreferencesChange: (prefs: Partial<LinkedInPreferences>) => void;
-  onCopy: () => void;
-  onClear: () => void;
   onClearHistory: () => void;
-  draft: string;
   getHistoryLength: () => number;
 }
 
@@ -24,16 +17,9 @@ export const Header: React.FC<HeaderProps> = ({
   userPreferences,
   chatHistory,
   showPreferencesModal,
-  showContextModal,
-  context,
   onPreferencesModalChange,
-  onContextModalChange,
-  onContextChange,
   onPreferencesChange,
-  onCopy,
-  onClear,
   onClearHistory,
-  draft,
   getHistoryLength
 }) => {
   const handlePreferenceChange = (key: keyof LinkedInPreferences, value: any) => {
@@ -68,16 +54,8 @@ export const Header: React.FC<HeaderProps> = ({
                 fontWeight: 700,
                 letterSpacing: '-0.5px'
               }}>
-                LinkedIn Writer
+                ALwrity LinkedIn Assistant
               </h1>
-              <p style={{ 
-                margin: '6px 0 0 0', 
-                fontSize: '14px', 
-                opacity: 0.9,
-                fontWeight: 400
-              }}>
-                Professional content creation for LinkedIn
-              </p>
             </div>
           </div>
           
@@ -126,10 +104,76 @@ export const Header: React.FC<HeaderProps> = ({
                 }}>
                   <div style={{ marginBottom: '16px' }}>
                     <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '16px', fontWeight: 600 }}>
-                      Content Preferences & Context
+                      Content Preferences & Persona
                     </h4>
                     <div style={{ fontSize: '12px', color: '#666', marginBottom: '16px' }}>
                       <strong>Current Settings:</strong> {userPreferences.tone} tone • {userPreferences.industry || 'Not set'} industry • {chatHistory.length} messages
+                    </div>
+                  </div>
+                  
+                  {/* Persona Section */}
+                  <div style={{ 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '8px', 
+                    padding: '16px', 
+                    marginBottom: '16px',
+                    background: '#f8f9fa'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <h5 style={{ margin: 0, color: '#2d3748', fontSize: '14px', fontWeight: '600' }}>
+                        Writing Persona
+                      </h5>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#4a5568' }}>
+                          <input
+                            type="radio"
+                            name="personaEnabled"
+                            defaultChecked={true}
+                            style={{ margin: 0 }}
+                          />
+                          On
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#4a5568' }}>
+                          <input
+                            type="radio"
+                            name="personaEnabled"
+                            style={{ margin: 0 }}
+                          />
+                          Off
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px',
+                      padding: '12px',
+                      background: 'white',
+                      borderRadius: '6px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <span style={{ fontSize: '16px' }}>🎭</span>
+                        <span style={{ fontSize: '16px' }}>🎯</span>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#2d3748', marginBottom: '2px' }}>
+                          The Digital Strategist (The Insightful Guide)
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#666' }}>
+                          88% accuracy | Platform: LinkedIn Optimized
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ 
+                      marginTop: '8px', 
+                      fontSize: '11px', 
+                      color: '#666',
+                      fontStyle: 'italic'
+                    }}>
+                      Hover over persona for detailed information
                     </div>
                   </div>
                   
@@ -300,111 +344,10 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
             
-                         {/* Context & Notes Button */}
-             <div 
-               style={{ 
-                 position: 'relative',
-                 cursor: 'pointer'
-               }}
-               onMouseEnter={() => onContextModalChange(true)}
-               onMouseLeave={() => onContextModalChange(false)}
-             >
-               <div style={{
-                 display: 'flex',
-                 alignItems: 'center',
-                 gap: '8px',
-                 padding: '10px 16px',
-                 background: 'rgba(255, 255, 255, 0.15)',
-                 borderRadius: '24px',
-                 border: '1px solid rgba(255, 255, 255, 0.2)',
-                 transition: 'all 0.2s ease',
-                 backdropFilter: 'blur(10px)'
-               }}>
-                 <span style={{ fontSize: '14px', opacity: 0.9 }}>📝</span>
-                 <span style={{ fontSize: '13px', fontWeight: 600 }}>Context & Notes</span>
-                 <span style={{ fontSize: '10px', opacity: 0.7 }}>▼</span>
-               </div>
-              
-              {/* Context & Notes Modal */}
-              {showContextModal && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: '0',
-                  width: '400px',
-                  background: 'white',
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                  border: '1px solid #e9ecef',
-                  padding: '20px',
-                  zIndex: 1000,
-                  marginTop: '8px',
-                  animation: 'slideIn 0.2s ease-out'
-                }}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '16px', fontWeight: 600 }}>
-                      Context & Notes
-                    </h4>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '16px' }}>
-                      Add context, notes, or specific requirements for your LinkedIn content
-                    </div>
-                  </div>
-                  
-                  <textarea
-                    value={context}
-                    onChange={(e) => onContextChange(e.target.value)}
-                    placeholder="Add context, notes, or specific requirements for your LinkedIn content..."
-                    style={{
-                      width: '100%',
-                      minHeight: '120px',
-                      padding: '12px',
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontFamily: 'inherit',
-                      resize: 'vertical',
-                      background: '#f8f9fa'
-                    }}
-                  />
-                </div>
-              )}
-            </div>
           </div>
         </div>
         
         <div style={{ display: 'flex', gap: 12 }}>
-          <button
-            onClick={onCopy}
-            disabled={!draft.trim()}
-            style={{
-              padding: '8px 16px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: 6,
-              cursor: draft.trim() ? 'pointer' : 'not-allowed',
-              fontSize: 14,
-              fontWeight: 500
-            }}
-          >
-            Copy
-          </button>
-          <button
-            onClick={onClear}
-            disabled={!draft.trim()}
-            style={{
-              padding: '8px 16px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: 6,
-              cursor: draft.trim() ? 'pointer' : 'not-allowed',
-              fontSize: 14,
-              fontWeight: 500
-            }}
-          >
-            Clear
-          </button>
           <button
             onClick={onClearHistory}
             style={{
