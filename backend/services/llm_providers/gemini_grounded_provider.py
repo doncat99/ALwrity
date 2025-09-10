@@ -254,12 +254,8 @@ class GeminiGroundedProvider:
                         result['sources'] = sources
                         logger.info(f"Extracted {len(sources)} sources")
                     else:
-                        logger.error("❌ CRITICAL: No grounding chunks found in response")
-                        logger.error(f"Grounding metadata structure: {dir(grounding_metadata)}")
-                        if hasattr(grounding_metadata, 'grounding_chunks'):
-                            logger.error(f"Grounding chunks type: {type(grounding_metadata.grounding_chunks)}")
-                            logger.error(f"Grounding chunks value: {grounding_metadata.grounding_chunks}")
-                        raise ValueError("No grounding chunks found - grounding is not working properly")
+                        logger.warning("⚠️ No grounding chunks found in response. Proceeding with available data (search queries/content).")
+                        # Keep sources empty but continue. This avoids hard failure when Google Search tool returns queries only.
                     
                     # Extract citations from grounding supports
                     if hasattr(grounding_metadata, 'grounding_supports') and grounding_metadata.grounding_supports:
@@ -278,12 +274,7 @@ class GeminiGroundedProvider:
                         result['citations'] = citations
                         logger.info(f"Extracted {len(citations)} citations")
                     else:
-                        logger.error("❌ CRITICAL: No grounding supports found in response")
-                        logger.error(f"Grounding metadata structure: {dir(grounding_metadata)}")
-                        if hasattr(grounding_metadata, 'grounding_supports'):
-                            logger.error(f"Grounding supports type: {type(grounding_metadata.grounding_supports)}")
-                            logger.error(f"Grounding supports value: {grounding_metadata.grounding_supports}")
-                        raise ValueError("No grounding supports found - grounding is not working properly")
+                        logger.warning("⚠️ No grounding supports found in response. Continuing without inline citations.")
                     
                     logger.info(f"✅ Successfully extracted {len(result['sources'])} sources and {len(result['citations'])} citations from grounding metadata")
                     logger.info(f"Sources: {result['sources']}")
@@ -294,9 +285,7 @@ class GeminiGroundedProvider:
                     logger.error(f"First candidate structure: {dir(candidates[0]) if candidates else 'No candidates'}")
                     raise ValueError("No grounding metadata found - grounding is not working properly")
             else:
-                logger.error("❌ CRITICAL: No candidates found in response")
-                logger.error(f"Response structure: {dir(response)}")
-                raise ValueError("No candidates found in response - grounding is not working properly")
+                logger.warning("⚠️ No candidates found in response. Returning content without sources.")
             
             # Add content-specific processing
             if content_type == "linkedin_post":
