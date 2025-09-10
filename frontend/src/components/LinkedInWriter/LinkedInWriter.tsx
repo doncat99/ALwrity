@@ -1,23 +1,35 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { CopilotSidebar } from '@copilotkit/react-ui';
 import { useCopilotReadable, useCopilotAction, useCopilotContext } from '@copilotkit/react-core';
 import '@copilotkit/react-ui/styles.css';
 import './styles/alwrity-copilot.css';
 import RegisterLinkedInActions from './RegisterLinkedInActions';
 import RegisterLinkedInEditActions from './RegisterLinkedInEditActions';
+import RegisterLinkedInActionsEnhanced from './RegisterLinkedInActionsEnhanced';
 import { Header, ContentEditor, LoadingIndicator, WelcomeMessage, ProgressTracker } from './components';
 import { useLinkedInWriter } from './hooks/useLinkedInWriter';
 import { useCopilotPersistence } from './utils/enhancedPersistence';
+import { PlatformPersonaProvider, usePlatformPersonaContext } from '../shared/PersonaContext/PlatformPersonaProvider';
 
 const useCopilotActionTyped = useCopilotAction as any;
 
-
+// Optional debug flag: set to true to enable verbose logs locally
+const DEBUG_LINKEDIN = false;
 
 interface LinkedInWriterProps {
   className?: string;
 }
 
 const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
+  return (
+    <PlatformPersonaProvider platform="linkedin">
+      <LinkedInWriterContent className={className} />
+    </PlatformPersonaProvider>
+  );
+};
+
+// Main LinkedIn Writer Content Component
+const LinkedInWriterContent: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
   const {
     // State
     draft,
@@ -68,6 +80,8 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
     summarizeHistory
   } = useLinkedInWriter();
 
+  // Get persona context for enhanced AI assistance
+  const { corePersona, platformPersona, loading: personaLoading } = usePlatformPersonaContext();
 
 
   // Get enhanced persistence functionality
@@ -286,15 +300,15 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
     }
   });
 
-  // Intelligent, stage-aware suggestions
-  const getIntelligentSuggestions = () => {
+  // Intelligent, stage-aware suggestions (memoized to prevent infinite re-rendering)
+  const getIntelligentSuggestions = useMemo(() => {
     const hasContent = draft && draft.trim().length > 0;
     const hasCTA = /\b(call now|sign up|join|try|learn more|cta|comment|share|connect|message|dm|reach out)\b/i.test(draft || '');
     const hasHashtags = /#[A-Za-z0-9_]+/.test(draft || '');
     const isLong = (draft || '').length > 500;
     
     // Debug logging for suggestions
-    console.log('[LinkedIn Writer] Generating suggestions:', {
+    if (DEBUG_LINKEDIN) console.log('[LinkedIn Writer] Generating suggestions:', {
       hasContent,
       justGeneratedContent,
       draftLength: draft?.length || 0
@@ -352,7 +366,7 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
       
       // Add image generation suggestion when there's content
       if (draft && draft.trim().length > 0) {
-        console.log('[LinkedIn Writer] Adding image generation suggestion');
+        if (DEBUG_LINKEDIN) console.log('[LinkedIn Writer] Adding image generation suggestion');
         // Make image generation suggestion more prominent
         refinementSuggestions.push({ 
           title: '🖼️ Generate Post Image', 
@@ -373,10 +387,10 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
         }
       }
 
-      console.log('[LinkedIn Writer] Final suggestions:', refinementSuggestions);
+      if (DEBUG_LINKEDIN) console.log('[LinkedIn Writer] Final suggestions:', refinementSuggestions);
       return refinementSuggestions;
     }
-  };
+  }, [draft, justGeneratedContent]);
 
   return (
     <div className={`linkedin-writer ${className}`} style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -385,18 +399,12 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
         userPreferences={userPreferences}
         chatHistory={chatHistory}
         showPreferencesModal={showPreferencesModal}
-        showContextModal={showContextModal}
-        context={context}
         onPreferencesModalChange={setShowPreferencesModal}
-        onContextModalChange={setShowContextModal}
-        onContextChange={handleContextChange}
         onPreferencesChange={handlePreferencesChange}
-        onCopy={handleCopy}
-        onClear={handleClear}
         onClearHistory={handleClearHistory}
-        draft={draft}
         getHistoryLength={getHistoryLength}
       />
+
       {/* Lightweight progress tracker under header */}
       <div style={{ 
         padding: '6px 16px',
@@ -443,6 +451,7 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
             onDiscardChanges={handleDiscardChanges}
             onDraftChange={handleDraftChange}
             onPreviewToggle={handlePreviewToggle}
+            topic={context ? context.split('\n')[0].substring(0, 50) : undefined}
           />
  
           
@@ -456,8 +465,10 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
       </div>
 
       {/* Register CopilotKit Actions */}
-              <RegisterLinkedInActions />
-        <RegisterLinkedInEditActions />
+      <RegisterLinkedInActions />
+      <RegisterLinkedInEditActions />
+      {/* Enhanced Persona-Aware Actions */}
+      <RegisterLinkedInActionsEnhanced />
 
       {/* CopilotKit Sidebar */}
       <CopilotSidebar 
@@ -466,9 +477,9 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
           title: 'ALwrity Co-Pilot',
           initial: draft ? 
             'Great! I can see you have content to work with. Use the quick edit suggestions below to refine your post in real-time, or ask me to make specific changes.' : 
-            'Hi! I\'m your ALwrity Co-Pilot, your LinkedIn writing assistant. I can help you create professional posts, articles, carousels, video scripts, and comment responses. What would you like to create today?'
+            `Hi! I'm your ALwrity Co-Pilot, your LinkedIn writing assistant${corePersona ? ` with ${corePersona.persona_name} persona optimization` : ''}. I can help you create professional posts, articles, carousels, video scripts, and comment responses. Try the new persona-aware actions for enhanced content generation!`
         }}
-        suggestions={getIntelligentSuggestions()}
+        suggestions={getIntelligentSuggestions}
         makeSystemMessage={(context: string, additional?: string) => {
           const prefs = userPreferences;
           const prefsLine = Object.keys(prefs).length ? `User preferences (remember and respect unless changed): ${JSON.stringify(prefs)}` : '';
@@ -479,7 +490,25 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
           const industry = prefs.industry || 'Technology';
           const audience = prefs.target_audience || 'professionals';
           
-                    const guidance = `
+          // Enhanced persona-aware guidance
+          const personaGuidance = corePersona && platformPersona ? `
+PERSONA-AWARE WRITING GUIDANCE:
+- PERSONA: ${corePersona.persona_name} (${corePersona.archetype})
+- CORE BELIEF: ${corePersona.core_belief}
+- CONFIDENCE SCORE: ${corePersona.confidence_score}%
+- LINGUISTIC STYLE: ${corePersona.linguistic_fingerprint?.sentence_metrics?.average_sentence_length_words || 'Unknown'} words average, ${corePersona.linguistic_fingerprint?.sentence_metrics?.active_to_passive_ratio || 'Unknown'} active/passive ratio
+- GO-TO WORDS: ${corePersona.linguistic_fingerprint?.lexical_features?.go_to_words?.join(', ') || 'None specified'}
+- AVOID WORDS: ${corePersona.linguistic_fingerprint?.lexical_features?.avoid_words?.join(', ') || 'None specified'}
+
+PLATFORM OPTIMIZATION (LinkedIn):
+- CHARACTER LIMIT: ${platformPersona.content_format_rules?.character_limit || '3000'} characters
+- OPTIMAL LENGTH: ${platformPersona.content_format_rules?.optimal_length || '150-300 words'}
+- ENGAGEMENT PATTERN: ${platformPersona.engagement_patterns?.posting_frequency || '2-3 times per week'}
+- HASHTAG STRATEGY: ${platformPersona.lexical_features?.hashtag_strategy || '3-5 relevant hashtags'}
+
+ALWAYS generate content that matches this persona's linguistic fingerprint and platform optimization rules.` : '';
+
+          const guidance = `
  You are ALwrity's LinkedIn Writing Assistant specializing in ${industry} content.
  
  CRITICAL CONSTRAINTS:
@@ -487,16 +516,23 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
  - INDUSTRY: Focus specifically on ${industry} industry context and terminology  
  - AUDIENCE: Target content specifically for ${audience}
  - QUALITY: Ensure all content meets LinkedIn professional standards
+ ${personaGuidance ? `\n${personaGuidance}` : ''}
  
  CURRENT CONTEXT:
  ${currentDraft}
  
- Available LinkedIn content tools:
- - generateLinkedInPost: Create ${tone} LinkedIn posts for ${industry} ${audience}
- - generateLinkedInArticle: Write ${tone} thought leadership articles about ${industry}
- - generateLinkedInCarousel: Design ${tone} multi-slide carousels for ${industry} insights
- - generateLinkedInVideoScript: Create ${tone} video scripts for ${industry} topics
- - generateLinkedInCommentResponse: Draft ${tone} responses appropriate for ${industry}
+       Available LinkedIn content tools:
+      - generateLinkedInPost: Create ${tone} LinkedIn posts for ${industry} ${audience}
+      - generateLinkedInArticle: Write ${tone} thought leadership articles about ${industry}
+      - generateLinkedInCarousel: Design ${tone} multi-slide carousels for ${industry} insights
+      - generateLinkedInVideoScript: Create ${tone} video scripts for ${industry} topics
+      - generateLinkedInCommentResponse: Draft ${tone} responses appropriate for ${industry}
+      
+      🎭 ENHANCED PERSONA-AWARE ACTIONS (Recommended):
+      - generateLinkedInPostWithPersona: Create posts optimized for your writing style and platform constraints
+      - generateLinkedInArticleWithPersona: Write articles with persona-aware optimization
+      - validateContentAgainstPersona: Validate existing content against your persona
+      - getPersonaWritingSuggestions: Get personalized writing recommendations
  
  DIRECT DRAFT ACTIONS:
  - updateLinkedInDraft: Replace the entire draft with new content
@@ -507,8 +543,8 @@ const LinkedInWriter: React.FC<LinkedInWriterProps> = ({ className = '' }) => {
  
  For quick edits, use editLinkedInDraft with the appropriate operation. This will show a live preview of changes before applying them.
  
- Use user preferences, context, and conversation history to personalize all content.
- Always respect the user's preferred ${tone} tone and ${industry} industry focus.
+ Use user preferences, context, conversation history, and persona data to personalize all content.
+ Always respect the user's preferred ${tone} tone, ${industry} industry focus, and writing persona style.
  Always use the most appropriate tool for the user's request.`.trim();
           return [prefsLine, historyLine, currentDraft, guidance, additional].filter(Boolean).join('\n\n');
         }}
