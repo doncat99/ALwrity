@@ -54,7 +54,7 @@ class UsageTrackingService:
                 model_used=model_used,
                 tokens_input=tokens_input,
                 tokens_output=tokens_output,
-                tokens_total=tokens_input + tokens_output,
+                tokens_total=(tokens_input or 0) + (tokens_output or 0),
                 cost_input=cost_data['cost_input'],
                 cost_output=cost_data['cost_output'],
                 cost_total=cost_data['cost_total'],
@@ -75,7 +75,7 @@ class UsageTrackingService:
             await self._update_usage_summary(
                 user_id=user_id,
                 provider=provider,
-                tokens_used=tokens_input + tokens_output,
+                tokens_used=(tokens_input or 0) + (tokens_output or 0),
                 cost=cost_data['cost_total'],
                 billing_period=billing_period,
                 response_time=response_time,
@@ -92,7 +92,7 @@ class UsageTrackingService:
             return {
                 'usage_logged': True,
                 'cost': cost_data['cost_total'],
-                'tokens_used': tokens_input + tokens_output,
+                'tokens_used': (tokens_input or 0) + (tokens_output or 0),
                 'billing_period': billing_period
             }
             
@@ -304,17 +304,35 @@ class UsageTrackingService:
         ).order_by(UsageAlert.created_at.desc()).limit(10).all()
         
         if not summary:
-            # No usage this period
+            # No usage this period - return complete structure with zeros
+            provider_breakdown = {}
+            usage_percentages = {}
+            
+            # Initialize provider breakdown with zeros
+            for provider in APIProvider:
+                provider_name = provider.value
+                provider_breakdown[provider_name] = {
+                    'calls': 0,
+                    'tokens': 0,
+                    'cost': 0.0
+                }
+                usage_percentages[f"{provider_name}_calls"] = 0
+            
+            usage_percentages['cost'] = 0
+            
             return {
                 'billing_period': billing_period,
                 'usage_status': 'active',
                 'total_calls': 0,
                 'total_tokens': 0,
                 'total_cost': 0.0,
+                'avg_response_time': 0.0,
+                'error_rate': 0.0,
+                'last_updated': datetime.now().isoformat(),
                 'limits': limits,
-                'provider_breakdown': {},
+                'provider_breakdown': provider_breakdown,
                 'alerts': [],
-                'usage_percentages': {}
+                'usage_percentages': usage_percentages
             }
         
         # Calculate usage percentages
@@ -322,8 +340,8 @@ class UsageTrackingService:
         if limits:
             for provider in APIProvider:
                 provider_name = provider.value
-                current_calls = getattr(summary, f"{provider_name}_calls", 0)
-                call_limit = limits['limits'].get(f"{provider_name}_calls", 0)
+                current_calls = getattr(summary, f"{provider_name}_calls", 0) or 0
+                call_limit = limits['limits'].get(f"{provider_name}_calls", 0) or 0
                 
                 if call_limit > 0:
                     usage_percentages[f"{provider_name}_calls"] = (current_calls / call_limit) * 100
@@ -331,9 +349,10 @@ class UsageTrackingService:
                     usage_percentages[f"{provider_name}_calls"] = 0
             
             # Cost usage percentage
-            cost_limit = limits['limits'].get('monthly_cost', 0)
+            cost_limit = limits['limits'].get('monthly_cost', 0) or 0
+            total_cost = summary.total_cost or 0
             if cost_limit > 0:
-                usage_percentages['cost'] = (summary.total_cost / cost_limit) * 100
+                usage_percentages['cost'] = (total_cost / cost_limit) * 100
             else:
                 usage_percentages['cost'] = 0
         
@@ -342,19 +361,19 @@ class UsageTrackingService:
         for provider in APIProvider:
             provider_name = provider.value
             provider_breakdown[provider_name] = {
-                'calls': getattr(summary, f"{provider_name}_calls", 0),
-                'tokens': getattr(summary, f"{provider_name}_tokens", 0),
-                'cost': getattr(summary, f"{provider_name}_cost", 0.0)
+                'calls': getattr(summary, f"{provider_name}_calls", 0) or 0,
+                'tokens': getattr(summary, f"{provider_name}_tokens", 0) or 0,
+                'cost': getattr(summary, f"{provider_name}_cost", 0.0) or 0.0
             }
         
         return {
             'billing_period': billing_period,
-            'usage_status': summary.usage_status.value,
-            'total_calls': summary.total_calls,
-            'total_tokens': summary.total_tokens,
-            'total_cost': summary.total_cost,
-            'avg_response_time': summary.avg_response_time,
-            'error_rate': summary.error_rate,
+            'usage_status': summary.usage_status.value if hasattr(summary.usage_status, 'value') else str(summary.usage_status),
+            'total_calls': summary.total_calls or 0,
+            'total_tokens': summary.total_tokens or 0,
+            'total_cost': summary.total_cost or 0.0,
+            'avg_response_time': summary.avg_response_time or 0.0,
+            'error_rate': summary.error_rate or 0.0,
             'limits': limits,
             'provider_breakdown': provider_breakdown,
             'alerts': [
@@ -405,9 +424,9 @@ class UsageTrackingService:
             summary = summary_dict.get(period)
             
             if summary:
-                trends['total_calls'].append(summary.total_calls)
-                trends['total_cost'].append(summary.total_cost)
-                trends['total_tokens'].append(summary.total_tokens)
+                trends['total_calls'].append(summary.total_calls or 0)
+                trends['total_cost'].append(summary.total_cost or 0.0)
+                trends['total_tokens'].append(summary.total_tokens or 0)
                 
                 # Provider-specific trends
                 for provider in APIProvider:
@@ -420,13 +439,13 @@ class UsageTrackingService:
                         }
                     
                     trends['provider_trends'][provider_name]['calls'].append(
-                        getattr(summary, f"{provider_name}_calls", 0)
+                        getattr(summary, f"{provider_name}_calls", 0) or 0
                     )
                     trends['provider_trends'][provider_name]['cost'].append(
-                        getattr(summary, f"{provider_name}_cost", 0.0)
+                        getattr(summary, f"{provider_name}_cost", 0.0) or 0.0
                     )
                     trends['provider_trends'][provider_name]['tokens'].append(
-                        getattr(summary, f"{provider_name}_tokens", 0)
+                        getattr(summary, f"{provider_name}_tokens", 0) or 0
                     )
             else:
                 # No data for this period

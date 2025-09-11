@@ -263,7 +263,7 @@ const AnalyticsInsights: React.FC<AnalyticsInsightsProps> = ({ data, onActionCli
   };
 
   return (
-    <Box sx={{ mt: 2, mb: 2.9 }}>
+    <Box sx={{ mt: 1, mb: 1.5 }}>
       <Box sx={{ position: 'relative', overflow: 'hidden' }}>
         <Typography
           variant="h6"
@@ -277,7 +277,7 @@ const AnalyticsInsights: React.FC<AnalyticsInsightsProps> = ({ data, onActionCli
           Today's Analytics Insights
         </Typography>
       </Box>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
         {columns.map((col) => {
           const isHovered = hovered === col.key;
           const visibleItems = isHovered ? col.items : col.items.slice(0, 1);
@@ -291,16 +291,16 @@ const AnalyticsInsights: React.FC<AnalyticsInsightsProps> = ({ data, onActionCli
                   <Badge>{col.items.length}</Badge>
                 </GradientHeader>
 
-                <CardContent sx={{ p: 1.5 }}>
-                  <Stack spacing={1}>
+                <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                  <Stack spacing={0.5}>
                     {visibleItems.map((insight) => (
                       <Box key={insight.id} sx={{
                         background: 'rgba(255,255,255,0.08)',
                         border: '1px solid rgba(255,255,255,0.18)',
                         borderRadius: 1.5,
-                        p: 1
+                        p: 0.8
                       }}>
-                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.25 }}>
+                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.1 }}>
                           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.95)', fontWeight: 700, fontSize: '0.8rem' }}>
                             {insight.title}
                           </Typography>

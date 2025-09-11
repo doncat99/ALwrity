@@ -383,7 +383,7 @@ def should_monitor_endpoint(path: str) -> bool:
     """Check if an endpoint should be monitored."""
     return not any(path.endswith(excluded) for excluded in EXCLUDED_ENDPOINTS)
 
-async def check_usage_limits_middleware(request: Request, user_id: str) -> Optional[JSONResponse]:
+async def check_usage_limits_middleware(request: Request, user_id: str, request_body: str = None) -> Optional[JSONResponse]:
     """Check usage limits before processing request."""
     if not user_id:
         return None
@@ -397,17 +397,17 @@ async def check_usage_limits_middleware(request: Request, user_id: str) -> Optio
         if not api_provider:
             return None
         
-        # Get request body to estimate tokens
-        request_body = None
-        try:
-            if hasattr(request, '_body'):
-                request_body = request._body
-            else:
-                # Try to read body (this might not work in all cases)
-                body = await request.body()
-                request_body = body.decode('utf-8') if body else None
-        except:
-            pass
+        # Use provided request body or read it if not provided
+        if request_body is None:
+            try:
+                if hasattr(request, '_body'):
+                    request_body = request._body
+                else:
+                    # Try to read body (this might not work in all cases)
+                    body = await request.body()
+                    request_body = body.decode('utf-8') if body else None
+            except:
+                pass
         
         # Estimate tokens needed
         tokens_requested = 0
@@ -474,12 +474,7 @@ async def monitoring_middleware(request: Request, call_next):
     except:
         pass
     
-    # Check usage limits before processing
-    limit_response = await check_usage_limits_middleware(request, user_id)
-    if limit_response:
-        return limit_response
-    
-    # Capture request body for usage tracking
+    # Capture request body for usage tracking (read once)
     request_body = None
     try:
         if hasattr(request, '_body'):
@@ -489,6 +484,11 @@ async def monitoring_middleware(request: Request, call_next):
             request_body = body.decode('utf-8') if body else None
     except:
         pass
+    
+    # Check usage limits before processing
+    limit_response = await check_usage_limits_middleware(request, user_id, request_body)
+    if limit_response:
+        return limit_response
     
     # Get database session
     db = next(get_db())

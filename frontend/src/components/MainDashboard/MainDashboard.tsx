@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Container,
@@ -24,6 +24,8 @@ import EmptyState from '../shared/EmptyState';
 import ContentLifecyclePillars from './ContentLifecyclePillars';
 import AnalyticsInsights from './components/AnalyticsInsights';
 import ToolsModal from './components/ToolsModal';
+import EnhancedBillingDashboard from '../billing/EnhancedBillingDashboard';
+import CompactSidebar from './components/CompactSidebar';
 
 // Shared types and utilities
 import { Tool } from '../shared/types';
@@ -40,6 +42,9 @@ import { toolCategories } from '../../data/toolCategories';
 const MainDashboard: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  
+  // Sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   
   // Zustand store hooks
   const {
@@ -272,7 +277,13 @@ const MainDashboard: React.FC = () => {
         },
       }}
     >
-      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+      <Container 
+        maxWidth="xl" 
+        sx={{ 
+          position: 'relative', 
+          zIndex: 1,
+        }}
+      >
         <AnimatePresence>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -302,22 +313,39 @@ const MainDashboard: React.FC = () => {
             {/* Content Lifecycle Pillars - First Panel */}
             <ContentLifecyclePillars />
 
-            {/* Search and Filter */}
-            <SearchFilter
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              onClearSearch={() => setSearchQuery('')}
-              selectedCategory={selectedCategory}
-              onCategoryChange={setSelectedCategory}
-              selectedSubCategory={selectedSubCategory}
-              onSubCategoryChange={setSelectedSubCategory}
-              toolCategories={toolCategories}
-              theme={theme}
-              onCategoryClick={handleCategoryClick}
-            />
+            {/* Side-by-side layout for Areas 2 and 3 */}
+            <Box sx={{ display: 'flex', gap: 3, mt: 3 }}>
+              {/* Area 2: Search Tools Sidebar */}
+              <Box sx={{ 
+                width: sidebarCollapsed ? 60 : 280,
+                transition: 'width 0.3s ease-in-out',
+                flexShrink: 0
+              }}>
+                <CompactSidebar
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  onClearSearch={() => setSearchQuery('')}
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={setSelectedCategory}
+                  selectedSubCategory={selectedSubCategory}
+                  onSubCategoryChange={setSelectedSubCategory}
+                  toolCategories={toolCategories}
+                  onCategoryClick={handleCategoryClick}
+                  collapsed={sidebarCollapsed}
+                  onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  theme={theme}
+                />
+              </Box>
 
-            {/* Analytics Insights - Good/Bad/Ugly */}
-            <AnalyticsInsights />
+              {/* Area 3: Analytics and Billing */}
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                {/* Analytics Insights - Good/Bad/Ugly */}
+                <AnalyticsInsights />
+
+                {/* Billing & Usage Dashboard */}
+                <EnhancedBillingDashboard />
+              </Box>
+            </Box>
 
             {/* Tools Modal */}
             <ToolsModal

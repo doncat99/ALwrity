@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from loguru import logger
+from functools import lru_cache
 
 from services.database import get_db
 from services.usage_tracking_service import UsageTrackingService
@@ -18,6 +19,12 @@ from models.subscription_models import (
 )
 
 router = APIRouter(prefix="/api/subscription", tags=["subscription"])
+
+# Simple in-process cache for dashboard responses to smooth bursts
+# Cache key: (user_id). TTL-like behavior implemented via timestamp check
+_dashboard_cache: Dict[str, Dict[str, Any]] = {}
+_dashboard_cache_ts: Dict[str, float] = {}
+_DASHBOARD_CACHE_TTL_SEC = 2.0
 
 @router.get("/usage/{user_id}")
 async def get_user_usage(
@@ -336,6 +343,12 @@ async def get_dashboard_data(
     """Get comprehensive dashboard data for usage monitoring."""
     
     try:
+        # Serve from short TTL cache to avoid hammering DB on bursts
+        import time
+        now = time.time()
+        if user_id in _dashboard_cache and (now - _dashboard_cache_ts.get(user_id, 0)) < _DASHBOARD_CACHE_TTL_SEC:
+            return _dashboard_cache[user_id]
+
         usage_service = UsageTrackingService(db)
         pricing_service = PricingService(db)
         
@@ -372,7 +385,7 @@ async def get_dashboard_data(
         current_day = datetime.now().day
         projected_cost = (current_cost / current_day) * days_in_period if current_day > 0 else 0
         
-        return {
+        response_payload = {
             "success": True,
             "data": {
                 "current_usage": current_usage,
@@ -392,6 +405,9 @@ async def get_dashboard_data(
                 }
             }
         }
+        _dashboard_cache[user_id] = response_payload
+        _dashboard_cache_ts[user_id] = now
+        return response_payload
     
     except Exception as e:
         logger.error(f"Error getting dashboard data: {e}")

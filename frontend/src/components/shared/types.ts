@@ -74,6 +74,7 @@ export interface SearchFilterProps {
   toolCategories: ToolCategories;
   theme: any;
   onCategoryClick?: (category: string | null, categoryData?: any) => void;
+  compact?: boolean;
 }
 
 export interface DashboardHeaderProps {

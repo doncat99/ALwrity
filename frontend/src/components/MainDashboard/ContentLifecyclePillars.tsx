@@ -32,6 +32,7 @@ import AnalyzePillarChips from './components/AnalyzePillarChips';
 import EngagePillarChips from './components/EngagePillarChips';
 import EnhancedTodayChip from './components/EnhancedTodayChip';
 import OnboardingModal from './components/OnboardingModal';
+import WorkflowHeroSection from './components/WorkflowHeroSection';
 import { pillarData } from './components/PillarData';
 import { useWorkflowStore } from '../../stores/workflowStore';
 
@@ -487,6 +488,14 @@ const ContentLifecyclePillars: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
 
+  // Workflow store hooks
+  const {
+    currentWorkflow,
+    workflowProgress,
+    isLoading: workflowLoading,
+    startWorkflow,
+  } = useWorkflowStore();
+
   const handleOnboardingClick = () => {
     setOnboardingModalOpen(true);
   };
@@ -494,6 +503,20 @@ const ContentLifecyclePillars: React.FC = () => {
   const handleCloseModal = () => {
     setOnboardingModalOpen(false);
   };
+
+  const handleStartWorkflow = async () => {
+    try {
+      if (currentWorkflow) {
+        await startWorkflow(currentWorkflow.id);
+      }
+    } catch (error) {
+      console.error('Failed to start workflow:', error);
+    }
+  };
+
+  // Check if workflow is active (in progress or completed)
+  const isWorkflowActive = currentWorkflow?.workflowStatus === 'in_progress' || 
+                          currentWorkflow?.workflowStatus === 'completed';
 
   return (
     <>
@@ -503,7 +526,8 @@ const ContentLifecyclePillars: React.FC = () => {
           background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
           backdropFilter: 'blur(8px)',
           borderRadius: 2,
-          mb: 4
+          mb: 4,
+          position: 'relative', // For hero section positioning
         }}
       >
         <Container maxWidth="xl">
@@ -530,6 +554,13 @@ const ContentLifecyclePillars: React.FC = () => {
             ))}
           </Box>
         </Container>
+
+        {/* Hero Section Overlay */}
+        <WorkflowHeroSection
+          onStartWorkflow={handleStartWorkflow}
+          isWorkflowActive={isWorkflowActive}
+          isLoading={workflowLoading}
+        />
       </Box>
 
       {/* Onboarding Modal */}

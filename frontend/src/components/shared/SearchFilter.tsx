@@ -25,7 +25,8 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
   onSubCategoryChange,
   toolCategories,
   theme,
-  onCategoryClick
+  onCategoryClick,
+  compact = false
 }) => {
   // Helper function to get tool count from a category
   const getToolCount = (category: any): number => {
@@ -44,6 +45,87 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     'Social Media': 'Platform writers for Facebook, LinkedIn, Twitter, Instagram, YouTube.',
     'Dashboards': 'Analytics dashboards: SEO, Social, Website, Strategy, and Calendar.'
   };
+  if (compact) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {/* Compact Search Input */}
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Search tools..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchQuery && (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  onClick={onClearSearch}
+                  sx={{ color: 'rgba(255,255,255,0.7)' }}
+                >
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ),
+            sx: {
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              borderRadius: 2,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'rgba(255,255,255,0.1)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255,255,255,0.2)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'rgba(255,255,255,0.3)',
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: '#ffffff',
+                '&::placeholder': {
+                  color: 'rgba(255,255,255,0.5)',
+                  opacity: 1,
+                },
+              },
+            },
+          }}
+        />
+
+        {/* Compact Category Filters */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {Object.entries(toolCategories).map(([categoryId, category]) => (
+            <CategoryChip
+              key={categoryId}
+              label={`${categoryId} (${getToolCount(category)})`}
+              onClick={() => onCategoryClick?.(categoryId, category)}
+              sx={{
+                fontSize: '0.75rem',
+                height: 24,
+                backgroundColor: selectedCategory === categoryId 
+                  ? 'rgba(255,255,255,0.2)' 
+                  : 'rgba(255,255,255,0.05)',
+                color: '#ffffff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                '& .MuiChip-label': {
+                  px: 1,
+                },
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                }
+              }}
+            />
+          ))}
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <SearchContainer>
       {/* Single Row Layout: Search Input + Category Filters */}

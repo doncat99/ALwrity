@@ -25,28 +25,115 @@ class PricingService:
     def initialize_default_pricing(self):
         """Initialize default pricing for all API providers."""
         
-        # Gemini API Pricing (as of January 2025)
+        # Gemini API Pricing (Updated as of September 2025 - Official Google AI Pricing)
+        # Source: https://ai.google.dev/gemini-api/docs/pricing
         gemini_pricing = [
-            {
-                "provider": APIProvider.GEMINI,
-                "model_name": "gemini-2.0-flash-lite",
-                "cost_per_input_token": 0.000000375,  # $0.075 per 1M input tokens (up to 128k context)
-                "cost_per_output_token": 0.0000003,   # $0.30 per 1M output tokens
-                "description": "Gemini 2.0 Flash Lite - Fast and efficient model"
-            },
-            {
-                "provider": APIProvider.GEMINI,
-                "model_name": "gemini-2.5-flash",
-                "cost_per_input_token": 0.000000625,  # $0.125 per 1M input tokens (up to 1M context)
-                "cost_per_output_token": 0.000000375,  # $0.375 per 1M output tokens
-                "description": "Gemini 2.5 Flash - Balanced performance and cost"
-            },
+            # Gemini 2.5 Pro - Standard Tier
             {
                 "provider": APIProvider.GEMINI,
                 "model_name": "gemini-2.5-pro",
-                "cost_per_input_token": 0.00000125,   # $1.25 per 1M input tokens (up to 200k context)
-                "cost_per_output_token": 0.00001,     # $10.00 per 1M output tokens
-                "description": "Gemini 2.5 Pro - Most capable model"
+                "cost_per_input_token": 0.00000125,   # $1.25 per 1M input tokens (prompts <= 200k tokens)
+                "cost_per_output_token": 0.00001,     # $10.00 per 1M output tokens (prompts <= 200k tokens)
+                "description": "Gemini 2.5 Pro - State-of-the-art multipurpose model for coding and complex reasoning"
+            },
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-2.5-pro-large",
+                "cost_per_input_token": 0.0000025,    # $2.50 per 1M input tokens (prompts > 200k tokens)
+                "cost_per_output_token": 0.000015,    # $15.00 per 1M output tokens (prompts > 200k tokens)
+                "description": "Gemini 2.5 Pro - Large context model for prompts > 200k tokens"
+            },
+            # Gemini 2.5 Flash - Standard Tier
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-2.5-flash",
+                "cost_per_input_token": 0.0000003,    # $0.30 per 1M input tokens (text/image/video)
+                "cost_per_output_token": 0.0000025,   # $2.50 per 1M output tokens
+                "description": "Gemini 2.5 Flash - Hybrid reasoning model with 1M token context window"
+            },
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-2.5-flash-audio",
+                "cost_per_input_token": 0.000001,     # $1.00 per 1M input tokens (audio)
+                "cost_per_output_token": 0.0000025,   # $2.50 per 1M output tokens
+                "description": "Gemini 2.5 Flash - Audio input model"
+            },
+            # Gemini 2.5 Flash-Lite - Standard Tier
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-2.5-flash-lite",
+                "cost_per_input_token": 0.0000001,    # $0.10 per 1M input tokens (text/image/video)
+                "cost_per_output_token": 0.0000004,   # $0.40 per 1M output tokens
+                "description": "Gemini 2.5 Flash-Lite - Smallest and most cost-effective model for at-scale usage"
+            },
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-2.5-flash-lite-audio",
+                "cost_per_input_token": 0.0000003,    # $0.30 per 1M input tokens (audio)
+                "cost_per_output_token": 0.0000004,   # $0.40 per 1M output tokens
+                "description": "Gemini 2.5 Flash-Lite - Audio input model"
+            },
+            # Gemini 1.5 Flash - Standard Tier
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-1.5-flash",
+                "cost_per_input_token": 0.000000075,  # $0.075 per 1M input tokens (prompts <= 128k tokens)
+                "cost_per_output_token": 0.0000003,   # $0.30 per 1M output tokens (prompts <= 128k tokens)
+                "description": "Gemini 1.5 Flash - Fast multimodal model with 1M token context window"
+            },
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-1.5-flash-large",
+                "cost_per_input_token": 0.00000015,   # $0.15 per 1M input tokens (prompts > 128k tokens)
+                "cost_per_output_token": 0.0000006,   # $0.60 per 1M output tokens (prompts > 128k tokens)
+                "description": "Gemini 1.5 Flash - Large context model for prompts > 128k tokens"
+            },
+            # Gemini 1.5 Flash-8B - Standard Tier
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-1.5-flash-8b",
+                "cost_per_input_token": 0.0000000375, # $0.0375 per 1M input tokens (prompts <= 128k tokens)
+                "cost_per_output_token": 0.00000015,  # $0.15 per 1M output tokens (prompts <= 128k tokens)
+                "description": "Gemini 1.5 Flash-8B - Smallest model for lower intelligence use cases"
+            },
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-1.5-flash-8b-large",
+                "cost_per_input_token": 0.000000075,  # $0.075 per 1M input tokens (prompts > 128k tokens)
+                "cost_per_output_token": 0.0000003,   # $0.30 per 1M output tokens (prompts > 128k tokens)
+                "description": "Gemini 1.5 Flash-8B - Large context model for prompts > 128k tokens"
+            },
+            # Gemini 1.5 Pro - Standard Tier
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-1.5-pro",
+                "cost_per_input_token": 0.00000125,   # $1.25 per 1M input tokens (prompts <= 128k tokens)
+                "cost_per_output_token": 0.000005,    # $5.00 per 1M output tokens (prompts <= 128k tokens)
+                "description": "Gemini 1.5 Pro - Highest intelligence model with 2M token context window"
+            },
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-1.5-pro-large",
+                "cost_per_input_token": 0.0000025,    # $2.50 per 1M input tokens (prompts > 128k tokens)
+                "cost_per_output_token": 0.00001,     # $10.00 per 1M output tokens (prompts > 128k tokens)
+                "description": "Gemini 1.5 Pro - Large context model for prompts > 128k tokens"
+            },
+            # Gemini Embedding - Standard Tier
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-embedding",
+                "cost_per_input_token": 0.00000015,   # $0.15 per 1M input tokens
+                "cost_per_output_token": 0.0,         # No output tokens for embeddings
+                "description": "Gemini Embedding - Newest embeddings model with higher rate limits"
+            },
+            # Grounding with Google Search - Standard Tier
+            {
+                "provider": APIProvider.GEMINI,
+                "model_name": "gemini-grounding-search",
+                "cost_per_request": 0.035,            # $35 per 1,000 requests (after free tier)
+                "cost_per_input_token": 0.0,          # No additional token cost for grounding
+                "cost_per_output_token": 0.0,         # No additional token cost for grounding
+                "description": "Grounding with Google Search - 1,500 RPD free, then $35/1K requests"
             }
         ]
         

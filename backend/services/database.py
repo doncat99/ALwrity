@@ -23,12 +23,23 @@ from models.subscription_models import Base as SubscriptionBase
 # Database configuration
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./alwrity.db')
 
-# Create engine
+# Create engine with safer pooling defaults and SQLite-friendly settings
+engine_kwargs = {
+    "echo": False,                 # Set to True for SQL debugging
+    "pool_pre_ping": True,        # Detect stale connections
+    "pool_recycle": 300,          # Recycle connections to avoid timeouts
+    "pool_size": int(os.getenv("DB_POOL_SIZE", "20")),
+    "max_overflow": int(os.getenv("DB_MAX_OVERFLOW", "40")),
+    "pool_timeout": int(os.getenv("DB_POOL_TIMEOUT", "30")),
+}
+
+# SQLite needs special handling for multithreaded FastAPI
+if DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
 engine = create_engine(
     DATABASE_URL,
-    echo=False,  # Set to True for SQL debugging
-    pool_pre_ping=True,
-    pool_recycle=300,
+    **engine_kwargs,
 )
 
 # Create session factory

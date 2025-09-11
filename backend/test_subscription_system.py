@@ -166,7 +166,8 @@ def test_database_tables():
                 WHERE type='table' AND (
                     name LIKE '%subscription%' OR 
                     name LIKE '%usage%' OR 
-                    name LIKE '%pricing%'
+                    name LIKE '%pricing%' OR
+                    name LIKE '%billing%'
                 )
                 ORDER BY name
             """)
