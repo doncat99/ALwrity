@@ -10,6 +10,9 @@ import SEOMiniPanel from './SEOMiniPanel';
 import ResearchResults from './ResearchResults';
 import KeywordInputForm from './KeywordInputForm';
 import ResearchAction from './ResearchAction';
+import { CustomOutlineForm } from './CustomOutlineForm';
+import { ResearchDataActions } from './ResearchDataActions';
+import { EnhancedOutlineActions } from './EnhancedOutlineActions';
 
 const useCopilotActionTyped = useCopilotAction as any;
 
@@ -141,9 +144,22 @@ export const BlogWriter: React.FC = () => {
       } catch (error) {
         console.error('Outline generation failed:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Provide more specific error messages based on the error type
+        let userMessage = '❌ Outline generation failed. ';
+        if (errorMessage.includes('503') || errorMessage.includes('overloaded')) {
+          userMessage += 'The AI service is temporarily overloaded. Please try again in a few minutes.';
+        } else if (errorMessage.includes('timeout')) {
+          userMessage += 'The request timed out. Please try again.';
+        } else if (errorMessage.includes('Invalid outline structure')) {
+          userMessage += 'The AI generated an invalid response. Please try again with different research data.';
+        } else {
+          userMessage += `${errorMessage}. Please try again or contact support if the problem persists.`;
+        }
+        
         return { 
           success: false, 
-          message: `❌ Outline generation failed: ${errorMessage}. The AI system encountered an issue while creating your outline. Please try again or contact support if the problem persists.` 
+          message: userMessage
         };
       }
       return { 
@@ -411,6 +427,9 @@ export const BlogWriter: React.FC = () => {
     }
   });
 
+
+
+
   // Publish (convert markdown -> HTML rudimentary; TODO: replace with proper converter like marked)
   useCopilotActionTyped({
     name: 'publishToPlatform',
@@ -439,17 +458,36 @@ export const BlogWriter: React.FC = () => {
 
   const suggestions = useMemo(() => {
     const items = [] as { title: string; message: string }[];
-    if (!research) items.push({ title: '🔎 Start research', message: "I want to research a topic for my blog" });
-    if (research && outline.length === 0) items.push({ title: '🧩 Create Outline', message: 'Let\'s proceed to create an outline based on the research results' });
-    if (outline.length > 0) {
+    
+    if (!research) {
+      items.push({ title: '🔎 Start research', message: "I want to research a topic for my blog" });
+    } else if (research && outline.length === 0) {
+      // Research completed, guide user to outline creation
+      items.push({ 
+        title: '🧩 Create Outline', 
+        message: 'Let\'s proceed to create an outline based on the research results'
+      });
+      items.push({ 
+        title: '💬 Chat with Research Data', 
+        message: 'I want to explore the research data and ask questions about the findings'
+      });
+      items.push({ 
+        title: '🎨 Create Custom Outline', 
+        message: 'I want to create an outline with my own specific instructions and requirements'
+      });
+    } else if (outline.length > 0) {
+      // Outline created, focus on content generation
       items.push({ title: '📝 Generate all sections', message: 'Generate all sections of my blog post' });
       outline.forEach(s => items.push({ title: `✍️ Generate ${s.heading}`, message: `Generate the section: ${s.heading}` }));
       items.push({ title: '🔧 Refine outline', message: 'Help me refine the outline structure' });
+      items.push({ title: '✨ Enhance outline', message: 'Optimize the entire outline for better flow and engagement' });
+      items.push({ title: '⚖️ Rebalance word counts', message: 'Rebalance word count distribution across sections' });
       items.push({ title: '📈 Run SEO analysis', message: 'Analyze SEO for my blog post' });
       items.push({ title: '🧾 Generate SEO metadata', message: 'Generate SEO metadata and title' });
       items.push({ title: '🧪 Hallucination check', message: 'Check for any false claims in my content' });
       items.push({ title: '🚀 Publish to WordPress', message: 'Publish my blog to WordPress' });
     }
+    
     return items;
   }, [research, outline]);
 
@@ -457,7 +495,17 @@ export const BlogWriter: React.FC = () => {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Extracted Components */}
       <KeywordInputForm onResearchComplete={handleResearchComplete} />
+      <CustomOutlineForm onOutlineCreated={setOutline} />
       <ResearchAction onResearchComplete={handleResearchComplete} />
+      <ResearchDataActions 
+        research={research} 
+        onOutlineCreated={setOutline} 
+        onTitleOptionsSet={setTitleOptions} 
+      />
+      <EnhancedOutlineActions 
+        outline={outline} 
+        onOutlineUpdated={setOutline} 
+      />
       
       <div style={{ padding: 16, borderBottom: '1px solid #eee' }}>
         <h2 style={{ margin: 0 }}>AI Blog Writer</h2>
@@ -551,25 +599,40 @@ Available tools:
 - getResearchKeywords(prompt?: string) - Get keywords from user for research
 - performResearch(formData: string) - Perform research with collected keywords (formData is JSON string with keywords and blogLength)
 - researchTopic(keywords: string, industry?: string, target_audience?: string)
+- chatWithResearchData(question: string) - Chat with research data to explore insights and get recommendations
 - generateOutline()
+- createOutlineWithCustomInputs(customInstructions: string) - Create outline with user's custom instructions
 - generateSection(sectionId: string)
 - generateAllSections()
 - refineOutline(operation: add|remove|move|merge|rename, sectionId?: string, payload?: object)
+- enhanceSection(sectionId: string, focus?: string) - Enhance a specific section with AI improvements
+- optimizeOutline(focus?: string) - Optimize entire outline for better flow, SEO, and engagement
+- rebalanceOutline(targetWords?: number) - Rebalance word count distribution across sections
 - runSEOAnalyze(keywords?: string)
 - generateSEOMetadata(title?: string)
 - runHallucinationCheck()
 - publishToPlatform(platform: 'wix'|'wordpress', schedule_time?: string)
 
-       CRITICAL BEHAVIOR:
+       CRITICAL BEHAVIOR & USER GUIDANCE:
        - When user wants to research ANY topic, IMMEDIATELY call getResearchKeywords() to get their input
        - When user asks to research something, call getResearchKeywords() first to collect their keywords
        - After getResearchKeywords() completes, IMMEDIATELY call performResearch() with the collected data
-       - When user asks for outline, call generateOutline()
+       
+       USER GUIDANCE STRATEGY:
+       - After research completion, ALWAYS guide user toward outline creation as the next step
+       - If user wants to explore research data, use chatWithResearchData() but then guide them to outline creation
+       - If user has specific outline requirements, use createOutlineWithCustomInputs() with their instructions
+       - When user asks for outline, call generateOutline() or createOutlineWithCustomInputs() based on their needs
        - When user asks to generate content, call generateSection or generateAllSections
+       
+       ENGAGEMENT TACTICS:
        - DO NOT ask for clarification - take action immediately with the information provided
        - Always call the appropriate tool instead of just talking about what you could do
        - Be aware of the current state and reference research results when relevant
        - Guide users through the process: Research → Outline → Content → SEO → Publish
+       - Use encouraging language and highlight progress made
+       - If user seems lost, remind them of the current stage and suggest the next step
+       - When research is complete, emphasize the value of the data found and guide to outline creation
 `;
           return [toolGuide, additional].filter(Boolean).join('\n\n');
         }}

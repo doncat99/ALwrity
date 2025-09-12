@@ -1,4 +1,4 @@
-import { apiClient } from "../api/client";
+import { apiClient, aiApiClient, longRunningApiClient } from "../api/client";
 
 export interface PersonaInfo {
   persona_id?: string;
@@ -33,6 +33,7 @@ export interface BlogResearchResponse {
   suggested_angles: string[];
   search_widget?: string;
   search_queries?: string[];
+  error_message?: string;
 }
 
 export interface BlogOutlineSection {
@@ -86,11 +87,13 @@ export interface BlogPublishResponse {
 
 export const blogWriterApi = {
   async research(payload: BlogResearchRequest): Promise<BlogResearchResponse> {
+    // Use the direct research endpoint for simplicity
     const { data } = await apiClient.post("/api/blog/research", payload);
     return data;
   },
 
-  async generateOutline(payload: { research: BlogResearchResponse; persona?: PersonaInfo; word_count?: number }): Promise<BlogOutlineResponse> {
+  async generateOutline(payload: { research: BlogResearchResponse; persona?: PersonaInfo; word_count?: number; custom_instructions?: string }): Promise<BlogOutlineResponse> {
+    // Use the direct outline generation endpoint
     const { data } = await apiClient.post("/api/blog/outline/generate", payload);
     return data;
   },
@@ -117,6 +120,28 @@ export const blogWriterApi = {
 
   async publish(payload: { platform: 'wix' | 'wordpress'; html: string; metadata: BlogSEOMetadataResponse; schedule_time?: string }): Promise<BlogPublishResponse> {
     const { data } = await apiClient.post("/api/blog/publish", payload);
+    return data;
+  },
+
+  // Enhanced Outline Methods
+  async enhanceSection(section: BlogOutlineSection, focus: string = 'general improvement'): Promise<BlogOutlineSection> {
+    const { data } = await apiClient.post("/api/blog/outline/enhance-section", section, {
+      params: { focus }
+    });
+    return data;
+  },
+
+  async optimizeOutline(payload: { outline: BlogOutlineSection[] }, focus: string = 'general optimization'): Promise<{ outline: BlogOutlineSection[] }> {
+    const { data } = await apiClient.post("/api/blog/outline/optimize", payload, {
+      params: { focus }
+    });
+    return data;
+  },
+
+  async rebalanceOutline(payload: { outline: BlogOutlineSection[] }, targetWords: number = 1500): Promise<{ outline: BlogOutlineSection[] }> {
+    const { data } = await apiClient.post("/api/blog/outline/rebalance", payload, {
+      params: { target_words: targetWords }
+    });
     return data;
   }
 };

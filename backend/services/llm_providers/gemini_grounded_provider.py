@@ -9,6 +9,8 @@ Based on Google AI's official grounding documentation.
 import os
 import json
 import re
+import time
+import asyncio
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from loguru import logger
@@ -104,6 +106,29 @@ class GeminiGroundedProvider:
                     )
             except asyncio.TimeoutError:
                 raise Exception(f"Gemini API request timed out after {self.timeout} seconds")
+            except Exception as api_error:
+                # Handle specific Google API errors with retry logic
+                error_str = str(api_error)
+                if "503" in error_str and "overloaded" in error_str:
+                    # Conservative retry for overloaded service (expensive API calls)
+                    response = await self._retry_with_backoff(
+                        lambda: self._make_api_request(grounded_prompt, config),
+                        max_retries=1,  # Only 1 retry to avoid excessive costs
+                        base_delay=5   # Longer delay
+                    )
+                elif "429" in error_str:
+                    # Conservative retry for rate limits
+                    response = await self._retry_with_backoff(
+                        lambda: self._make_api_request(grounded_prompt, config),
+                        max_retries=1,  # Only 1 retry
+                        base_delay=10   # Much longer delay for rate limits
+                    )
+                elif "401" in error_str or "403" in error_str:
+                    raise Exception("Authentication failed. Please check your API credentials.")
+                elif "400" in error_str:
+                    raise Exception("Invalid request. Please check your input parameters.")
+                else:
+                    raise Exception(f"Google AI service error: {error_str}")
             
             # Process the grounded response
             result = self._process_grounded_response(response, content_type)
@@ -112,8 +137,46 @@ class GeminiGroundedProvider:
             return result
             
         except Exception as e:
-            logger.error(f"❌ Error generating grounded content: {str(e)}")
+            # Log error without causing secondary exceptions
+            try:
+                logger.error(f"❌ Error generating grounded content: {str(e)}")
+            except:
+                # Fallback to print if logging fails
+                print(f"Error generating grounded content: {str(e)}")
             raise
+    
+    async def _make_api_request(self, grounded_prompt: str, config: Any):
+        """Make the actual API request to Gemini."""
+        import concurrent.futures
+        
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            return await asyncio.wait_for(
+                loop.run_in_executor(
+                    executor,
+                    lambda: self.client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=grounded_prompt,
+                        config=config,
+                    )
+                ),
+                timeout=self.timeout
+            )
+    
+    async def _retry_with_backoff(self, func, max_retries: int = 3, base_delay: float = 1.0):
+        """Retry a function with exponential backoff."""
+        for attempt in range(max_retries + 1):
+            try:
+                return await func()
+            except Exception as e:
+                if attempt == max_retries:
+                    # Last attempt failed, raise the error
+                    raise e
+                
+                # Calculate delay with exponential backoff
+                delay = base_delay * (2 ** attempt)
+                logger.warning(f"Attempt {attempt + 1} failed, retrying in {delay} seconds: {str(e)}")
+                await asyncio.sleep(delay)
     
     def _build_grounded_prompt(self, prompt: str, content_type: str) -> str:
         """

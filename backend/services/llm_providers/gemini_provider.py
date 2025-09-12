@@ -389,10 +389,36 @@ def gemini_structured_json_response(prompt, schema, temperature=0.7, top_p=0.9, 
             config=generation_config,
         )
 
-        # According to the documentation, we should use response.parsed for structured output
+        # Check for parsed content first (primary method for structured output)
         if hasattr(response, 'parsed') and response.parsed is not None:
             logger.info("Using response.parsed for structured output")
             return response.parsed
+        
+        # Check for text content as fallback
+        if hasattr(response, 'text') and response.text:
+            logger.info("No parsed content, trying to parse text response")
+            try:
+                import json
+                parsed_text = json.loads(response.text)
+                logger.info("Successfully parsed text as JSON")
+                return parsed_text
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse text as JSON: {e}")
+        
+        # Check candidates for content (fallback for edge cases)
+        if hasattr(response, 'candidates') and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, 'content') and candidate.content:
+                if hasattr(candidate.content, 'parts') and candidate.content.parts:
+                    for part in candidate.content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            try:
+                                import json
+                                parsed_text = json.loads(part.text)
+                                logger.info("Successfully parsed candidate text as JSON")
+                                return parsed_text
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Failed to parse candidate text as JSON: {e}")
         
         logger.error("No valid structured response content found")
         return {"error": "No valid structured response content found"}

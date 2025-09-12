@@ -23,7 +23,7 @@ export const ResearchAction: React.FC<ResearchActionProps> = ({ onResearchComple
         // If keywords is a topic description, extract keywords from it
         const keywordList = keywords.includes(',') 
           ? keywords.split(',').map(k => k.trim())
-          : keywords.split(' ').filter(k => k.length > 2).slice(0, 5); // Extract up to 5 meaningful words
+          : keywords.split(' ').filter(k => k.length > 1).slice(0, 5); // Extract up to 5 meaningful words (including 2-char words like "AI")
         
         const payload: BlogResearchRequest = { 
           keywords: keywordList, 
@@ -33,6 +33,15 @@ export const ResearchAction: React.FC<ResearchActionProps> = ({ onResearchComple
         };
         
         const res = await blogWriterApi.research(payload);
+        
+        // Check if research failed gracefully
+        if (!res.success) {
+          return {
+            success: false,
+            message: `❌ Research failed: ${res.error_message || 'Unknown error occurred'}. Please try again with different keywords or contact support if the problem persists.`,
+            error_details: res.error_message
+          };
+        }
         
         // Notify parent component
         onResearchComplete?.(res);
@@ -63,7 +72,7 @@ export const ResearchAction: React.FC<ResearchActionProps> = ({ onResearchComple
       }
     },
     render: ({ status }: any) => {
-      if (status === 'inProgress') {
+      if (status === 'inProgress' || status === 'executing') {
         return (
           <div style={{ 
             padding: '16px', 
@@ -84,10 +93,12 @@ export const ResearchAction: React.FC<ResearchActionProps> = ({ onResearchComple
               <h4 style={{ margin: 0, color: '#1976d2' }}>🔍 Researching Your Topic</h4>
             </div>
             <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.5' }}>
+              <p style={{ margin: '0 0 8px 0' }}>• Starting research operation...</p>
               <p style={{ margin: '0 0 8px 0' }}>• Connecting to Google Search grounding...</p>
               <p style={{ margin: '0 0 8px 0' }}>• Analyzing keywords and search intent...</p>
               <p style={{ margin: '0 0 8px 0' }}>• Gathering relevant sources and statistics...</p>
-              <p style={{ margin: '0' }}>• Generating content angles and search queries...</p>
+              <p style={{ margin: '0 0 8px 0' }}>• Generating content angles and search queries...</p>
+              <p style={{ margin: '0', fontStyle: 'italic', color: '#888' }}>⏳ This may take 1-3 minutes. Please wait...</p>
             </div>
             <style>{`
               @keyframes spin {
