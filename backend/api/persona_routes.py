@@ -32,6 +32,7 @@ from api.persona import (
 )
 
 from services.persona_replication_engine import PersonaReplicationEngine
+from api.persona import update_platform_persona
 
 # Create router
 router = APIRouter(prefix="/api/personas", tags=["personas"])
@@ -205,3 +206,15 @@ async def validate_content_endpoint(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+
+@router.put("/platform/{platform}")
+async def update_platform_persona_endpoint(
+    platform: str,
+    update_data: Dict[str, Any],
+    user_id: int = Query(1, description="User ID")
+):
+    """Update platform-specific persona fields for a user.
+
+    Allows editing persona fields in the UI and saving them to the database.
+    """
+    return await update_platform_persona(user_id, platform, update_data)

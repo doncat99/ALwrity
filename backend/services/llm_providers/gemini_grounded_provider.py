@@ -396,9 +396,7 @@ class GeminiGroundedProvider:
                     logger.error(f"First candidate structure: {dir(candidates[0]) if candidates else 'No candidates'}")
                     raise ValueError("No grounding metadata found - grounding is not working properly")
             else:
-                logger.error("❌ CRITICAL: No candidates found in response")
-                logger.error(f"Response structure: {dir(response)}")
-                raise ValueError("No candidates found in response - grounding is not working properly")
+                logger.warning("⚠️ No candidates found in response. Returning content without sources.")
             
             # Add content-specific processing
             if content_type == "linkedin_post":

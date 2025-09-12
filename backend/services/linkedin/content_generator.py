@@ -21,6 +21,7 @@ from services.linkedin.content_generator_prompts import (
     CarouselGenerator,
     VideoScriptGenerator
 )
+from services.persona_analysis_service import PersonaAnalysisService
 
 
 class ContentGenerator:
@@ -340,8 +341,27 @@ class ContentGenerator:
                 logger.error("Gemini Grounded Provider not available - cannot generate content without AI provider")
                 raise Exception("Gemini Grounded Provider not available - cannot generate content without AI provider")
                 
-            # Build the prompt for grounded generation using the new prompt builder
-            prompt = PostPromptBuilder.build_post_prompt(request)
+            # Build the prompt for grounded generation using persona if available (DB vs session override)
+            persona_service = PersonaAnalysisService()
+            persona_data = persona_service.get_persona_for_platform(user_id=getattr(request, 'user_id', 1), platform='linkedin') if hasattr(request, 'user_id') else None
+            if getattr(request, 'persona_override', None):
+                try:
+                    # Merge shallowly: override core and platform adaptation parts
+                    override = request.persona_override
+                    if persona_data:
+                        core = persona_data.get('core_persona', {})
+                        platform_adapt = persona_data.get('platform_adaptation', {})
+                        if 'core_persona' in override:
+                            core.update(override['core_persona'])
+                        if 'platform_adaptation' in override:
+                            platform_adapt.update(override['platform_adaptation'])
+                        persona_data['core_persona'] = core
+                        persona_data['platform_adaptation'] = platform_adapt
+                    else:
+                        persona_data = override
+                except Exception:
+                    pass
+            prompt = PostPromptBuilder.build_post_prompt(request, persona=persona_data)
             
             # Generate grounded content using native Google Search grounding
             result = await self.gemini_grounded.generate_grounded_content(
@@ -395,8 +415,26 @@ class ContentGenerator:
                 logger.error("Gemini Grounded Provider not available - cannot generate content without AI provider")
                 raise Exception("Gemini Grounded Provider not available - cannot generate content without AI provider")
                 
-            # Build the prompt for grounded generation using the new prompt builder
-            prompt = ArticlePromptBuilder.build_article_prompt(request)
+            # Build the prompt for grounded generation using persona if available (DB vs session override)
+            persona_service = PersonaAnalysisService()
+            persona_data = persona_service.get_persona_for_platform(user_id=getattr(request, 'user_id', 1), platform='linkedin') if hasattr(request, 'user_id') else None
+            if getattr(request, 'persona_override', None):
+                try:
+                    override = request.persona_override
+                    if persona_data:
+                        core = persona_data.get('core_persona', {})
+                        platform_adapt = persona_data.get('platform_adaptation', {})
+                        if 'core_persona' in override:
+                            core.update(override['core_persona'])
+                        if 'platform_adaptation' in override:
+                            platform_adapt.update(override['platform_adaptation'])
+                        persona_data['core_persona'] = core
+                        persona_data['platform_adaptation'] = platform_adapt
+                    else:
+                        persona_data = override
+                except Exception:
+                    pass
+            prompt = ArticlePromptBuilder.build_article_prompt(request, persona=persona_data)
             
             # Generate grounded content using native Google Search grounding
             result = await self.gemini_grounded.generate_grounded_content(
