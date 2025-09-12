@@ -389,43 +389,13 @@ def gemini_structured_json_response(prompt, schema, temperature=0.7, top_p=0.9, 
             config=generation_config,
         )
 
-        # Add debugging for response
-        logger.info("Gemini response | type=%s | has_text=%s | has_parsed=%s",
-                     type(response), hasattr(response, 'text'), hasattr(response, 'parsed'))
-        
-        if hasattr(response, 'text'):
-            logger.info(f"Gemini response.text: {repr(response.text)}")
-        if hasattr(response, 'parsed'):
-            logger.info(f"Gemini response.parsed: {repr(response.parsed)}")
-
         # According to the documentation, we should use response.parsed for structured output
         if hasattr(response, 'parsed') and response.parsed is not None:
             logger.info("Using response.parsed for structured output")
             return response.parsed
         
-        # Fallback to text if parsed is not available
-        if hasattr(response, 'text') and response.text:
-            logger.info("Falling back to response.text parsing")
-            text = response.text.strip()
-            
-            # Strip markdown code fences if present
-            if text.startswith('```'):
-                if text.lower().startswith('```json'):
-                    text = text[7:]
-                else:
-                    text = text[3:]
-                if text.endswith('```'):
-                    text = text[:-3]
-                text = text.strip()
-            
-            try:
-                return json.loads(text)
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse response.text as JSON: {e}")
-                return {"error": f"Failed to parse JSON response: {e}", "raw_response": text[:500]}
-        
-        logger.error("No valid response content found")
-        return {"error": "No valid response content found", "raw_response": ""}
+        logger.error("No valid structured response content found")
+        return {"error": "No valid structured response content found"}
 
     except ValueError as e:
         # API key related errors

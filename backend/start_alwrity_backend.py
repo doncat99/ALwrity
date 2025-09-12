@@ -91,6 +91,37 @@ def setup_monitoring_tables():
         print("   Monitoring will be disabled. Continuing startup...")
         return True  # Don't fail startup for monitoring issues
 
+def setup_billing_tables():
+    """Set up billing and subscription database tables."""
+    print("💳 Setting up billing and subscription tables...")
+    
+    try:
+        # Import and run the billing table creation
+        sys.path.append(str(Path(__file__).parent))
+        from scripts.create_billing_tables import create_billing_tables, check_existing_tables
+        from services.database import DATABASE_URL
+        from sqlalchemy import create_engine
+        
+        # Create engine to check existing tables
+        engine = create_engine(DATABASE_URL, echo=False)
+        
+        # Check existing tables
+        if not check_existing_tables(engine):
+            print("✅ Billing tables already exist, skipping creation")
+            return True
+        
+        if create_billing_tables():
+            print("✅ Billing and subscription tables created successfully!")
+            return True
+        else:
+            print("⚠️  Warning: Failed to create billing tables, continuing anyway...")
+            return True  # Don't fail startup for billing issues
+            
+    except Exception as e:
+        print(f"⚠️  Warning: Could not set up billing tables: {e}")
+        print("   Billing system will be disabled. Continuing startup...")
+        return True  # Don't fail startup for billing issues
+
 def setup_monitoring_middleware():
     """Set up monitoring middleware in app.py if not already present."""
     print("🔍 Setting up API monitoring middleware...")
@@ -168,7 +199,8 @@ def check_dependencies():
         'openai',
         'google.generativeai',
         'anthropic',
-        'mistralai'
+        'mistralai',
+        'sqlalchemy'
     ]
     
     missing_packages = []
@@ -212,6 +244,9 @@ def setup_environment():
     setup_monitoring_tables()
     setup_monitoring_middleware()
     
+    # Set up billing and subscription system
+    setup_billing_tables()
+    
     print("✅ Environment setup complete")
 
 def verify_persona_tables():
@@ -236,6 +271,35 @@ def verify_persona_tables():
             return False
     except Exception as e:
         print(f"⚠️  Warning: Could not verify persona tables: {e}")
+        return False
+
+def verify_billing_tables():
+    """Verify that billing and subscription tables exist and are accessible."""
+    print("🔍 Verifying billing and subscription tables...")
+    try:
+        from services.database import get_db_session
+        from models.subscription_models import (
+            SubscriptionPlan, UserSubscription, APIUsageLog, 
+            UsageSummary, APIProviderPricing, UsageAlert
+        )
+        
+        session = get_db_session()
+        if session:
+            # Try to query all billing tables to verify they exist
+            session.query(SubscriptionPlan).first()
+            session.query(UserSubscription).first()
+            session.query(APIUsageLog).first()
+            session.query(UsageSummary).first()
+            session.query(APIProviderPricing).first()
+            session.query(UsageAlert).first()
+            session.close()
+            print("✅ All billing and subscription tables verified successfully")
+            return True
+        else:
+            print("⚠️  Warning: Could not get database session")
+            return False
+    except Exception as e:
+        print(f"⚠️  Warning: Could not verify billing tables: {e}")
         return False
 
 def start_backend(enable_reload=False):
@@ -276,11 +340,16 @@ def start_backend(enable_reload=False):
         # Verify persona tables exist
         verify_persona_tables()
         
+        # Verify billing tables exist
+        verify_billing_tables()
+        
         print("\n🌐 Backend is starting...")
         print("   📖 API Documentation: http://localhost:8000/api/docs")
         print("   🔍 Health Check: http://localhost:8000/health")
         print("   📊 ReDoc: http://localhost:8000/api/redoc")
         print("   📈 API Monitoring: http://localhost:8000/api/content-planning/monitoring/health")
+        print("   💳 Billing Dashboard: http://localhost:8000/api/subscription/plans")
+        print("   📊 Usage Tracking: http://localhost:8000/api/subscription/usage/demo")
         print("\n⏹️  Press Ctrl+C to stop the server")
         print("=" * 60)
         print("\n💡 Usage:")

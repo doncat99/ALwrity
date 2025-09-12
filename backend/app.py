@@ -457,6 +457,13 @@ app.include_router(content_planning_router)
 app.include_router(user_data_router)
 app.include_router(strategy_copilot_router)
 
+# Include AI Blog Writer router
+try:
+    from api.blog_writer.router import router as blog_writer_router
+    app.include_router(blog_writer_router)
+except Exception as e:
+    logger.warning(f"AI Blog Writer router not mounted: {e}")
+
 # Include persona router
 from api.persona_routes import router as persona_router
 app.include_router(persona_router)
