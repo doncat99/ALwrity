@@ -410,8 +410,9 @@ class ContentGenerator:
                 raise Exception("Gemini Grounded Provider not available - cannot generate content without AI provider")
                 
             # Build the prompt for grounded generation using persona if available (DB vs session override)
-            user_id = getattr(request, 'user_id', 1)
-            persona_data = self._get_cached_persona_data(user_id, 'linkedin') if hasattr(request, 'user_id') else None
+            # Beta testing: Force user_id=1 for all requests
+            user_id = 1
+            persona_data = self._get_cached_persona_data(user_id, 'linkedin')
             if getattr(request, 'persona_override', None):
                 try:
                     # Merge shallowly: override core and platform adaptation parts
@@ -484,8 +485,9 @@ class ContentGenerator:
                 raise Exception("Gemini Grounded Provider not available - cannot generate content without AI provider")
                 
             # Build the prompt for grounded generation using persona if available (DB vs session override)
-            user_id = getattr(request, 'user_id', 1)
-            persona_data = self._get_cached_persona_data(user_id, 'linkedin') if hasattr(request, 'user_id') else None
+            # Beta testing: Force user_id=1 for all requests
+            user_id = 1
+            persona_data = self._get_cached_persona_data(user_id, 'linkedin')
             if getattr(request, 'persona_override', None):
                 try:
                     override = request.persona_override

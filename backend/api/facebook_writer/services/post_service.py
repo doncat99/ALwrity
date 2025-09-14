@@ -24,7 +24,8 @@ class FacebookPostService(FacebookWriterBaseService):
             actual_tone = request.custom_tone if request.post_tone.value == "Custom" else request.post_tone.value
             
             # Get persona data for enhanced content generation
-            user_id = getattr(request, 'user_id', 1)
+            # Beta testing: Force user_id=1 for all requests
+            user_id = 1
             persona_data = self._get_persona_data(user_id)
             
             # Build the prompt

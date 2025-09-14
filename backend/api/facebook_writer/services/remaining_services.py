@@ -16,7 +16,8 @@ class FacebookReelService(FacebookWriterBaseService):
             actual_style = request.custom_style if request.reel_style.value == "Custom" else request.reel_style.value
             
             # Get persona data for enhanced content generation
-            user_id = getattr(request, 'user_id', 1)
+            # Beta testing: Force user_id=1 for all requests
+            user_id = 1
             persona_data = self._get_persona_data(user_id)
             
             base_prompt = f"""
