@@ -11,7 +11,12 @@ from datetime import datetime
 from typing import Any, Dict, List
 from loguru import logger
 
-from models.blog_models import BlogResearchRequest, BlogOutlineRequest
+from models.blog_models import (
+    BlogResearchRequest,
+    BlogOutlineRequest,
+    MediumBlogGenerateRequest,
+    MediumBlogGenerateResult,
+)
 from services.blog_writer.blog_service import BlogWriterService
 
 
@@ -106,6 +111,12 @@ class TaskManager:
         asyncio.create_task(self._run_outline_generation_task(task_id, request))
         
         return task_id
+
+    def start_medium_generation_task(self, request: MediumBlogGenerateRequest) -> str:
+        """Start a medium (≤1000 words) full-blog generation task."""
+        task_id = self.create_task("medium_generation")
+        asyncio.create_task(self._run_medium_generation_task(task_id, request))
+        return task_id
     
     async def _run_research_task(self, task_id: str, request: BlogResearchRequest):
         """Background task to run research and update status with progress messages."""
@@ -171,6 +182,45 @@ class TaskManager:
         except Exception as e:
             await self.update_progress(task_id, f"❌ Outline generation failed: {str(e)}")
             # Update status to failed
+            self.task_storage[task_id]["status"] = "failed"
+            self.task_storage[task_id]["error"] = str(e)
+
+    async def _run_medium_generation_task(self, task_id: str, request: MediumBlogGenerateRequest):
+        """Background task to generate a medium blog using a single structured JSON call."""
+        try:
+            self.task_storage[task_id]["status"] = "running"
+            self.task_storage[task_id]["progress_messages"] = []
+
+            await self.update_progress(task_id, "📦 Packaging outline and metadata...")
+
+            # Basic guard: respect global target words
+            total_target = int(request.globalTargetWords or 1000)
+            if total_target > 1000:
+                raise ValueError("Global target words exceed 1000; medium generation not allowed")
+
+            result: MediumBlogGenerateResult = await self.service.generate_medium_blog_with_progress(
+                request,
+                task_id,
+            )
+
+            if not result or not getattr(result, "sections", None):
+                raise ValueError("Empty generation result from model")
+
+            # Check if result came from cache
+            cache_hit = getattr(result, 'cache_hit', False)
+            if cache_hit:
+                await self.update_progress(task_id, "⚡ Found cached content - loading instantly!")
+            else:
+                await self.update_progress(task_id, "🤖 Generated fresh content with AI...")
+                await self.update_progress(task_id, "✨ Post-processing and assembling sections...")
+
+            # Mark completed
+            self.task_storage[task_id]["status"] = "completed"
+            self.task_storage[task_id]["result"] = result.dict()
+            await self.update_progress(task_id, f"✅ Generated {len(result.sections)} sections successfully.")
+
+        except Exception as e:
+            await self.update_progress(task_id, f"❌ Medium generation failed: {str(e)}")
             self.task_storage[task_id]["status"] = "failed"
             self.task_storage[task_id]["error"] = str(e)
 

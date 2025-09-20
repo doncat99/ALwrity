@@ -24,6 +24,9 @@ export const useBlogWriterState = () => {
   // Separate research titles from AI-generated titles
   const [researchTitles, setResearchTitles] = useState<string[]>([]);
   const [aiGeneratedTitles, setAiGeneratedTitles] = useState<string[]>([]);
+  
+  // Outline confirmation state
+  const [outlineConfirmed, setOutlineConfirmed] = useState<boolean>(false);
 
   // Cache recovery - restore most recent research on page load
   useEffect(() => {
@@ -116,6 +119,8 @@ export const useBlogWriterState = () => {
       }
     }
     setOutlineTaskId(null);
+    // Reset outline confirmation when new outline is generated
+    setOutlineConfirmed(false);
   }, [research]);
 
   // Handle outline error
@@ -149,6 +154,36 @@ export const useBlogWriterState = () => {
     localStorage.setItem('blog_selected_title', title);
   }, [titleOptions]);
 
+  // Handle outline confirmation
+  const handleOutlineConfirmed = useCallback(() => {
+    setOutlineConfirmed(true);
+    console.log('Outline confirmed by user');
+  }, []);
+
+  // Handle outline refinement
+  const handleOutlineRefined = useCallback((feedback: string) => {
+    console.log('Outline refinement requested with feedback:', feedback);
+    // The actual refinement will be handled by the copilot action
+  }, []);
+
+  // Handle content updates from WYSIWYG editor
+  const handleContentUpdate = useCallback((updatedSections: any[]) => {
+    console.log('Content updated:', updatedSections);
+    // Update sections state with new content
+    const newSections: { [key: string]: string } = {};
+    updatedSections.forEach(section => {
+      newSections[section.id] = section.content;
+    });
+    setSections(newSections);
+  }, [setSections]);
+
+  // Handle content saving
+  const handleContentSave = useCallback((content: any) => {
+    console.log('Content saved:', content);
+    // Here you could save to backend or local storage
+    // For now, just log the content
+  }, []);
+
   return {
     // State
     research,
@@ -167,6 +202,7 @@ export const useBlogWriterState = () => {
     researchCoverage,
     researchTitles,
     aiGeneratedTitles,
+    outlineConfirmed,
     
     // Setters
     setResearch,
@@ -185,6 +221,7 @@ export const useBlogWriterState = () => {
     setResearchCoverage,
     setResearchTitles,
     setAiGeneratedTitles,
+    setOutlineConfirmed,
     
     // Handlers
     handleResearchComplete,
@@ -193,6 +230,10 @@ export const useBlogWriterState = () => {
     handleSectionGenerated,
     handleContinuityRefresh,
     handleTitleSelect,
-    handleCustomTitle
+    handleCustomTitle,
+    handleOutlineConfirmed,
+    handleOutlineRefined,
+    handleContentUpdate,
+    handleContentSave
   };
 };

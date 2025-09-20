@@ -9,6 +9,7 @@ const useCopilotActionTyped = useCopilotAction as any;
 interface KeywordInputFormProps {
   onKeywordsReceived?: (data: { keywords: string; blogLength: string }) => void;
   onResearchComplete?: (researchData: BlogResearchResponse) => void;
+  onTaskStart?: (taskId: string) => void;
 }
 
 // Separate component to manage form state
@@ -140,7 +141,7 @@ const ResearchForm: React.FC<{
   );
 };
 
-export const KeywordInputForm: React.FC<KeywordInputFormProps> = ({ onKeywordsReceived, onResearchComplete }) => {
+export const KeywordInputForm: React.FC<KeywordInputFormProps> = ({ onKeywordsReceived, onResearchComplete, onTaskStart }) => {
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
 
   // Keyword input action with Human-in-the-Loop
@@ -214,9 +215,13 @@ export const KeywordInputForm: React.FC<KeywordInputFormProps> = ({ onKeywordsRe
           word_count_target: parseInt(blogLength)
         };
         
+        // Store the blog length in localStorage for later use
+        localStorage.setItem('blog_length_target', blogLength);
+        
         // Start async research
         const { task_id } = await blogWriterApi.startResearch(payload);
         setCurrentTaskId(task_id);
+        onTaskStart?.(task_id); // Notify parent component to start polling
         
         return { 
           success: true, 

@@ -215,3 +215,45 @@ class HallucinationCheckResponse(BaseModel):
     claims: List[Dict[str, Any]] = []
     suggestions: List[Dict[str, Any]] = []
 
+
+# -----------------------
+# Medium Blog Generation
+# -----------------------
+
+class MediumSectionOutline(BaseModel):
+    """Lightweight outline payload for medium blog generation."""
+    id: str
+    heading: str
+    keyPoints: List[str] = []
+    subheadings: List[str] = []
+    keywords: List[str] = []
+    targetWords: Optional[int] = None
+    references: List[ResearchSource] = []
+
+
+class MediumBlogGenerateRequest(BaseModel):
+    """Request to generate an entire medium-length blog in one pass."""
+    title: str
+    sections: List[MediumSectionOutline]
+    persona: Optional[PersonaInfo] = None
+    tone: Optional[str] = None
+    audience: Optional[str] = None
+    globalTargetWords: Optional[int] = 1000
+    researchKeywords: Optional[List[str]] = None  # Original research keywords for better caching
+
+
+class MediumGeneratedSection(BaseModel):
+    id: str
+    heading: str
+    content: str
+    wordCount: int
+    sources: Optional[List[ResearchSource]] = None
+
+
+class MediumBlogGenerateResult(BaseModel):
+    success: bool = True
+    title: str
+    sections: List[MediumGeneratedSection]
+    model: Optional[str] = None
+    generation_time_ms: Optional[int] = None
+    safety_flags: Optional[Dict[str, Any]] = None

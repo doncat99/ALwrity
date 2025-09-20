@@ -37,26 +37,37 @@ export function usePolling(
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Debug state changes
+  useEffect(() => {
+    console.log('Polling state changed:', { isPolling, currentStatus, progressCount: progressMessages.length });
+  }, [isPolling, currentStatus, progressMessages.length]);
+
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const attemptsRef = useRef(0);
   const currentTaskIdRef = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
+    console.log('stopPolling called');
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    console.log('Setting isPolling to false');
     setIsPolling(false);
     attemptsRef.current = 0;
     currentTaskIdRef.current = null;
   }, []);
 
   const startPolling = useCallback((taskId: string) => {
+    console.log('startPolling called with taskId:', taskId);
     if (isPolling) {
+      console.log('Already polling, stopping first');
       stopPolling();
     }
 
     currentTaskIdRef.current = taskId;
+    console.log('Setting isPolling to true');
     setIsPolling(true);
     setCurrentStatus('pending');
     setProgressMessages([]);
@@ -118,7 +129,7 @@ export function usePolling(
     // Start polling immediately, then at intervals
     poll();
     intervalRef.current = setInterval(poll, interval);
-  }, [isPolling, interval, maxAttempts, onProgress, onComplete, onError, pollFunction, stopPolling, progressMessages.length]);
+  }, [isPolling, interval, onProgress, onComplete, onError, pollFunction, stopPolling, progressMessages.length]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -145,4 +156,13 @@ export function useResearchPolling(options: UsePollingOptions = {}) {
 
 export function useOutlinePolling(options: UsePollingOptions = {}) {
   return usePolling(blogWriterApi.pollOutlineStatus, options);
+}
+
+export function useMediumGenerationPolling(options: UsePollingOptions = {}) {
+  // Lazy import to avoid circular: poll function from mediumBlogApi
+  const pollFn = (taskId: string) => import('../services/blogWriterApi').then(m => m.mediumBlogApi.pollMediumGeneration(taskId));
+  // Wrap to satisfy type
+  const wrapped = (taskId: string) => pollFn(taskId) as unknown as Promise<TaskStatusResponse>;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return usePolling(wrapped, options);
 }

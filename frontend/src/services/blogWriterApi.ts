@@ -1,4 +1,4 @@
-import { apiClient, aiApiClient, longRunningApiClient, pollingApiClient } from "../api/client";
+import { apiClient, aiApiClient, pollingApiClient } from "../api/client";
 
 export interface PersonaInfo {
   persona_id?: string;
@@ -68,6 +68,7 @@ export interface BlogResearchResponse {
   search_widget?: string;
   search_queries?: string[];
   grounding_metadata?: GroundingMetadata;
+  original_keywords?: string[];  // Original user-provided keywords for caching
   error_message?: string;
 }
 
@@ -279,6 +280,46 @@ export const blogWriterApi = {
     const { data } = await apiClient.post("/api/blog/outline/rebalance", payload, {
       params: { target_words: targetWords }
     });
+    return data;
+  }
+};
+
+// Medium blog generation (≤1000 words)
+export interface MediumSectionOutlinePayload {
+  id: string;
+  heading: string;
+  keyPoints?: string[];
+  subheadings?: string[];
+  keywords?: string[];
+  targetWords?: number;
+  references?: ResearchSource[];
+}
+
+export interface MediumGenerationRequestPayload {
+  title: string;
+  sections: MediumSectionOutlinePayload[];
+  persona?: PersonaInfo;
+  tone?: string;
+  audience?: string;
+  globalTargetWords?: number;
+  researchKeywords?: string[];  // Original research keywords for better caching
+}
+
+export interface MediumGenerationResultPayload {
+  success: boolean;
+  title: string;
+  sections: Array<{ id: string; heading: string; content: string; wordCount: number; sources?: ResearchSource[] }>;
+  model?: string;
+  generation_time_ms?: number;
+}
+
+export const mediumBlogApi = {
+  async startMediumGeneration(payload: MediumGenerationRequestPayload): Promise<{ task_id: string; status: string }> {
+    const { data } = await aiApiClient.post('/api/blog/generate/medium/start', payload);
+    return data;
+  },
+  async pollMediumGeneration(taskId: string): Promise<TaskStatusResponse & { result?: MediumGenerationResultPayload }> {
+    const { data } = await pollingApiClient.get(`/api/blog/generate/medium/status/${taskId}`);
     return data;
   }
 };

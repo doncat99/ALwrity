@@ -407,11 +407,50 @@ def gemini_structured_json_response(prompt, schema, temperature=0.7, top_p=0.9, 
             logger.info("No parsed content, trying to parse text response")
             try:
                 import json
-                parsed_text = json.loads(response.text)
+                import re
+                
+                # Clean the text response to fix common JSON issues
+                cleaned_text = response.text.strip()
+                
+                # Remove any markdown code blocks if present
+                if cleaned_text.startswith('```json'):
+                    cleaned_text = cleaned_text[7:]
+                if cleaned_text.endswith('```'):
+                    cleaned_text = cleaned_text[:-3]
+                cleaned_text = cleaned_text.strip()
+                
+                # Try to find JSON content between curly braces
+                json_match = re.search(r'\{.*\}', cleaned_text, re.DOTALL)
+                if json_match:
+                    cleaned_text = json_match.group(0)
+                
+                parsed_text = json.loads(cleaned_text)
                 logger.info("Successfully parsed text as JSON")
                 return parsed_text
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse text as JSON: {e}")
+                logger.debug(f"Problematic text (first 500 chars): {response.text[:500]}")
+                
+                # Try to extract and fix JSON manually
+                try:
+                    import re
+                    # Look for the main JSON object
+                    json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+                    matches = re.findall(json_pattern, response.text, re.DOTALL)
+                    if matches:
+                        # Try the largest match (likely the main JSON)
+                        largest_match = max(matches, key=len)
+                        # Basic cleanup of common issues
+                        fixed_json = largest_match.replace('\n', ' ').replace('\r', ' ')
+                        # Remove any trailing commas before closing braces
+                        fixed_json = re.sub(r',\s*}', '}', fixed_json)
+                        fixed_json = re.sub(r',\s*]', ']', fixed_json)
+                        
+                        parsed_text = json.loads(fixed_json)
+                        logger.info("Successfully parsed cleaned JSON")
+                        return parsed_text
+                except Exception as fix_error:
+                    logger.error(f"Failed to fix JSON manually: {fix_error}")
         
         # Check candidates for content (fallback for edge cases)
         if hasattr(response, 'candidates') and response.candidates:

@@ -31,6 +31,7 @@ from models.blog_models import (
 from services.blog_writer.blog_service import BlogWriterService
 from .task_manager import task_manager
 from .cache_manager import cache_manager
+from models.blog_models import MediumBlogGenerateRequest
 
 
 router = APIRouter(prefix="/api/blog", tags=["AI Blog Writer"])
@@ -289,4 +290,40 @@ async def get_outline_cache_entries(limit: int = 20):
         return cache_manager.get_recent_outline_cache_entries(limit)
     except Exception as e:
         logger.error(f"Failed to get outline cache entries: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------
+# Medium Blog Generation API
+# ---------------------------
+
+@router.post("/generate/medium/start")
+async def start_medium_generation(request: MediumBlogGenerateRequest):
+    """Start medium-length blog generation (≤1000 words) and return a task id."""
+    try:
+        # Simple server-side guard
+        if (request.globalTargetWords or 1000) > 1000:
+            raise HTTPException(status_code=400, detail="Global target words exceed 1000; use per-section generation")
+
+        task_id = task_manager.start_medium_generation_task(request)
+        return {"task_id": task_id, "status": "started"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to start medium generation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/generate/medium/status/{task_id}")
+async def medium_generation_status(task_id: str):
+    """Poll status for medium blog generation task."""
+    try:
+        status = task_manager.get_task_status(task_id)
+        if status is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return status
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get medium generation status for {task_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
