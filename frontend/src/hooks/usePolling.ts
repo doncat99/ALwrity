@@ -166,3 +166,12 @@ export function useMediumGenerationPolling(options: UsePollingOptions = {}) {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return usePolling(wrapped, options);
 }
+
+export function useRewritePolling(options: UsePollingOptions = {}) {
+  // Lazy import to avoid circular: poll function from blogWriterApi
+  const pollFn = (taskId: string) => import('../services/blogWriterApi').then(m => m.blogWriterApi.pollRewriteStatus(taskId));
+  // Wrap to satisfy type
+  const wrapped = (taskId: string) => pollFn(taskId) as unknown as Promise<TaskStatusResponse>;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return usePolling(wrapped, options);
+}

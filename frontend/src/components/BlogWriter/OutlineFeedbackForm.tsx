@@ -47,6 +47,9 @@ interface OutlineFeedbackFormProps {
   onOutlineRefined: (feedback: string) => void;
   onMediumGenerationStarted?: (taskId: string) => void;
   onMediumGenerationTriggered?: () => void;
+  sections?: Record<string, string>;
+  blogTitle?: string;
+  onFlowAnalysisComplete?: (analysis: any) => void;
 }
 
 
@@ -220,13 +223,16 @@ const FeedbackForm: React.FC<{
   );
 };
 
-export const OutlineFeedbackForm: React.FC<OutlineFeedbackFormProps> = ({
-  outline,
-  research,
-  onOutlineConfirmed,
+export const OutlineFeedbackForm: React.FC<OutlineFeedbackFormProps> = ({ 
+  outline, 
+  research, 
+  onOutlineConfirmed, 
   onOutlineRefined,
   onMediumGenerationStarted,
-  onMediumGenerationTriggered
+  onMediumGenerationTriggered,
+  sections,
+  blogTitle,
+  onFlowAnalysisComplete
 }) => {
 
   // Refine outline action with HITL
@@ -487,6 +493,181 @@ export const OutlineFeedbackForm: React.FC<OutlineFeedbackFormProps> = ({
           success: false, 
           message: `Failed to chat with outline: ${errorMessage}`,
           suggestion: 'Please try again or ask a more specific question about the outline.'
+        };
+      }
+    }
+  });
+
+  // Flow Analysis Actions
+  useCopilotActionTyped({
+    name: 'analyzeContentQuality',
+    description: 'Analyze the flow and quality of blog content to get improvement suggestions (basic analysis)',
+    parameters: [],
+    handler: async () => {
+      try {
+        if (!sections || Object.keys(sections).length === 0) {
+          return {
+            success: false,
+            message: 'No content available for analysis. Please generate content first.',
+            suggestion: 'Generate content for your blog sections before running quality analysis.'
+          };
+        }
+
+        // Prepare sections data for analysis
+        const sectionsData = Object.entries(sections).map(([id, content]: [string, any]) => {
+          const outlineSection = outline.find(s => s.id === id);
+          return {
+            id,
+            heading: outlineSection?.heading || 'Untitled Section',
+            content: typeof content === 'string' ? content : (content?.content || '')
+          };
+        });
+
+        if (sectionsData.length === 0) {
+          return {
+            success: false,
+            message: 'No valid sections found for analysis.',
+            suggestion: 'Ensure your blog has generated content before running analysis.'
+          };
+        }
+
+        // Call basic flow analysis API
+        const result = await blogWriterApi.analyzeFlowBasic({
+          title: blogTitle || 'Untitled Blog',
+          sections: sectionsData
+        });
+
+        if (result.success && result.analysis) {
+          // Notify parent component of analysis completion
+          onFlowAnalysisComplete?.(result.analysis);
+
+          const analysis = result.analysis;
+          const overallFlow = Math.round(analysis.overall_flow_score * 100);
+          const overallConsistency = Math.round(analysis.overall_consistency_score * 100);
+          const overallProgression = Math.round(analysis.overall_progression_score * 100);
+
+          return {
+            success: true,
+            message: `Content quality analysis completed! Your blog has an overall flow score of ${overallFlow}%, consistency of ${overallConsistency}%, and progression of ${overallProgression}%.`,
+            analysis: {
+              overall_scores: {
+                flow: overallFlow,
+                consistency: overallConsistency,
+                progression: overallProgression
+              },
+              sections: analysis.sections.map((s: any) => ({
+                heading: s.heading,
+                flow: Math.round(s.flow_score * 100),
+                consistency: Math.round(s.consistency_score * 100),
+                progression: Math.round(s.progression_score * 100),
+                suggestions: s.suggestions
+              })),
+              overall_suggestions: analysis.overall_suggestions
+            },
+            next_step_suggestion: 'Use "🔍 Deep Content Analysis" for detailed, section-by-section analysis with more specific recommendations.'
+          };
+        } else {
+          return {
+            success: false,
+            message: 'Content quality analysis failed.',
+            error: result.error || 'Unknown error occurred',
+            suggestion: 'Please try again or check if your content is properly generated.'
+          };
+        }
+      } catch (error) {
+        console.error('Content quality analysis error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return {
+          success: false,
+          message: `Failed to analyze content quality: ${errorMessage}`,
+          suggestion: 'Please try again or ensure your content is properly generated.'
+        };
+      }
+    }
+  });
+
+  useCopilotActionTyped({
+    name: 'analyzeContentQualityAdvanced',
+    description: 'Get detailed, section-by-section analysis of content quality and flow (advanced analysis)',
+    parameters: [],
+    handler: async () => {
+      try {
+        if (!sections || Object.keys(sections).length === 0) {
+          return {
+            success: false,
+            message: 'No content available for advanced analysis. Please generate content first.',
+            suggestion: 'Generate content for your blog sections before running advanced analysis.'
+          };
+        }
+
+        // Prepare sections data for analysis
+        const sectionsData = Object.entries(sections).map(([id, content]: [string, any]) => {
+          const outlineSection = outline.find(s => s.id === id);
+          return {
+            id,
+            heading: outlineSection?.heading || 'Untitled Section',
+            content: typeof content === 'string' ? content : (content?.content || '')
+          };
+        });
+
+        if (sectionsData.length === 0) {
+          return {
+            success: false,
+            message: 'No valid sections found for advanced analysis.',
+            suggestion: 'Ensure your blog has generated content before running analysis.'
+          };
+        }
+
+        // Call advanced flow analysis API
+        const result = await blogWriterApi.analyzeFlowAdvanced({
+          title: blogTitle || 'Untitled Blog',
+          sections: sectionsData
+        });
+
+        if (result.success && result.analysis) {
+          // Notify parent component of analysis completion
+          onFlowAnalysisComplete?.(result.analysis);
+
+          const analysis = result.analysis;
+          const overallFlow = Math.round(analysis.overall_flow_score * 100);
+          const overallConsistency = Math.round(analysis.overall_consistency_score * 100);
+          const overallProgression = Math.round(analysis.overall_progression_score * 100);
+
+          return {
+            success: true,
+            message: `Advanced content analysis completed! Your blog has an overall flow score of ${overallFlow}%, consistency of ${overallConsistency}%, and progression of ${overallProgression}%.`,
+            analysis: {
+              overall_scores: {
+                flow: overallFlow,
+                consistency: overallConsistency,
+                progression: overallProgression
+              },
+              sections: analysis.sections.map((s: any) => ({
+                heading: s.heading,
+                flow: Math.round(s.flow_score * 100),
+                consistency: Math.round(s.consistency_score * 100),
+                progression: Math.round(s.progression_score * 100),
+                detailed_analysis: s.detailed_analysis,
+                suggestions: s.suggestions
+              }))
+            },
+            next_step_suggestion: 'Review the detailed analysis and implement the suggested improvements to enhance your content quality.'
+          };
+        } else {
+          return {
+            success: false,
+            message: 'Advanced content analysis failed.',
+            error: result.error || 'Unknown error occurred',
+            suggestion: 'Please try again or check if your content is properly generated.'
+          };
+        }
+      } catch (error) {
+        console.error('Advanced content analysis error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return {
+          success: false,
+          message: `Failed to perform advanced content analysis: ${errorMessage}`,
+          suggestion: 'Please try again or ensure your content is properly generated.'
         };
       }
     }

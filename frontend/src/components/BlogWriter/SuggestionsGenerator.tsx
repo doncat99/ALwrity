@@ -8,6 +8,9 @@ interface SuggestionsGeneratorProps {
   researchPolling?: { isPolling: boolean; currentStatus: string };
   outlinePolling?: { isPolling: boolean; currentStatus: string };
   mediumPolling?: { isPolling: boolean; currentStatus: string };
+  hasContent?: boolean;
+  flowAnalysisCompleted?: boolean;
+  contentConfirmed?: boolean;
 }
 
 export const useSuggestions = (
@@ -16,7 +19,10 @@ export const useSuggestions = (
   outlineConfirmed: boolean = false,
   researchPolling?: { isPolling: boolean; currentStatus: string },
   outlinePolling?: { isPolling: boolean; currentStatus: string },
-  mediumPolling?: { isPolling: boolean; currentStatus: string }
+  mediumPolling?: { isPolling: boolean; currentStatus: string },
+  hasContent: boolean = false,
+  flowAnalysisCompleted: boolean = false,
+  contentConfirmed: boolean = false
 ) => {
   return useMemo(() => {
     const items = [] as { title: string; message: string; priority?: 'high' | 'normal' }[];
@@ -82,7 +88,7 @@ export const useSuggestions = (
       // Outline created but not confirmed - focus on outline review and confirmation
       items.push({ 
         title: 'Next: Confirm & Generate Content', 
-        message: 'I\'m happy with the outline, let\'s generate content for all sections',
+        message: 'I confirm the outline and am ready to generate content',
         priority: 'high'
       });
       items.push({ 
@@ -98,17 +104,49 @@ export const useSuggestions = (
         message: 'Rebalance word count distribution across sections'
       });
     } else if (outline.length > 0 && outlineConfirmed) {
-      // Outline confirmed, focus on content generation
-      items.push({ title: '📝 Generate all sections', message: 'Generate all sections of my blog post' });
-      outline.forEach(s => items.push({ title: `✍️ Generate ${s.heading}`, message: `Generate the section: ${s.heading}` }));
-      items.push({ title: '📈 Run SEO analysis', message: 'Analyze SEO for my blog post' });
-      items.push({ title: '🧾 Generate SEO metadata', message: 'Generate SEO metadata and title' });
-      items.push({ title: '🧪 Hallucination check', message: 'Check for any false claims in my content' });
-      items.push({ title: '🚀 Publish to WordPress', message: 'Publish my blog to WordPress' });
+      // Outline confirmed, focus on content generation and optimization
+      if (hasContent && !contentConfirmed) {
+        // User has content but hasn't confirmed it yet - show content review suggestions
+        items.push({ 
+          title: 'Next: Confirm Blog Content', 
+          message: 'I have reviewed and confirmed my blog content is ready for the next stage',
+          priority: 'high'
+        });
+        items.push({ 
+          title: '🔄 ReWrite Blog', 
+          message: 'I want to rewrite my blog with different approach, tone, or focus'
+        });
+        items.push({ 
+          title: '📊 Content Analysis', 
+          message: 'Analyze the flow and quality of my blog content to get improvement suggestions'
+        });
+        items.push({ 
+          title: '📈 Run SEO Analysis', 
+          message: 'Analyze SEO for my blog post'
+        });
+      } else if (hasContent && contentConfirmed) {
+        // Content confirmed - move to SEO stage
+        items.push({ 
+          title: '📈 Run SEO Analysis', 
+          message: 'Analyze SEO for my blog post',
+          priority: 'high'
+        });
+        items.push({ 
+          title: '🧾 Generate SEO Metadata', 
+          message: 'Generate SEO metadata and title'
+        });
+        items.push({ 
+          title: '🚀 Publish to WordPress', 
+          message: 'Publish my blog to WordPress'
+        });
+      } else {
+        // No content yet, show generation option
+        items.push({ title: '📝 Generate all sections', message: 'Generate all sections of my blog post' });
+      }
     }
     
     return items;
-  }, [research, outline, outlineConfirmed, researchPolling, outlinePolling, mediumPolling]);
+  }, [research, outline, outlineConfirmed, researchPolling, outlinePolling, mediumPolling, hasContent, flowAnalysisCompleted, contentConfirmed]);
 };
 
 export const SuggestionsGenerator: React.FC<SuggestionsGeneratorProps> = ({ research, outline, outlineConfirmed = false }) => {

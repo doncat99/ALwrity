@@ -14,6 +14,8 @@ export const useBlogWriterState = () => {
   const [seoMetadata, setSeoMetadata] = useState<BlogSEOMetadataResponse | null>(null);
   const [continuityRefresh, setContinuityRefresh] = useState<number>(0);
   const [outlineTaskId, setOutlineTaskId] = useState<string | null>(null);
+  const [flowAnalysisCompleted, setFlowAnalysisCompleted] = useState<boolean>(false);
+  const [flowAnalysisResults, setFlowAnalysisResults] = useState<any>(null);
   
   // Enhanced metadata state
   const [sourceMappingStats, setSourceMappingStats] = useState<SourceMappingStats | null>(null);
@@ -27,6 +29,9 @@ export const useBlogWriterState = () => {
   
   // Outline confirmation state
   const [outlineConfirmed, setOutlineConfirmed] = useState<boolean>(false);
+  
+  // Content confirmation state
+  const [contentConfirmed, setContentConfirmed] = useState<boolean>(false);
 
   // Cache recovery - restore most recent research on page load
   useEffect(() => {
@@ -203,6 +208,9 @@ export const useBlogWriterState = () => {
     researchTitles,
     aiGeneratedTitles,
     outlineConfirmed,
+    contentConfirmed,
+    flowAnalysisCompleted,
+    flowAnalysisResults,
     
     // Setters
     setResearch,
@@ -222,6 +230,9 @@ export const useBlogWriterState = () => {
     setResearchTitles,
     setAiGeneratedTitles,
     setOutlineConfirmed,
+    setContentConfirmed,
+    setFlowAnalysisCompleted,
+    setFlowAnalysisResults,
     
     // Handlers
     handleResearchComplete,

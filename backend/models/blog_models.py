@@ -163,6 +163,7 @@ class BlogOptimizeResponse(BaseModel):
 class BlogSEOAnalyzeRequest(BaseModel):
     content: str
     keywords: List[str] = []
+    research_data: Optional[Dict[str, Any]] = None
 
 
 class BlogSEOAnalyzeResponse(BaseModel):

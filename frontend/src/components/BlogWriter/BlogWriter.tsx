@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { CopilotSidebar } from '@copilotkit/react-ui';
+import { useCopilotAction } from '@copilotkit/react-core';
 import '@copilotkit/react-ui/styles.css';
 import { blogWriterApi } from '../../services/blogWriterApi';
-import { useOutlinePolling, useMediumGenerationPolling, useResearchPolling } from '../../hooks/usePolling';
+import { useOutlinePolling, useMediumGenerationPolling, useResearchPolling, useRewritePolling } from '../../hooks/usePolling';
 import { useClaimFixer } from '../../hooks/useClaimFixer';
 import { useMarkdownProcessor } from '../../hooks/useMarkdownProcessor';
 import { useBlogWriterState } from '../../hooks/useBlogWriterState';
@@ -18,14 +19,19 @@ import { CustomOutlineForm } from './CustomOutlineForm';
 import { ResearchDataActions } from './ResearchDataActions';
 import { EnhancedOutlineActions } from './EnhancedOutlineActions';
 import HallucinationChecker from './HallucinationChecker';
+import { RewriteFeedbackForm } from './RewriteFeedbackForm';
 import Publisher from './Publisher';
 import OutlineGenerator from './OutlineGenerator';
 import OutlineRefiner from './OutlineRefiner';
-import SEOProcessor from './SEOProcessor';
+import { SEOProcessor } from './SEO';
 import BlogWriterLanding from './BlogWriterLanding';
 import { OutlineProgressModal } from './OutlineProgressModal';
 import OutlineFeedbackForm from './OutlineFeedbackForm';
 import { BlogEditor } from './WYSIWYG';
+import { SEOAnalysisModal } from './SEOAnalysisModal';
+
+// Type assertion for CopilotKit action
+const useCopilotActionTyped = useCopilotAction as any;
 
 export const BlogWriter: React.FC = () => {
   // Use custom hook for all state management
@@ -47,13 +53,20 @@ export const BlogWriter: React.FC = () => {
     researchTitles,
     aiGeneratedTitles,
     outlineConfirmed,
+    contentConfirmed,
+    flowAnalysisCompleted,
+    flowAnalysisResults,
     setOutline,
     setTitleOptions,
     setSections,
     setSeoAnalysis,
     setGenMode,
     setSeoMetadata,
+    setContinuityRefresh,
     setOutlineTaskId,
+    setContentConfirmed,
+    setFlowAnalysisCompleted,
+    setFlowAnalysisResults,
     handleResearchComplete,
     handleOutlineComplete,
     handleOutlineError,
@@ -107,6 +120,24 @@ export const BlogWriter: React.FC = () => {
     onError: (err) => console.error('Medium generation failed:', err)
   });
 
+  // Rewrite polling hook (used for blog rewrite operations)
+  const rewritePolling = useRewritePolling({
+    onComplete: (result: any) => {
+      try {
+        if (result && result.sections) {
+          const newSections: Record<string, string> = {};
+          result.sections.forEach((s: any) => {
+            newSections[String(s.id)] = s.content || '';
+          });
+          setSections(newSections);
+        }
+      } catch (e) {
+        console.error('Failed to apply rewrite result:', e);
+      }
+    },
+    onError: (err) => console.error('Rewrite failed:', err)
+  });
+
   // Get context-aware suggestions based on current task status
   const suggestions = useSuggestions(
     research, 
@@ -114,19 +145,26 @@ export const BlogWriter: React.FC = () => {
     outlineConfirmed,
     { isPolling: researchPolling.isPolling, currentStatus: researchPolling.currentStatus },
     { isPolling: outlinePolling.isPolling, currentStatus: outlinePolling.currentStatus },
-    { isPolling: mediumPolling.isPolling, currentStatus: mediumPolling.currentStatus }
+    { isPolling: mediumPolling.isPolling, currentStatus: mediumPolling.currentStatus },
+    Object.keys(sections).length > 0, // hasContent
+    flowAnalysisCompleted, // flowAnalysisCompleted state
+    contentConfirmed // contentConfirmed state
   );
 
   // Add minimum display time for modal
   const [showModal, setShowModal] = useState(false);
   const [modalStartTime, setModalStartTime] = useState<number | null>(null);
   const [isMediumGenerationStarting, setIsMediumGenerationStarting] = useState(false);
+  const [showOutlineModal, setShowOutlineModal] = useState(false);
+  
+  // SEO Analysis Modal state
+  const [isSEOAnalysisModalOpen, setIsSEOAnalysisModalOpen] = useState(false);
 
   useEffect(() => {
-    if ((mediumPolling.isPolling || isMediumGenerationStarting) && !showModal) {
+    if ((mediumPolling.isPolling || rewritePolling.isPolling || isMediumGenerationStarting) && !showModal) {
       setShowModal(true);
       setModalStartTime(Date.now());
-    } else if (!mediumPolling.isPolling && !isMediumGenerationStarting && showModal) {
+    } else if (!mediumPolling.isPolling && !rewritePolling.isPolling && !isMediumGenerationStarting && showModal) {
       const elapsed = Date.now() - (modalStartTime || 0);
       const minDisplayTime = 2000; // 2 seconds minimum
       
@@ -140,7 +178,19 @@ export const BlogWriter: React.FC = () => {
         setModalStartTime(null);
       }
     }
-  }, [mediumPolling.isPolling, isMediumGenerationStarting, showModal, modalStartTime]);
+  }, [mediumPolling.isPolling, rewritePolling.isPolling, isMediumGenerationStarting, showModal, modalStartTime]);
+
+  // Handle outline modal visibility
+  useEffect(() => {
+    if (outlinePolling.isPolling && !showOutlineModal) {
+      setShowOutlineModal(true);
+    } else if (!outlinePolling.isPolling && showOutlineModal) {
+      // Add a small delay to ensure user sees completion message
+      setTimeout(() => {
+        setShowOutlineModal(false);
+      }, 1000);
+    }
+  }, [outlinePolling.isPolling, showOutlineModal]);
 
   // Handle medium generation start from OutlineFeedbackForm
   const handleMediumGenerationStarted = (taskId: string) => {
@@ -160,6 +210,62 @@ export const BlogWriter: React.FC = () => {
     isPolling: mediumPolling.isPolling,
     status: mediumPolling.currentStatus,
     progressCount: mediumPolling.progressMessages.length
+  });
+
+  // Debug SEO modal state
+  console.log('🔍 SEO Analysis Modal state:', {
+    isSEOAnalysisModalOpen,
+    hasResearch: !!research,
+    hasContent: !!sections && Object.keys(sections).length > 0,
+    researchKeys: research ? Object.keys(research) : [],
+    sectionsKeys: sections ? Object.keys(sections) : []
+  });
+
+  // Debug action registration
+  console.log('📋 CopilotKit Actions Registered:', ['confirmBlogContent', 'analyzeSEO']);
+
+  // Copilot action for confirming blog content
+  useCopilotActionTyped({
+    name: "confirmBlogContent",
+    description: "Confirm that the blog content is ready and move to the next stage (SEO analysis)",
+    parameters: [],
+    handler: async () => {
+      console.log('Blog content confirmed by user');
+      setContentConfirmed(true);
+      return "Blog content has been confirmed! You can now proceed with SEO analysis and publishing.";
+    }
+  });
+
+  // Copilot action for running SEO analysis
+  useCopilotActionTyped({
+    name: "analyzeSEO",
+    description: "Analyze the blog content for SEO optimization and provide detailed recommendations",
+    parameters: [],
+    handler: async () => {
+      console.log('🚀 SEO Analysis Action Triggered!');
+      console.log('Current modal state before:', isSEOAnalysisModalOpen);
+      console.log('Sections available:', !!sections && Object.keys(sections).length > 0);
+      console.log('Research data available:', !!research && !!research.keyword_analysis);
+      
+      // Check if we have content to analyze
+      if (!sections || Object.keys(sections).length === 0) {
+        console.log('❌ No content available for SEO analysis');
+        return "No blog content available for SEO analysis. Please generate content first.";
+      }
+      
+      // Check if we have research data
+      if (!research || !research.keyword_analysis) {
+        console.log('❌ No research data available for SEO analysis');
+        return "Research data is required for SEO analysis. Please run research first.";
+      }
+      
+      // Open SEO analysis modal
+      console.log('✅ All checks passed, opening SEO analysis modal');
+      setIsSEOAnalysisModalOpen(true);
+      console.log('Modal state set to true');
+      
+      return "Running SEO analysis of your blog content. This will analyze content structure, keyword optimization, readability, and provide actionable recommendations.";
+    }
   });
 
 
@@ -191,13 +297,41 @@ export const BlogWriter: React.FC = () => {
         onOutlineRefined={handleOutlineRefined}
         onMediumGenerationStarted={handleMediumGenerationStarted}
         onMediumGenerationTriggered={handleMediumGenerationTriggered}
+        sections={sections}
+        blogTitle={selectedTitle}
+        onFlowAnalysisComplete={(analysis) => {
+          console.log('Flow analysis completed:', analysis);
+          setFlowAnalysisCompleted(true);
+          setFlowAnalysisResults(analysis);
+          // Trigger a refresh of continuity badges
+          setContinuityRefresh((prev: number) => (prev || 0) + 1);
+        }}
       />
+      
+      {/* Rewrite Feedback Form - Only show when content exists */}
+      {Object.keys(sections).length > 0 && (
+        <RewriteFeedbackForm
+          research={research!}
+          outline={outline}
+          sections={sections}
+          blogTitle={selectedTitle}
+          onRewriteStarted={(taskId) => {
+            console.log('Starting rewrite polling for task:', taskId);
+            rewritePolling.startPolling(taskId);
+          }}
+          onRewriteTriggered={() => {
+            console.log('Rewrite triggered - showing modal immediately');
+            setIsMediumGenerationStarting(true);
+          }}
+        />
+      )}
       
       {/* New extracted functionality components */}
       <OutlineGenerator
         research={research}
         onTaskStart={(taskId) => setOutlineTaskId(taskId)}
         onPollingStart={(taskId) => outlinePolling.startPolling(taskId)}
+        onModalShow={() => setShowOutlineModal(true)}
       />
       <OutlineRefiner
         outline={outline}
@@ -239,17 +373,19 @@ export const BlogWriter: React.FC = () => {
             <div>
               {outlineConfirmed ? (
                 /* WYSIWYG Editor - Show when outline is confirmed */
-                <BlogEditor 
-                  outline={outline}
-                  research={research}
-                  initialTitle={selectedTitle}
-                  titleOptions={titleOptions}
-                  researchTitles={researchTitles}
-                  aiGeneratedTitles={aiGeneratedTitles}
-                  sections={sections}
-                  onContentUpdate={handleContentUpdate}
-                  onSave={handleContentSave}
-                />
+        <BlogEditor 
+          outline={outline}
+          research={research}
+          initialTitle={selectedTitle}
+          titleOptions={titleOptions}
+          researchTitles={researchTitles}
+          aiGeneratedTitles={aiGeneratedTitles}
+          sections={sections}
+          onContentUpdate={handleContentUpdate}
+          onSave={handleContentSave}
+          continuityRefresh={continuityRefresh}
+          flowAnalysisResults={flowAnalysisResults}
+        />
               ) : (
                 /* Outline Editor - Show when outline is not confirmed */
                 <>
@@ -374,9 +510,9 @@ Available tools:
 - enhanceSection(sectionId: string, focus?: string) - Enhance a specific section with AI improvements
 - optimizeOutline(focus?: string) - Optimize entire outline for better flow, SEO, and engagement
 - rebalanceOutline(targetWords?: number) - Rebalance word count distribution across sections
-- runSEOAnalyze(keywords?: string)
+- confirmBlogContent() - Confirm that blog content is ready and move to SEO stage
+- analyzeSEO() - Analyze SEO for blog content with comprehensive insights and visual interface
 - generateSEOMetadata(title?: string)
-- runHallucinationCheck()
 - publishToPlatform(platform: 'wix'|'wordpress', schedule_time?: string)
 
        CRITICAL BEHAVIOR & USER GUIDANCE:
@@ -392,16 +528,26 @@ Available tools:
        - After outline generation, ALWAYS guide user to review and confirm the outline
        - If user wants to discuss the outline, use chatWithOutline() to provide insights and answer questions
        - If user wants to refine the outline, use refineOutline() to collect their feedback and refine
-       - When user clicks "Confirm & Generate Content", ONLY call confirmOutlineAndGenerateContent() - DO NOT automatically generate content
+       - When user says "I confirm the outline" or "I confirm the outline and am ready to generate content" or clicks "Confirm & Generate Content", IMMEDIATELY call confirmOutlineAndGenerateContent() - DO NOT ask for additional confirmation
+       - CRITICAL: If user explicitly confirms the outline, do NOT ask "are you sure?" or "please confirm" - the confirmation is already given
        - Only after outline confirmation, show content generation suggestions and wait for user to explicitly request content generation
        - When user asks to generate content before outline confirmation, remind them to confirm the outline first
        - Content generation should ONLY happen when user explicitly clicks "Generate all sections" or "Generate [specific section]"
+       - When user has generated content and wants to rewrite, use rewriteBlog() to collect feedback and rewriteBlog() to process
+       - For rewrite requests, collect detailed feedback about what they want to change, tone, audience, and focus
+       - After content generation, guide users to review and confirm their content before moving to SEO stage
+       - When user says "I have reviewed and confirmed my blog content is ready for the next stage" or clicks "Next: Confirm Blog Content", IMMEDIATELY call confirmBlogContent() - DO NOT ask for additional confirmation
+       - CRITICAL: If user explicitly confirms blog content, do NOT ask "are you sure?" or "please confirm" - the confirmation is already given
+       - Only after content confirmation, show SEO analysis and publishing suggestions
+       - When user asks for SEO analysis before content confirmation, remind them to confirm the content first
+       - For SEO analysis, ALWAYS use analyzeSEO() - this is the ONLY SEO analysis tool available and provides comprehensive insights with visual interface
+       - IMPORTANT: There is NO "basic" or "simple" SEO analysis - only the comprehensive one. Do NOT mention multiple SEO analysis options
        
        ENGAGEMENT TACTICS:
        - DO NOT ask for clarification - take action immediately with the information provided
        - Always call the appropriate tool instead of just talking about what you could do
        - Be aware of the current state and reference research results when relevant
-       - Guide users through the process: Research → Outline → Outline Review & Confirmation → Content → SEO → Publish
+       - Guide users through the process: Research → Outline → Outline Review & Confirmation → Content → Content Review & Confirmation → SEO → Publish
        - Use encouraging language and highlight progress made
        - If user seems lost, remind them of the current stage and suggest the next step
        - When research is complete, emphasize the value of the data found and guide to outline creation
@@ -415,21 +561,36 @@ Available tools:
       {/* Outline Progress Modal */}
       {/* Outline modal */}
       <OutlineProgressModal
-        isVisible={outlinePolling.isPolling}
+        isVisible={showOutlineModal}
         status={outlinePolling.currentStatus}
         progressMessages={outlinePolling.progressMessages.map(m => m.message)}
         latestMessage={outlinePolling.progressMessages.length > 0 ? outlinePolling.progressMessages[outlinePolling.progressMessages.length - 1].message : ''}
         error={outlinePolling.error}
       />
 
-      {/* Medium generation modal */}
+      {/* Medium generation / Rewrite modal */}
       <OutlineProgressModal
         isVisible={showModal}
-        status={mediumPolling.currentStatus}
-        progressMessages={mediumPolling.progressMessages.map(m => m.message)}
-        latestMessage={mediumPolling.progressMessages.length > 0 ? mediumPolling.progressMessages[mediumPolling.progressMessages.length - 1].message : ''}
-        error={mediumPolling.error}
-        titleOverride={'📝 Generating Your Blog Content'}
+        status={rewritePolling.isPolling ? rewritePolling.currentStatus : mediumPolling.currentStatus}
+        progressMessages={rewritePolling.isPolling ? rewritePolling.progressMessages.map(m => m.message) : mediumPolling.progressMessages.map(m => m.message)}
+        latestMessage={rewritePolling.isPolling ? 
+          (rewritePolling.progressMessages.length > 0 ? rewritePolling.progressMessages[rewritePolling.progressMessages.length - 1].message : '') :
+          (mediumPolling.progressMessages.length > 0 ? mediumPolling.progressMessages[mediumPolling.progressMessages.length - 1].message : '')
+        }
+        error={rewritePolling.isPolling ? rewritePolling.error : mediumPolling.error}
+        titleOverride={rewritePolling.isPolling ? '🔄 Rewriting Your Blog' : '📝 Generating Your Blog Content'}
+      />
+
+      {/* SEO Analysis Modal */}
+      <SEOAnalysisModal
+        isOpen={isSEOAnalysisModalOpen}
+        onClose={() => setIsSEOAnalysisModalOpen(false)}
+        blogContent={buildFullMarkdown()}
+        researchData={research}
+        onApplyRecommendations={(recommendations) => {
+          console.log('Applying SEO recommendations:', recommendations);
+          // TODO: Implement recommendation application logic
+        }}
       />
     </div>
   );

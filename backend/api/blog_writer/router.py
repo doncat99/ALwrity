@@ -179,6 +179,28 @@ async def get_section_continuity(section_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/flow-analysis/basic")
+async def analyze_flow_basic(request: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze flow metrics for entire blog using single AI call (cost-effective)."""
+    try:
+        result = await service.analyze_flow_basic(request)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to perform basic flow analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/flow-analysis/advanced")
+async def analyze_flow_advanced(request: Dict[str, Any]) -> Dict[str, Any]:
+    """Analyze flow metrics for each section individually (detailed but expensive)."""
+    try:
+        result = await service.analyze_flow_advanced(request)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to perform advanced flow analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/section/optimize", response_model=BlogOptimizeResponse)
 async def optimize_section(request: BlogOptimizeRequest) -> BlogOptimizeResponse:
     """Optimize a specific section for better quality and engagement."""
@@ -326,4 +348,28 @@ async def medium_generation_status(task_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get medium generation status for {task_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/rewrite/start")
+async def start_blog_rewrite(request: Dict[str, Any]) -> Dict[str, Any]:
+    """Start blog rewrite task with user feedback."""
+    try:
+        task_id = service.start_blog_rewrite(request)
+        return {"task_id": task_id, "status": "started"}
+    except Exception as e:
+        logger.error(f"Failed to start blog rewrite: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/rewrite/status/{task_id}")
+async def rewrite_status(task_id: str):
+    """Poll status for blog rewrite task."""
+    try:
+        status = service.task_manager.get_task_status(task_id)
+        if status is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return status
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get rewrite status for {task_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

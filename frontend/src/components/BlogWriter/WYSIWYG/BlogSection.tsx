@@ -20,6 +20,7 @@ import {
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import useBlogTextSelectionHandler from './BlogTextSelectionHandler';
+import { ContinuityBadge } from '../ContinuityBadge';
 
 interface BlogSectionProps {
   id: any;
@@ -37,6 +38,8 @@ interface BlogSectionProps {
   onContentUpdate?: (sections: any[]) => void;
   expandedSections: Set<any>;
   toggleSectionExpansion: (sectionId: any) => void;
+  refreshToken?: number;
+  flowAnalysisResults?: any;
 }
 
 const BlogSection: React.FC<BlogSectionProps> = ({ 
@@ -48,7 +51,9 @@ const BlogSection: React.FC<BlogSectionProps> = ({
   outlineData, 
   onContentUpdate,
   expandedSections,
-  toggleSectionExpansion
+  toggleSectionExpansion,
+  refreshToken,
+  flowAnalysisResults
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [sectionTitle, setSectionTitle] = useState(title);
@@ -110,6 +115,7 @@ const BlogSection: React.FC<BlogSectionProps> = ({
   
   const handleContentChange = (e: any) => {
     const newContent = e.target.value;
+    console.log('🔍 [BlogSection] handleContentChange called, content length:', newContent.length);
     setContent(newContent);
     
     // Trigger smart typing assist
@@ -147,24 +153,27 @@ const BlogSection: React.FC<BlogSectionProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       
-      {isEditing ? (
-        <TextField
-          fullWidth
-          variant="standard"
-          value={sectionTitle}
-          onChange={(e) => setSectionTitle(e.target.value)}
-          onBlur={() => setIsEditing(false)}
-          autoFocus
-          InputProps={{ className: 'text-2xl md:text-3xl font-bold !font-serif text-gray-800 mb-4' }}
-        />
-      ) : (
-        <h2
-          className="text-2xl md:text-3xl font-bold font-serif text-gray-800 mb-4 cursor-pointer"
-          onClick={() => setIsEditing(true)}
-        >
-          {sectionTitle}
-        </h2>
-      )}
+      <div className="flex items-center gap-3 mb-4">
+        {isEditing ? (
+          <TextField
+            fullWidth
+            variant="standard"
+            value={sectionTitle}
+            onChange={(e) => setSectionTitle(e.target.value)}
+            onBlur={() => setIsEditing(false)}
+            autoFocus
+            InputProps={{ className: 'text-2xl md:text-3xl font-bold !font-serif text-gray-800' }}
+          />
+        ) : (
+          <h2
+            className="text-2xl md:text-3xl font-bold font-serif text-gray-800 cursor-pointer"
+            onClick={() => setIsEditing(true)}
+          >
+            {sectionTitle}
+          </h2>
+        )}
+        
+      </div>
       
       <div 
         className="relative"
@@ -359,6 +368,15 @@ const BlogSection: React.FC<BlogSectionProps> = ({
             <AutoAwesomeIcon fontSize="small" />
           </IconButton>
         </Tooltip>
+        
+        {/* Flow Analysis Badge - Enabled when flow analysis results are available */}
+        <ContinuityBadge 
+          sectionId={id} 
+          refreshToken={refreshToken}
+          disabled={!flowAnalysisResults}
+          flowAnalysisResults={flowAnalysisResults}
+        />
+        
         <Tooltip title="Copy Section"><IconButton size="small"><FileCopyOutlinedIcon fontSize="small" /></IconButton></Tooltip>
         <Tooltip title="Edit Metadata"><IconButton size="small"><EditIcon fontSize="small" /></IconButton></Tooltip>
         <Tooltip title="Delete Section"><IconButton size="small" className="text-red-500"><DeleteOutlineIcon fontSize="small" /></IconButton></Tooltip>

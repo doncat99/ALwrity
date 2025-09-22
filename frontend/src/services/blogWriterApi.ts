@@ -235,6 +235,95 @@ export const blogWriterApi = {
     return data;
   },
 
+  // Blog Rewrite API
+  async rewriteBlog(payload: {
+    title: string;
+    sections: Array<{
+      id: string;
+      heading: string;
+      content: string;
+    }>;
+    research: BlogResearchResponse;
+    outline: BlogOutlineSection[];
+    feedback: string;
+    tone?: string;
+    audience?: string;
+    focus?: string;
+  }): Promise<{
+    success: boolean;
+    taskId?: string;
+    error?: string;
+  }> {
+    const { data } = await aiApiClient.post('/api/blog/rewrite/start', payload);
+    return data;
+  },
+
+  async pollRewriteStatus(taskId: string): Promise<TaskStatusResponse> {
+    const { data } = await pollingApiClient.get(`/api/blog/rewrite/status/${taskId}`);
+    return data;
+  },
+
+  // Flow Analysis APIs
+  async analyzeFlowBasic(payload: {
+    title: string;
+    sections: Array<{
+      id: string;
+      heading: string;
+      content: string;
+    }>;
+  }): Promise<{
+    success: boolean;
+    analysis?: {
+      overall_flow_score: number;
+      overall_consistency_score: number;
+      overall_progression_score: number;
+      sections: Array<{
+        section_id: string;
+        heading: string;
+        flow_score: number;
+        consistency_score: number;
+        progression_score: number;
+        suggestions: string[];
+      }>;
+      overall_suggestions: string[];
+    };
+    mode: string;
+    error?: string;
+  }> {
+    const { data } = await aiApiClient.post('/api/blog/flow-analysis/basic', payload);
+    return data;
+  },
+
+  async analyzeFlowAdvanced(payload: {
+    title: string;
+    sections: Array<{
+      id: string;
+      heading: string;
+      content: string;
+    }>;
+  }): Promise<{
+    success: boolean;
+    analysis?: {
+      overall_flow_score: number;
+      overall_consistency_score: number;
+      overall_progression_score: number;
+      sections: Array<{
+        section_id: string;
+        heading: string;
+        flow_score: number;
+        consistency_score: number;
+        progression_score: number;
+        detailed_analysis: string;
+        suggestions: string[];
+      }>;
+    };
+    mode: string;
+    error?: string;
+  }> {
+    const { data } = await aiApiClient.post('/api/blog/flow-analysis/advanced', payload);
+    return data;
+  },
+
 
   async refineOutline(payload: { outline: BlogOutlineSection[]; operation: string; section_id?: string; payload?: any }): Promise<BlogOutlineResponse> {
     const { data } = await apiClient.post("/api/blog/outline/refine", payload);
@@ -246,10 +335,7 @@ export const blogWriterApi = {
     return data;
   },
 
-  async seoAnalyze(payload: { content: string; keywords?: string[] }): Promise<BlogSEOAnalyzeResponse> {
-    const { data } = await apiClient.post("/api/blog/seo/analyze", payload);
-    return data;
-  },
+  // Removed old seoAnalyze - now using comprehensive SEO analysis through modal
 
   async seoMetadata(payload: { content: string; title?: string; keywords?: string[] }): Promise<BlogSEOMetadataResponse> {
     const { data } = await apiClient.post("/api/blog/seo/metadata", payload);
@@ -320,6 +406,35 @@ export const mediumBlogApi = {
   },
   async pollMediumGeneration(taskId: string): Promise<TaskStatusResponse & { result?: MediumGenerationResultPayload }> {
     const { data } = await pollingApiClient.get(`/api/blog/generate/medium/status/${taskId}`);
+    return data;
+  }
+};
+
+// Assistive Writing API
+export interface AssistiveSuggestion {
+  text: string;
+  confidence: number;
+  sources: Array<{
+    title: string;
+    url: string;
+    text?: string;
+    author?: string;
+    published_date?: string;
+    score: number;
+  }>;
+}
+
+export interface AssistiveSuggestionResponse {
+  success: boolean;
+  suggestions: AssistiveSuggestion[];
+}
+
+export const assistiveWritingApi = {
+  async getSuggestion(text: string, maxResults: number = 1): Promise<AssistiveSuggestionResponse> {
+    const { data } = await aiApiClient.post('/api/writing-assistant/suggest', {
+      text,
+      max_results: maxResults
+    });
     return data;
   }
 };

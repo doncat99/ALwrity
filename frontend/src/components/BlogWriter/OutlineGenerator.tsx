@@ -6,6 +6,7 @@ interface OutlineGeneratorProps {
   research: BlogResearchResponse | null;
   onTaskStart: (taskId: string) => void;
   onPollingStart: (taskId: string) => void;
+  onModalShow?: () => void; // Callback to show progress modal immediately
 }
 
 const useCopilotActionTyped = useCopilotAction as any;
@@ -13,7 +14,8 @@ const useCopilotActionTyped = useCopilotAction as any;
 export const OutlineGenerator: React.FC<OutlineGeneratorProps> = ({
   research,
   onTaskStart,
-  onPollingStart
+  onPollingStart,
+  onModalShow
 }) => {
   useCopilotActionTyped({
     name: 'generateOutline',
@@ -23,8 +25,14 @@ export const OutlineGenerator: React.FC<OutlineGeneratorProps> = ({
       if (!research) return { success: false, message: 'No research yet. Please research a topic first.' };
       
       try {
+        // Show progress modal immediately when user clicks "Create outline"
+        onModalShow?.();
+        
         // Start async outline generation
         const { task_id } = await blogWriterApi.startOutlineGeneration({ research });
+        
+        // Start polling immediately after getting task_id
+        // This ensures we catch progress messages from the very beginning
         onTaskStart(task_id);
         onPollingStart(task_id);
         

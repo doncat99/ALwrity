@@ -5,6 +5,8 @@ Coordinates research, outline generation, content creation, and optimization.
 """
 
 from typing import Dict, Any, List
+import time
+import uuid
 from loguru import logger
 
 from models.blog_models import (
@@ -30,6 +32,8 @@ from models.blog_models import (
 from ..research import ResearchService
 from ..outline import OutlineService
 from ..content.enhanced_content_generator import EnhancedContentGenerator
+from ..content.medium_blog_generator import MediumBlogGenerator
+from ..content.blog_rewriter import BlogRewriter
 from services.llm_providers.gemini_provider import gemini_structured_json_response
 from services.cache.persistent_content_cache import persistent_content_cache
 from models.blog_models import (
@@ -37,6 +41,47 @@ from models.blog_models import (
     MediumBlogGenerateResult,
     MediumGeneratedSection,
 )
+
+# Import task manager - we'll create a simple one for this service
+class SimpleTaskManager:
+    """Simple task manager for BlogWriterService."""
+    
+    def __init__(self):
+        self.tasks = {}
+    
+    def start_task(self, task_id: str, func, **kwargs):
+        """Start a task with the given function and arguments."""
+        import asyncio
+        self.tasks[task_id] = {
+            "status": "running",
+            "progress": "Starting...",
+            "result": None,
+            "error": None
+        }
+        # Start the task in the background
+        asyncio.create_task(self._run_task(task_id, func, **kwargs))
+    
+    async def _run_task(self, task_id: str, func, **kwargs):
+        """Run the task function."""
+        try:
+            await func(task_id, **kwargs)
+        except Exception as e:
+            self.tasks[task_id]["status"] = "failed"
+            self.tasks[task_id]["error"] = str(e)
+            logger.error(f"Task {task_id} failed: {e}")
+    
+    def update_task_status(self, task_id: str, status: str, progress: str = None, result=None):
+        """Update task status."""
+        if task_id in self.tasks:
+            self.tasks[task_id]["status"] = status
+            if progress:
+                self.tasks[task_id]["progress"] = progress
+            if result:
+                self.tasks[task_id]["result"] = result
+    
+    def get_task_status(self, task_id: str):
+        """Get task status."""
+        return self.tasks.get(task_id, {"status": "not_found"})
 
 
 class BlogWriterService:
@@ -46,6 +91,9 @@ class BlogWriterService:
         self.research_service = ResearchService()
         self.outline_service = OutlineService()
         self.content_generator = EnhancedContentGenerator()
+        self.task_manager = SimpleTaskManager()
+        self.medium_blog_generator = MediumBlogGenerator()
+        self.blog_rewriter = BlogRewriter(self.task_manager)
     
     # Research Methods
     async def research(self, request: BlogResearchRequest) -> BlogResearchResponse:
@@ -157,98 +205,67 @@ class BlogWriterService:
             return {"success": False, "error": str(e)}
 
     async def seo_analyze(self, request: BlogSEOAnalyzeRequest) -> BlogSEOAnalyzeResponse:
-        """Analyze content for SEO optimization."""
-        from services.seo_tools.on_page_seo_service import OnPageSEOService
-        from services.seo_tools.image_alt_service import ImageAltService
-        from services.seo_tools.content_strategy_service import ContentStrategyService
-
-        content = request.content or ""
-        target_keywords = request.keywords or []
-
-        # On-page analysis (treat content as a virtual URL/document for now)
-        on_page = OnPageSEOService()
-        on_page_result = await on_page.analyze_on_page_seo(url="about:blank", target_keywords=target_keywords)
-
-        # Image alt coverage (placeholder: no images in raw content yet)
+        """Analyze content for SEO optimization using comprehensive blog-specific analyzer."""
         try:
-            image_alt_service = ImageAltService()
-            image_alt_status = {"total_images": 0, "missing_alt": 0}
-        except Exception:
-            image_alt_status = {"total_images": 0, "missing_alt": 0}
+            from services.blog_writer.seo.blog_content_seo_analyzer import BlogContentSEOAnalyzer
 
-        # Strategy hints (keywords/topics)
-        try:
-            strategy = ContentStrategyService()
-            strategy_hints = await strategy.analyze_content_topics(content=content)
-        except Exception:
-            strategy_hints = {"topics": [], "gaps": []}
+            content = request.content or ""
+            target_keywords = request.keywords or []
 
-        # Lightweight markdown parsing for headings/links/keywords
-        import re
-        content_text = content or ""
-        words = re.findall(r"[A-Za-z0-9']+", content_text)
-        total_words = max(len(words), 1)
-        heading_lines = content_text.splitlines()
-        h1 = sum(1 for ln in heading_lines if ln.startswith('# '))
-        h2 = sum(1 for ln in heading_lines if ln.startswith('## '))
-        h3 = sum(1 for ln in heading_lines if ln.startswith('### '))
-        md_links = re.findall(r"\[([^\]]+)\]\(([^)]+)\)", content_text)
-        external_links = [u for (_t, u) in md_links if u.startswith('http')]
-
-        # Keyword density
-        density_map: Dict[str, Any] = {"target_keywords": target_keywords}
-        for kw in target_keywords:
-            try:
-                occurrences = len(re.findall(re.escape(kw), content_text, flags=re.IGNORECASE))
-            except re.error:
-                occurrences = 0
-            density_map[kw] = {
-                "occurrences": occurrences,
-                "density": round(occurrences / total_words, 4)
-            }
-
-        # Build unified response
-        recommendations: List[str] = []
-        if isinstance(on_page_result.get("recommendations"), list):
-            recommendations.extend(on_page_result["recommendations"]) 
-        if strategy_hints.get("gaps"):
-            recommendations.append("Cover missing topics: " + ", ".join(strategy_hints["gaps"]))
-        if not external_links:
-            recommendations.append("Add at least one credible external link to authoritative sources.")
-        if h2 < 2:
-            recommendations.append("Increase number of H2 sections for better structure.")
-
-        # Internal link suggestions: generate anchors for H2s and propose cross-links
-        def to_anchor(h: str) -> str:
-            import re
-            a = re.sub(r"[^a-z0-9\s-]", "", h.lower())
-            a = re.sub(r"\s+", "-", a).strip('-')
-            return a
-        h2_headings = [ln[3:].strip() for ln in heading_lines if ln.startswith('## ')]
-        anchors = [to_anchor(h) for h in h2_headings]
-        internal_link_suggestions = []
-        for i in range(len(anchors)-1):
-            internal_link_suggestions.append({
-                "from": h2_headings[i],
-                "to": h2_headings[i+1],
-                "anchor": f"#{anchors[i+1]}",
-                "suggestion": f"Add internal link from '{h2_headings[i]}' to '{h2_headings[i+1]}'"
-            })
-
-        return BlogSEOAnalyzeResponse(
-            success=True,
-            seo_score=float(on_page_result.get("overall_score", 75)),
-            density=density_map,
-            structure={
-                **on_page_result.get("heading_structure", {}),
-                "markdown_headings": {"h1": h1, "h2": h2, "h3": h3},
-                "links": {"total": len(md_links), "external": len(external_links)}
-            },
-            readability=on_page_result.get("content_analysis", {}),
-            link_suggestions=([{"suggestion": "Add external citation links for key claims."}] if not external_links else []) + internal_link_suggestions,
-            image_alt_status=image_alt_status,
-            recommendations=recommendations,
-        )
+            # Use research data from request if available, otherwise create fallback
+            if request.research_data:
+                research_data = request.research_data
+                logger.info(f"Using research data from request: {research_data.get('keyword_analysis', {})}")
+            else:
+                # Fallback for backward compatibility
+                research_data = {
+                    "keyword_analysis": {
+                        "primary": target_keywords,
+                        "long_tail": [],
+                        "semantic": [],
+                        "all_keywords": target_keywords,
+                        "search_intent": "informational"
+                    }
+                }
+                logger.warning("No research data provided, using fallback keywords")
+            
+            # Use our comprehensive SEO analyzer
+            analyzer = BlogContentSEOAnalyzer()
+            analysis_results = await analyzer.analyze_blog_content(content, research_data)
+            
+            # Convert results to response format
+            recommendations = analysis_results.get('actionable_recommendations', [])
+            # Convert recommendation objects to strings
+            recommendation_strings = []
+            for rec in recommendations:
+                if isinstance(rec, dict):
+                    recommendation_strings.append(f"[{rec.get('category', 'General')}] {rec.get('recommendation', '')}")
+                else:
+                    recommendation_strings.append(str(rec))
+            
+            return BlogSEOAnalyzeResponse(
+                success=True,
+                seo_score=float(analysis_results.get('overall_score', 0)),
+                density=analysis_results.get('visualization_data', {}).get('keyword_analysis', {}).get('densities', {}),
+                structure=analysis_results.get('detailed_analysis', {}).get('content_structure', {}),
+                readability=analysis_results.get('detailed_analysis', {}).get('readability_analysis', {}),
+                link_suggestions=[],
+                image_alt_status={"total_images": 0, "missing_alt": 0},
+                recommendations=recommendation_strings
+            )
+            
+        except Exception as e:
+            logger.error(f"SEO analysis failed: {e}")
+            return BlogSEOAnalyzeResponse(
+                success=False,
+                seo_score=0.0,
+                density={},
+                structure={},
+                readability={},
+                link_suggestions=[],
+                image_alt_status={"total_images": 0, "missing_alt": 0},
+                recommendations=[f"SEO analysis failed: {str(e)}"]
+            )
 
     async def seo_metadata(self, request: BlogSEOMetadataRequest) -> BlogSEOMetadataResponse:
         """Generate SEO metadata for content."""
@@ -269,177 +286,171 @@ class BlogWriterService:
 
     async def generate_medium_blog_with_progress(self, req: MediumBlogGenerateRequest, task_id: str) -> MediumBlogGenerateResult:
         """Use Gemini structured JSON to generate a medium-length blog in one call."""
-        import time
-        start = time.time()
+        return await self.medium_blog_generator.generate_medium_blog_with_progress(req, task_id)
 
-        # Prepare sections data for cache key generation
-        sections_for_cache = []
-        for s in req.sections:
-            sections_for_cache.append({
-                "id": s.id,
-                "heading": s.heading,
-                "keyPoints": getattr(s, "key_points", []) or getattr(s, "keyPoints", []),
-                "subheadings": getattr(s, "subheadings", []),
-                "keywords": getattr(s, "keywords", []),
-                "targetWords": getattr(s, "target_words", None) or getattr(s, "targetWords", None),
-            })
-
-        # Check cache first
-        cached_result = persistent_content_cache.get_cached_content(
-            keywords=req.researchKeywords or [],
-            sections=sections_for_cache,
-            global_target_words=req.globalTargetWords or 1000,
-            persona_data=req.persona.dict() if req.persona else None,
-            tone=req.tone,
-            audience=req.audience
-        )
-        
-        if cached_result:
-            logger.info(f"Using cached content for keywords: {req.researchKeywords} (saved expensive generation)")
-            # Add cache hit marker to distinguish from fresh generation
-            cached_result['generation_time_ms'] = 0  # Mark as cache hit
-            cached_result['cache_hit'] = True
-            return MediumBlogGenerateResult(**cached_result)
-
-        # Cache miss - proceed with AI generation
-        logger.info(f"Cache miss - generating new content for keywords: {req.researchKeywords}")
-
-        # Build schema expected from the model
-        schema = {
-            "type": "object",
-            "properties": {
-                "title": {"type": "string"},
-                "sections": {
-                    "type": "array",
-                    "items": {
+    async def analyze_flow_basic(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze flow metrics for entire blog using single AI call (cost-effective)."""
+        try:
+            # Extract blog content from request
+            sections = request.get("sections", [])
+            title = request.get("title", "Untitled Blog")
+            
+            if not sections:
+                return {"error": "No sections provided for analysis"}
+            
+            # Combine all content for analysis
+            full_content = f"Title: {title}\n\n"
+            for section in sections:
+                full_content += f"Section: {section.get('heading', 'Untitled')}\n"
+                full_content += f"Content: {section.get('content', '')}\n\n"
+            
+            # Build analysis prompt
+            system_prompt = """You are an expert content analyst specializing in narrative flow, consistency, and progression analysis. 
+            Analyze the provided blog content and provide detailed, actionable feedback for improvement. 
+            Focus on how well the content flows from section to section, maintains consistency in tone and style, 
+            and progresses logically through the topic."""
+            
+            analysis_prompt = f"""
+            Analyze the following blog content for narrative flow, consistency, and progression:
+            
+            {full_content}
+            
+            Evaluate each section and provide overall analysis with specific scores and actionable suggestions.
+            Consider:
+            - How well each section flows into the next
+            - Consistency in tone, style, and voice throughout
+            - Logical progression of ideas and arguments
+            - Transition quality between sections
+            - Overall coherence and readability
+            
+            IMPORTANT: For each section in the response, use the exact section ID provided in the input.
+            The section IDs in your response must match the section IDs from the input exactly.
+            
+            Provide detailed analysis with specific, actionable suggestions for improvement.
+            """
+            
+            # Use Gemini for structured analysis
+            from services.llm_providers.gemini_provider import gemini_structured_json_response
+            
+            schema = {
+                "type": "object",
+                "properties": {
+                    "overall_flow_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                    "overall_consistency_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                    "overall_progression_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                    "overall_coherence_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                    "sections": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "section_id": {"type": "string"},
+                                "heading": {"type": "string"},
+                                "flow_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                                "consistency_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                                "progression_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                                "coherence_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                                "transition_quality": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                                "suggestions": {"type": "array", "items": {"type": "string"}},
+                                "strengths": {"type": "array", "items": {"type": "string"}},
+                                "improvement_areas": {"type": "array", "items": {"type": "string"}}
+                            },
+                            "required": ["section_id", "heading", "flow_score", "consistency_score", "progression_score", "coherence_score", "transition_quality", "suggestions"]
+                        }
+                    },
+                    "overall_suggestions": {"type": "array", "items": {"type": "string"}},
+                    "overall_strengths": {"type": "array", "items": {"type": "string"}},
+                    "overall_improvement_areas": {"type": "array", "items": {"type": "string"}},
+                    "transition_analysis": {
                         "type": "object",
                         "properties": {
-                            "id": {"type": "string"},
-                            "heading": {"type": "string"},
-                            "content": {"type": "string"},
-                            "wordCount": {"type": "number"},
-                            "sources": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {"title": {"type": "string"}, "url": {"type": "string"}},
-                                },
-                            },
-                        },
-                    },
+                            "overall_transition_quality": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                            "transition_suggestions": {"type": "array", "items": {"type": "string"}}
+                        }
+                    }
                 },
-            },
-        }
-
-        # Compose prompt
-        def section_block(s):
-            return {
-                "id": s.id,
-                "heading": s.heading,
-                "outline": {
-                    "keyPoints": getattr(s, "key_points", []) or getattr(s, "keyPoints", []),
-                    "subheadings": getattr(s, "subheadings", []),
-                    "keywords": getattr(s, "keywords", []),
-                    "targetWords": getattr(s, "target_words", None) or getattr(s, "targetWords", None),
-                    "references": [
-                        {"title": r.title, "url": r.url} for r in getattr(s, "references", [])
-                    ],
-                },
+                "required": ["overall_flow_score", "overall_consistency_score", "overall_progression_score", "overall_coherence_score", "sections", "overall_suggestions"]
             }
-
-        payload = {
-            "title": req.title,
-            "globalTargetWords": req.globalTargetWords or 1000,
-            "persona": req.persona.dict() if req.persona else None,
-            "tone": req.tone,
-            "audience": req.audience,
-            "sections": [section_block(s) for s in req.sections],
-        }
-
-        system = (
-            "You are a professional blog writer. Generate high-quality content for each section based on the provided outline. "
-            "Write engaging, informative content that follows the section's key points and target word count. "
-            "Use a professional tone and ensure the content flows naturally. "
-            "Format content with proper paragraph breaks using double line breaks (\\n\\n) between paragraphs. "
-            "Structure content with clear paragraphs - aim for 2-4 sentences per paragraph. "
-            "Return ONLY valid JSON with no markdown formatting or explanations."
-        )
-
-        import json
-        prompt = (
-            f"Write blog content for the following sections. Each section should be {req.globalTargetWords or 1000} words total, distributed across all sections.\n\n"
-            f"Blog Title: {req.title}\n\n"
-            "For each section, write engaging content that:\n"
-            "- Follows the key points provided\n"
-            "- Uses the suggested keywords naturally\n"
-            "- Meets the target word count\n"
-            "- Maintains professional tone\n"
-            "- References the provided sources when relevant\n"
-            "- Breaks content into clear paragraphs (2-4 sentences each)\n"
-            "- Uses double line breaks (\\n\\n) between paragraphs for proper formatting\n"
-            "- Starts with an engaging opening paragraph\n"
-            "- Ends with a strong concluding paragraph\n\n"
-            "IMPORTANT: Format the 'content' field with proper paragraph breaks using \\n\\n between paragraphs.\n\n"
-            "Return a JSON object with 'title' and 'sections' array. Each section should have 'id', 'heading', 'content', and 'wordCount'.\n\n"
-            f"Sections to write:\n{json.dumps(payload, ensure_ascii=False, indent=2)}"
-        )
-
-        ai_resp = gemini_structured_json_response(
-            prompt=prompt,
-            schema=schema,
-            temperature=0.2,
-            max_tokens=8192,
-            system_prompt=system,
-        )
-
-        # Check for errors in AI response
-        if not ai_resp or ai_resp.get("error"):
-            error_msg = ai_resp.get("error", "Empty generation result from model") if ai_resp else "No response from model"
-            logger.error(f"AI generation failed: {error_msg}")
-            raise Exception(f"AI generation failed: {error_msg}")
-
-        # Normalize output
-        title = ai_resp.get("title") or req.title
-        out_sections = []
-        for s in ai_resp.get("sections", []) or []:
-            out_sections.append(
-                MediumGeneratedSection(
-                    id=str(s.get("id")),
-                    heading=s.get("heading") or "",
-                    content=s.get("content") or "",
-                    wordCount=int(s.get("wordCount") or 0),
-                    sources=[
-                        # map to ResearchSource shape if possible; keep minimal
-                        ResearchSource(title=src.get("title", ""), url=src.get("url", ""))
-                        for src in (s.get("sources") or [])
-                    ] or None,
-                )
+            
+            result = gemini_structured_json_response(
+                prompt=analysis_prompt,
+                schema=schema,
+                temperature=0.3,
+                max_tokens=4096,
+                system_prompt=system_prompt
             )
+            
+            if result and not result.get("error"):
+                logger.info("Basic flow analysis completed successfully")
+                return {"success": True, "analysis": result, "mode": "basic"}
+            else:
+                error_msg = result.get("error", "Analysis failed") if result else "No response from AI"
+                logger.error(f"Basic flow analysis failed: {error_msg}")
+                return {"error": error_msg}
+                
+        except Exception as e:
+            logger.error(f"Basic flow analysis error: {e}")
+            return {"error": str(e)}
 
-        duration_ms = int((time.time() - start) * 1000)
-        result = MediumBlogGenerateResult(
-            success=True,
-            title=title,
-            sections=out_sections,
-            model="gemini-2.5-flash",
-            generation_time_ms=duration_ms,
-            safety_flags=None,
-        )
-        
-        # Cache the result for future use
+    async def analyze_flow_advanced(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze flow metrics for each section individually (detailed but expensive)."""
         try:
-            persistent_content_cache.cache_content(
-                keywords=req.researchKeywords or [],
-                sections=sections_for_cache,
-                global_target_words=req.globalTargetWords or 1000,
-                persona_data=req.persona.dict() if req.persona else None,
-                tone=req.tone or "professional",
-                audience=req.audience or "general",
-                result=result.dict()
-            )
-            logger.info(f"Cached content result for keywords: {req.researchKeywords}")
-        except Exception as cache_error:
-            logger.warning(f"Failed to cache content result: {cache_error}")
-            # Don't fail the entire operation if caching fails
-        
-        return result
+            # Use the existing enhanced content generator for detailed analysis
+            sections = request.get("sections", [])
+            title = request.get("title", "Untitled Blog")
+            
+            if not sections:
+                return {"error": "No sections provided for analysis"}
+            
+            results = []
+            for section in sections:
+                # Use the existing flow analyzer for each section
+                section_content = section.get("content", "")
+                section_heading = section.get("heading", "Untitled")
+                
+                # Get previous section context for better analysis
+                prev_section_content = ""
+                if len(results) > 0:
+                    prev_section_content = results[-1].get("content", "")
+                
+                # Use the existing flow analyzer
+                flow_metrics = self.content_generator.flow.assess_flow(
+                    prev_section_content, 
+                    section_content, 
+                    use_llm=True
+                )
+                
+                results.append({
+                    "section_id": section.get("id", "unknown"),
+                    "heading": section_heading,
+                    "flow_score": flow_metrics.get("flow", 0.0),
+                    "consistency_score": flow_metrics.get("consistency", 0.0),
+                    "progression_score": flow_metrics.get("progression", 0.0),
+                    "detailed_analysis": flow_metrics.get("analysis", ""),
+                    "suggestions": flow_metrics.get("suggestions", [])
+                })
+            
+            # Calculate overall scores
+            overall_flow = sum(r["flow_score"] for r in results) / len(results) if results else 0.0
+            overall_consistency = sum(r["consistency_score"] for r in results) / len(results) if results else 0.0
+            overall_progression = sum(r["progression_score"] for r in results) / len(results) if results else 0.0
+            
+            logger.info("Advanced flow analysis completed successfully")
+            return {
+                "success": True,
+                "analysis": {
+                    "overall_flow_score": overall_flow,
+                    "overall_consistency_score": overall_consistency,
+                    "overall_progression_score": overall_progression,
+                    "sections": results
+                },
+                "mode": "advanced"
+            }
+            
+        except Exception as e:
+            logger.error(f"Advanced flow analysis error: {e}")
+            return {"error": str(e)}
+
+    def start_blog_rewrite(self, request: Dict[str, Any]) -> str:
+        """Start blog rewrite task with user feedback."""
+        return self.blog_rewriter.start_blog_rewrite(request)

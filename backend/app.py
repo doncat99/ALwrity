@@ -466,6 +466,13 @@ try:
 except Exception as e:
     logger.warning(f"AI Blog Writer router not mounted: {e}")
 
+# Include Blog Writer SEO Analysis router (comprehensive SEO analysis)
+try:
+    from api.blog_writer.seo_analysis import router as blog_seo_analysis_router
+    app.include_router(blog_seo_analysis_router)
+except Exception as e:
+    logger.warning(f"Blog Writer SEO Analysis router not mounted: {e}")
+
 # Include persona router
 from api.persona_routes import router as persona_router
 app.include_router(persona_router)

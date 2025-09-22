@@ -28,6 +28,8 @@ interface BlogEditorProps {
   sections?: Record<string, string>;
   onContentUpdate?: (sections: any[]) => void;
   onSave?: (content: any) => void;
+  continuityRefresh?: number;
+  flowAnalysisResults?: any;
 }
 
 const BlogEditor: React.FC<BlogEditorProps> = ({ 
@@ -39,7 +41,9 @@ const BlogEditor: React.FC<BlogEditorProps> = ({
   aiGeneratedTitles = [],
   sections: parentSections,
   onContentUpdate, 
-  onSave 
+  onSave,
+  continuityRefresh,
+  flowAnalysisResults
 }) => {
   const [blogTitle, setBlogTitle] = useState(initialTitle || 'Your Amazing Blog Title');
   const [sections, setSections] = useState<any[]>([]);
@@ -146,6 +150,8 @@ const BlogEditor: React.FC<BlogEditorProps> = ({
                       onContentUpdate={onContentUpdate}
                       expandedSections={expandedSections}
                       toggleSectionExpansion={toggleSectionExpansion}
+                      refreshToken={continuityRefresh}
+                      flowAnalysisResults={flowAnalysisResults}
                     />
                   ))}
                 </div>

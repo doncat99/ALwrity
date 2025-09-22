@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCopilotAction } from '@copilotkit/react-core';
-import { blogWriterApi, BlogSEOMetadataResponse } from '../../services/blogWriterApi';
+import { blogWriterApi, BlogSEOMetadataResponse } from '../../../services/blogWriterApi';
 
 interface SEOProcessorProps {
   buildFullMarkdown: () => string;
@@ -17,22 +17,7 @@ export const SEOProcessor: React.FC<SEOProcessorProps> = ({
   onSEOAnalysis,
   onSEOMetadata
 }) => {
-  useCopilotActionTyped({
-    name: 'runSEOAnalyze',
-    description: 'Analyze SEO for the full draft',
-    parameters: [ { name: 'keywords', type: 'string', description: 'Comma-separated keywords', required: false } ],
-    handler: async ({ keywords }: { keywords?: string }) => {
-      const content = buildFullMarkdown();
-      const res = await blogWriterApi.seoAnalyze({ content, keywords: keywords ? keywords.split(',').map(k => k.trim()) : [] });
-      onSEOAnalysis(res);
-      return { success: true, seo_score: res.seo_score };
-    },
-    render: ({ status, result }: any) => status === 'complete' ? (
-      <div style={{ padding: 12 }}>
-        <div>SEO Score: {result?.seo_score ?? '—'}</div>
-      </div>
-    ) : null
-  });
+  // Removed old runSEOAnalyze action - now using runComprehensiveSEOAnalysis in BlogWriter.tsx
 
   useCopilotActionTyped({
     name: 'generateSEOMetadata',
@@ -63,7 +48,24 @@ export const SEOProcessor: React.FC<SEOProcessorProps> = ({
     handler: async ({ sectionId, goals }: { sectionId: string; goals?: string }) => {
       const current = buildFullMarkdown();
       if (!current) return { success: false, message: 'No content yet for this section' };
-      const res = await blogWriterApi.seoAnalyze({ content: current, keywords: [] });
+      
+      // Use comprehensive SEO analysis endpoint
+      const response = await fetch('/api/blog-writer/seo/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: current,
+          keywords: []
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to analyze blog content');
+      }
+      
+      const res = await response.json();
       onSEOAnalysis(res);
       return { success: true, message: 'Analysis ready' };
     },
