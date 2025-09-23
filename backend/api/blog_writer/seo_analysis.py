@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/blog-writer/seo", tags=["Blog SEO Analysis"])
 class SEOAnalysisRequest(BaseModel):
     """Request model for SEO analysis"""
     blog_content: str
+    blog_title: Optional[str] = None
     research_data: Dict[str, Any]
     user_id: Optional[str] = None
     session_id: Optional[str] = None
@@ -34,6 +35,8 @@ class SEOAnalysisResponse(BaseModel):
     category_scores: Dict[str, float]
     analysis_summary: Dict[str, Any]
     actionable_recommendations: list
+    detailed_analysis: Optional[Dict[str, Any]] = None
+    visualization_data: Optional[Dict[str, Any]] = None
     generated_at: str
     error: Optional[str] = None
 
@@ -87,7 +90,8 @@ async def analyze_blog_seo(request: SEOAnalysisRequest):
         # Perform SEO analysis
         analysis_results = await seo_analyzer.analyze_blog_content(
             blog_content=request.blog_content,
-            research_data=request.research_data
+            research_data=request.research_data,
+            blog_title=request.blog_title
         )
         
         # Check for errors
@@ -100,6 +104,8 @@ async def analyze_blog_seo(request: SEOAnalysisRequest):
                 category_scores={},
                 analysis_summary={},
                 actionable_recommendations=[],
+                detailed_analysis=None,
+                visualization_data=None,
                 generated_at=analysis_results.get('generated_at', ''),
                 error=analysis_results['error']
             )
@@ -112,6 +118,8 @@ async def analyze_blog_seo(request: SEOAnalysisRequest):
             category_scores=analysis_results.get('category_scores', {}),
             analysis_summary=analysis_results.get('analysis_summary', {}),
             actionable_recommendations=analysis_results.get('actionable_recommendations', []),
+            detailed_analysis=analysis_results.get('detailed_analysis'),
+            visualization_data=analysis_results.get('visualization_data'),
             generated_at=analysis_results.get('generated_at', '')
         )
         

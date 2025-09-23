@@ -162,6 +162,7 @@ class BlogOptimizeResponse(BaseModel):
 
 class BlogSEOAnalyzeRequest(BaseModel):
     content: str
+    blog_title: Optional[str] = None
     keywords: List[str] = []
     research_data: Optional[Dict[str, Any]] = None
 
@@ -181,15 +182,28 @@ class BlogSEOMetadataRequest(BaseModel):
     content: str
     title: Optional[str] = None
     keywords: List[str] = []
+    research_data: Optional[Dict[str, Any]] = None
 
 
 class BlogSEOMetadataResponse(BaseModel):
     success: bool = True
-    title_options: List[str]
-    meta_descriptions: List[str]
-    open_graph: Dict[str, Any]
-    twitter_card: Dict[str, Any]
-    schema_data: Dict[str, Any]
+    title_options: List[str] = []
+    meta_descriptions: List[str] = []
+    seo_title: Optional[str] = None
+    meta_description: Optional[str] = None
+    url_slug: Optional[str] = None
+    blog_tags: List[str] = []
+    blog_categories: List[str] = []
+    social_hashtags: List[str] = []
+    open_graph: Dict[str, Any] = {}
+    twitter_card: Dict[str, Any] = {}
+    json_ld_schema: Dict[str, Any] = {}
+    canonical_url: Optional[str] = None
+    reading_time: float = 0.0
+    focus_keyword: Optional[str] = None
+    generated_at: Optional[str] = None
+    optimization_score: int = 0
+    error: Optional[str] = None
 
 
 class BlogPublishRequest(BaseModel):

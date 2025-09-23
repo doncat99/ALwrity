@@ -268,16 +268,53 @@ class BlogWriterService:
             )
 
     async def seo_metadata(self, request: BlogSEOMetadataRequest) -> BlogSEOMetadataResponse:
-        """Generate SEO metadata for content."""
-        # TODO: Move to optimization module
-        return BlogSEOMetadataResponse(
-            success=True,
-            title_options=[request.title or "Generated SEO Title"],
-            meta_descriptions=["Compelling meta description..."],
-            open_graph={"title": request.title or "OG Title", "image": ""},
-            twitter_card={"card": "summary_large_image"},
-            schema={"@type": "Article"},
-        )
+        """Generate comprehensive SEO metadata for content."""
+        try:
+            from services.blog_writer.seo.blog_seo_metadata_generator import BlogSEOMetadataGenerator
+            
+            # Initialize metadata generator
+            metadata_generator = BlogSEOMetadataGenerator()
+            
+            # Generate comprehensive metadata
+            metadata_results = await metadata_generator.generate_comprehensive_metadata(
+                blog_content=request.content,
+                blog_title=request.title or "Untitled Blog Post",
+                research_data=request.research_data or {}
+            )
+            
+            # Convert to BlogSEOMetadataResponse format
+            return BlogSEOMetadataResponse(
+                success=metadata_results.get('success', True),
+                title_options=metadata_results.get('title_options', []),
+                meta_descriptions=metadata_results.get('meta_descriptions', []),
+                seo_title=metadata_results.get('seo_title'),
+                meta_description=metadata_results.get('meta_description'),
+                url_slug=metadata_results.get('url_slug', ''),
+                blog_tags=metadata_results.get('blog_tags', []),
+                blog_categories=metadata_results.get('blog_categories', []),
+                social_hashtags=metadata_results.get('social_hashtags', []),
+                open_graph=metadata_results.get('open_graph', {}),
+                twitter_card=metadata_results.get('twitter_card', {}),
+                json_ld_schema=metadata_results.get('json_ld_schema', {}),
+                canonical_url=metadata_results.get('canonical_url', ''),
+                reading_time=metadata_results.get('reading_time', 0.0),
+                focus_keyword=metadata_results.get('focus_keyword', ''),
+                generated_at=metadata_results.get('generated_at', ''),
+                optimization_score=metadata_results.get('metadata_summary', {}).get('optimization_score', 0)
+            )
+            
+        except Exception as e:
+            logger.error(f"SEO metadata generation failed: {e}")
+            # Return fallback response
+            return BlogSEOMetadataResponse(
+                success=False,
+                title_options=[request.title or "Generated SEO Title"],
+                meta_descriptions=["Compelling meta description..."],
+                open_graph={"title": request.title or "OG Title", "image": ""},
+                twitter_card={"card": "summary_large_image"},
+                json_ld_schema={"@type": "Article"},
+                error=str(e)
+            )
 
     async def publish(self, request: BlogPublishRequest) -> BlogPublishResponse:
         """Publish content to specified platform."""

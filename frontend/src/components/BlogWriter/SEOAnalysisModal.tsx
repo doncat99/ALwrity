@@ -141,6 +141,7 @@ interface SEOAnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
   blogContent: string;
+  blogTitle?: string;
   researchData: any;
   onApplyRecommendations?: (recommendations: any[]) => void;
 }
@@ -149,6 +150,7 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
   isOpen,
   onClose,
   blogContent,
+  blogTitle,
   researchData,
   onApplyRecommendations
 }) => {
@@ -192,6 +194,7 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
         },
         body: JSON.stringify({
           blog_content: blogContent,
+          blog_title: blogTitle,
           research_data: researchData
         })
       });
@@ -202,12 +205,6 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
 
       const result = await response.json();
       console.log('🔍 Backend SEO Analysis Response:', result);
-      console.log('📊 Category Scores:', result.category_scores);
-      console.log('💡 Recommendations:', result.actionable_recommendations);
-      console.log('🔍 Visualization Data:', result.visualization_data);
-      console.log('📝 Detailed Analysis:', result.detailed_analysis);
-      console.log('🏗️ Content Structure:', result.detailed_analysis?.content_structure);
-      console.log('📋 Heading Structure:', result.detailed_analysis?.heading_structure);
       
       // Convert API response to frontend format - fail fast if data is missing
       if (!result.success) {
@@ -610,9 +607,9 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
                   <Recommendations recommendations={analysisResult.actionable_recommendations} />
                 )}
 
-                {tabValue === 'keywords' && (
-                  <KeywordAnalysis detailedAnalysis={analysisResult.detailed_analysis} />
-                )}
+                  {tabValue === 'keywords' && (
+                    <KeywordAnalysis detailedAnalysis={analysisResult.detailed_analysis} />
+                  )}
 
                 {tabValue === 'readability' && (
                   <ReadabilityAnalysis 
@@ -622,7 +619,15 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
                 )}
 
                 {tabValue === 'structure' && (
-                  <StructureAnalysis detailedAnalysis={analysisResult.detailed_analysis} />
+                  analysisResult ? (
+                    <StructureAnalysis detailedAnalysis={analysisResult.detailed_analysis} />
+                  ) : (
+                    <Box sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        Loading structure analysis...
+                      </Typography>
+                    </Box>
+                  )
                 )}
 
                 {tabValue === 'insights' && (

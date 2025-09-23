@@ -32,7 +32,7 @@ class BlogContentSEOAnalyzer:
         
         logger.info("BlogContentSEOAnalyzer initialized")
     
-    async def analyze_blog_content(self, blog_content: str, research_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def analyze_blog_content(self, blog_content: str, research_data: Dict[str, Any], blog_title: Optional[str] = None) -> Dict[str, Any]:
         """
         Main analysis method with parallel processing
         

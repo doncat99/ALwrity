@@ -114,9 +114,9 @@ const BlogEditor: React.FC<BlogEditorProps> = ({
                     <h1 
                       className="flex-1 text-2xl md:text-4xl font-bold font-serif text-gray-900 leading-tight cursor-pointer hover:bg-gray-50 p-2 rounded-md transition-colors duration-200"
                       style={{
-                        wordBreak: 'break-word',
-                        overflowWrap: 'break-word',
-                        whiteSpace: 'normal',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                         lineHeight: '1.3'
                       }}
                       onClick={() => {

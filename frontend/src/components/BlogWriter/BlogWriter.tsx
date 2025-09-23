@@ -29,6 +29,7 @@ import { OutlineProgressModal } from './OutlineProgressModal';
 import OutlineFeedbackForm from './OutlineFeedbackForm';
 import { BlogEditor } from './WYSIWYG';
 import { SEOAnalysisModal } from './SEOAnalysisModal';
+import { SEOMetadataModal } from './SEOMetadataModal';
 
 // Type assertion for CopilotKit action
 const useCopilotActionTyped = useCopilotAction as any;
@@ -159,6 +160,7 @@ export const BlogWriter: React.FC = () => {
   
   // SEO Analysis Modal state
   const [isSEOAnalysisModalOpen, setIsSEOAnalysisModalOpen] = useState(false);
+  const [isSEOMetadataModalOpen, setIsSEOMetadataModalOpen] = useState(false);
 
   useEffect(() => {
     if ((mediumPolling.isPolling || rewritePolling.isPolling || isMediumGenerationStarting) && !showModal) {
@@ -268,6 +270,42 @@ export const BlogWriter: React.FC = () => {
     }
   });
 
+  // Generate SEO Metadata Action
+  useCopilotActionTyped({
+    name: "generateSEOMetadata",
+    description: "Generate comprehensive SEO metadata including titles, descriptions, Open Graph tags, Twitter cards, and structured data",
+    parameters: [
+      {
+        name: "title",
+        type: "string",
+        description: "Optional blog title to use for metadata generation",
+        required: false
+      }
+    ],
+    handler: async ({ title }: { title?: string }) => {
+      console.log('🚀 Generate SEO Metadata Action Triggered!');
+      console.log('Title provided:', title);
+      console.log('Selected title:', selectedTitle);
+      console.log('Sections available:', !!sections && Object.keys(sections).length > 0);
+      console.log('Research data available:', !!research && !!research.keyword_analysis);
+      
+      // Check if we have content to generate metadata for
+      if (!sections || Object.keys(sections).length === 0) {
+        return "Please generate blog content first before creating SEO metadata. Use the content generation features to create your blog post.";
+      }
+      
+      if (!research || !research.keyword_analysis) {
+        return "Please complete research first to get keyword data for SEO metadata generation. Use the research features to gather keyword insights.";
+      }
+      
+      // Open the SEO metadata modal
+      setIsSEOMetadataModalOpen(true);
+      console.log('SEO Metadata modal opened');
+      
+      return "Opening SEO metadata generator! This will create optimized titles, descriptions, Open Graph tags, Twitter cards, and structured data for your blog post.";
+    }
+  });
+
 
 
 
@@ -373,10 +411,10 @@ export const BlogWriter: React.FC = () => {
             <div>
               {outlineConfirmed ? (
                 /* WYSIWYG Editor - Show when outline is confirmed */
-        <BlogEditor 
+        <BlogEditor
           outline={outline}
           research={research}
-          initialTitle={selectedTitle}
+          initialTitle={selectedTitle || (typeof window !== 'undefined' ? localStorage.getItem('blog_selected_title') : '') || 'Your Amazing Blog Title'}
           titleOptions={titleOptions}
           researchTitles={researchTitles}
           aiGeneratedTitles={aiGeneratedTitles}
@@ -586,10 +624,25 @@ Available tools:
         isOpen={isSEOAnalysisModalOpen}
         onClose={() => setIsSEOAnalysisModalOpen(false)}
         blogContent={buildFullMarkdown()}
+        blogTitle={selectedTitle}
         researchData={research}
         onApplyRecommendations={(recommendations) => {
           console.log('Applying SEO recommendations:', recommendations);
           // TODO: Implement recommendation application logic
+        }}
+      />
+
+      {/* SEO Metadata Modal */}
+      <SEOMetadataModal
+        isOpen={isSEOMetadataModalOpen}
+        onClose={() => setIsSEOMetadataModalOpen(false)}
+        blogContent={buildFullMarkdown()}
+        blogTitle={selectedTitle}
+        researchData={research}
+        onMetadataGenerated={(metadata) => {
+          console.log('SEO metadata generated:', metadata);
+          setSeoMetadata(metadata);
+          // TODO: Implement metadata application logic
         }}
       />
     </div>
