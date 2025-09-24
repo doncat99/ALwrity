@@ -2,7 +2,7 @@
 
 import aiohttp
 import asyncio
-from typing import Dict, Any, Optional, Union, Tuple
+from typing import Dict, Any, Optional, Union, Tuple, List
 import os
 from loguru import logger
 import json

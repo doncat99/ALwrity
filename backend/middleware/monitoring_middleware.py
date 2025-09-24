@@ -32,17 +32,22 @@ class DatabaseAPIMonitor:
             'misses': 0,
             'hit_rate': 0.0
         }
-        # API provider detection patterns
+        # API provider detection patterns - Updated to match actual endpoints
         self.provider_patterns = {
-            APIProvider.GEMINI: [r'/gemini', r'gemini', r'google.*ai'],
-            APIProvider.OPENAI: [r'/openai', r'openai', r'gpt'],
+            APIProvider.GEMINI: [
+                r'/api/blog-writer', r'/api/content-planning', r'/api/strategy-copilot',
+                r'/api/brainstorm', r'/api/writing-assistant', r'/api/seo-dashboard',
+                r'/api/onboarding', r'/api/user-data', r'/api/component-logic',
+                r'gemini', r'google.*ai', r'blog.*writer', r'content.*planning'
+            ],
+            APIProvider.OPENAI: [r'/openai', r'openai', r'gpt', r'chatgpt'],
             APIProvider.ANTHROPIC: [r'/anthropic', r'claude', r'anthropic'],
             APIProvider.MISTRAL: [r'/mistral', r'mistral'],
-            APIProvider.TAVILY: [r'/tavily', r'tavily'],
-            APIProvider.SERPER: [r'/serper', r'serper', r'google.*search'],
+            APIProvider.TAVILY: [r'/tavily', r'tavily', r'research', r'search'],
+            APIProvider.SERPER: [r'/serper', r'serper', r'google.*search', r'seo'],
             APIProvider.METAPHOR: [r'/metaphor', r'/exa', r'metaphor', r'exa'],
-            APIProvider.FIRECRAWL: [r'/firecrawl', r'firecrawl'],
-            APIProvider.STABILITY: [r'/stability', r'stable.*diffusion', r'stability']
+            APIProvider.FIRECRAWL: [r'/firecrawl', r'firecrawl', r'crawl'],
+            APIProvider.STABILITY: [r'/stability', r'stable.*diffusion', r'stability', r'image.*generation']
         }
     
     def detect_api_provider(self, path: str, user_agent: str = None) -> Optional[APIProvider]:
@@ -154,6 +159,7 @@ class DatabaseAPIMonitor:
             # Track API usage if this is an API call to external providers
             api_provider = self.detect_api_provider(path, user_agent)
             if api_provider and user_id:
+                logger.info(f"🔍 Detected API call: {path} -> {api_provider.value} for user: {user_id}")
                 try:
                     # Extract usage metrics
                     usage_metrics = self.extract_usage_metrics(request_body, response_body)
@@ -178,7 +184,7 @@ class DatabaseAPIMonitor:
                         image_count=usage_metrics.get('image_count', 0),
                         page_count=usage_metrics.get('page_count', 0)
                     )
-                    logger.info(f"Tracked usage for {user_id}: {api_provider.value} - {usage_metrics.get('tokens_input', 0)}+{usage_metrics.get('tokens_output', 0)} tokens")
+                    logger.info(f"✅ Tracked usage for {user_id}: {api_provider.value} - {usage_metrics.get('tokens_input', 0)}+{usage_metrics.get('tokens_output', 0)} tokens")
                 except Exception as usage_error:
                     logger.error(f"Error tracking API usage: {usage_error}")
                     # Don't fail the main request if usage tracking fails
@@ -457,33 +463,60 @@ async def monitoring_middleware(request: Request, call_next):
         response = await call_next(request)
         return response
     
-    # Extract request details
+    # Extract request details - Enhanced user identification
     user_id = None
     try:
+        # Check query parameters
         if hasattr(request, 'query_params') and 'user_id' in request.query_params:
             user_id = request.query_params['user_id']
         elif hasattr(request, 'path_params') and 'user_id' in request.path_params:
             user_id = request.path_params['user_id']
-        # Also check headers for user identification
+        
+        # Check headers for user identification
         elif 'x-user-id' in request.headers:
             user_id = request.headers['x-user-id']
+        elif 'x-user-email' in request.headers:
+            user_id = request.headers['x-user-email']  # Use email as user identifier
+        elif 'x-session-id' in request.headers:
+            user_id = request.headers['x-session-id']  # Use session as fallback
+        
         # Check for authorization header with user info
         elif 'authorization' in request.headers:
-            # This would need to be implemented based on your auth system
-            pass
-    except:
-        pass
+            auth_header = request.headers['authorization']
+            # Extract user info from JWT or other auth tokens if needed
+            # For now, use a default user for testing
+            user_id = "default_user"
+        
+        # For alpha testing, use IP address as user identifier if no other ID found
+        if not user_id and request.client:
+            user_id = f"alpha_user_{request.client.host}"
+        
+        # Final fallback for testing
+        if not user_id:
+            user_id = "anonymous_user"
+            
+    except Exception as e:
+        logger.debug(f"Error extracting user ID: {e}")
+        user_id = "error_user"
     
-    # Capture request body for usage tracking (read once)
+    # Capture request body for usage tracking (read once, safely)
     request_body = None
     try:
-        if hasattr(request, '_body'):
-            request_body = request._body.decode('utf-8') if request._body else None
-        else:
-            body = await request.body()
-            request_body = body.decode('utf-8') if body else None
-    except:
-        pass
+        # Only read body for POST/PUT/PATCH requests to avoid issues
+        if request.method in ['POST', 'PUT', 'PATCH']:
+            if hasattr(request, '_body') and request._body:
+                request_body = request._body.decode('utf-8')
+            else:
+                # Read body only if it hasn't been read yet
+                try:
+                    body = await request.body()
+                    request_body = body.decode('utf-8') if body else None
+                except Exception as body_error:
+                    logger.debug(f"Could not read request body: {body_error}")
+                    request_body = None
+    except Exception as e:
+        logger.debug(f"Error capturing request body: {e}")
+        request_body = None
     
     # Check usage limits before processing
     limit_response = await check_usage_limits_middleware(request, user_id, request_body)

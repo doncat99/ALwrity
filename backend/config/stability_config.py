@@ -1,7 +1,7 @@
 """Configuration settings for Stability AI integration."""
 
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 
