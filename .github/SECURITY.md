@@ -61,14 +61,18 @@ Send an email to: [security@alwrity.com](mailto:security@alwrity.com)
 
 ALwrity implements the following security measures:
 
-- **Authentication**: Secure user authentication with JWT tokens
-- **Authorization**: Role-based access control
-- **Input Validation**: Comprehensive input sanitization
-- **API Security**: Rate limiting and request validation
+- **Authentication**: Secure user authentication with JWT tokens and Clerk integration
+- **Authorization**: Role-based access control and subscription-based access
+- **Input Validation**: Comprehensive input sanitization for all user inputs
+- **API Security**: Rate limiting, request validation, and API key management
 - **Data Encryption**: Sensitive data encryption at rest and in transit
 - **CORS Protection**: Proper cross-origin resource sharing configuration
-- **Security Headers**: Implementation of security headers
+- **Security Headers**: Implementation of security headers and CSP policies
 - **Dependency Scanning**: Regular dependency vulnerability scanning
+- **AI Service Security**: Secure API key management for AI services
+- **Content Sanitization**: Proper sanitization of AI-generated content
+- **Database Security**: SQL injection prevention with SQLAlchemy ORM
+- **File Upload Security**: Secure file handling and validation
 
 ## 🚫 Out of Scope
 

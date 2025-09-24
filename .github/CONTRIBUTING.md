@@ -24,37 +24,61 @@ Thank you for your interest in contributing to ALwrity! 🚀 We welcome contribu
 ## 🛠️ Development Setup
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- Git
+- **Python 3.10+** (Backend: FastAPI, SQLAlchemy, AI integrations)
+- **Node.js 18+** (Frontend: React, TypeScript, Material-UI)
+- **Git** (Version control)
+- **API Keys** (Gemini, OpenAI, Anthropic, etc.)
 
-### Backend Setup
+### Quick Start
 ```bash
+# Clone the repository
+git clone https://github.com/AJaySi/ALwrity.git
+cd ALwrity
+
+# Backend setup
 cd backend
 pip install -r requirements.txt
+cp env_template.txt .env  # Configure your API keys
 python start_alwrity_backend.py
-```
 
-### Frontend Setup
-```bash
+# Frontend setup (in a new terminal)
 cd frontend
 npm install
+cp env_template.txt .env  # Configure your environment
 npm start
 ```
+
+### Environment Configuration
+1. **Backend**: Copy `backend/env_template.txt` to `backend/.env`
+2. **Frontend**: Copy `frontend/env_template.txt` to `frontend/.env`
+3. **API Keys**: Add your AI service API keys to the respective `.env` files
 
 ## 📝 Coding Standards
 
 ### Python (Backend)
-- Follow PEP 8 style guidelines
-- Use type hints where possible
-- Add docstrings for functions and classes
-- Use meaningful variable and function names
+- **Style**: Follow PEP 8 guidelines, use Black formatter
+- **Type Hints**: Use type hints for all function parameters and return values
+- **Documentation**: Add comprehensive docstrings using Google style
+- **Error Handling**: Use proper exception handling with meaningful error messages
+- **Logging**: Use structured logging with appropriate levels
+- **API Design**: Follow RESTful principles, use FastAPI best practices
+- **Database**: Use SQLAlchemy ORM, implement proper migrations
 
 ### TypeScript/React (Frontend)
-- Use TypeScript for type safety
-- Follow React best practices
-- Use functional components with hooks
-- Implement proper error handling
+- **TypeScript**: Strict mode enabled, no `any` types
+- **Components**: Functional components with hooks, proper prop typing
+- **State Management**: Use React hooks, consider context for global state
+- **Styling**: Material-UI components, consistent theming
+- **Error Boundaries**: Implement error boundaries for better UX
+- **Performance**: Use React.memo, useMemo, useCallback where appropriate
+- **Testing**: Jest + React Testing Library for unit tests
+
+### ALwrity-Specific Guidelines
+- **AI Integration**: Always handle API rate limits and errors gracefully
+- **Content Generation**: Implement proper validation and sanitization
+- **SEO Features**: Follow SEO best practices in generated content
+- **User Experience**: Maintain consistent UI/UX across all features
+- **Security**: Validate all inputs, implement proper authentication
 
 ## 🧪 Testing
 
@@ -120,17 +144,28 @@ We use the following labels to categorize issues:
 ## 🎯 Areas for Contribution
 
 ### High Priority
-- Bug fixes and performance improvements
-- Documentation improvements
-- Test coverage expansion
-- UI/UX enhancements
+- **Bug Fixes**: Critical issues affecting core functionality
+- **Performance**: API response times, database optimization
+- **Documentation**: API docs, user guides, setup instructions
+- **Test Coverage**: Unit tests, integration tests, E2E tests
+- **Security**: Vulnerability fixes, security improvements
 
 ### Feature Areas
-- AI content generation improvements
-- SEO analysis enhancements
-- Social media integration
-- Analytics and reporting
-- User experience improvements
+- **AI Content Generation**: Blog posts, social media content, SEO optimization
+- **SEO Dashboard**: Google Search Console integration, analytics
+- **Social Media**: LinkedIn, Facebook, Instagram content creation
+- **Content Planning**: Calendar management, content strategy
+- **User Experience**: Onboarding flow, dashboard improvements
+- **Analytics**: Usage tracking, performance metrics
+- **Integrations**: Third-party API integrations, webhooks
+
+### Good First Issues
+Look for issues labeled with `good first issue` - these are perfect for newcomers:
+- Documentation improvements
+- UI/UX enhancements
+- Test additions
+- Bug fixes with clear reproduction steps
+- Feature requests with detailed specifications
 
 ## 📞 Getting Help
 

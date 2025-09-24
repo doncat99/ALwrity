@@ -9,6 +9,8 @@ We're here to help you get the most out of ALwrity! Here are the best ways to ge
 - **[API Documentation](https://github.com/AJaySi/ALwrity/wiki/API-Documentation)** - Complete API reference
 - **[Setup Guide](https://github.com/AJaySi/ALwrity/wiki/Setup-Guide)** - Installation and configuration
 - **[User Guide](https://github.com/AJaySi/ALwrity/wiki/User-Guide)** - How to use ALwrity features
+- **[GSC Integration Guide](GSC_INTEGRATION_README.md)** - Google Search Console setup
+- **[Alpha Subscription Guide](backend/ALPHA_SUBSCRIPTION_IMPLEMENTATION_PLAN.md)** - Subscription system
 
 ### 💬 Community Support
 - **[GitHub Discussions](https://github.com/AJaySi/ALwrity/discussions)** - Ask questions and share ideas
@@ -68,22 +70,32 @@ npm start
 ## 🔧 Troubleshooting
 
 ### Performance Issues
-- Check system resources (CPU, RAM)
-- Review database query performance
-- Monitor API rate limits
-- Clear browser cache and cookies
+- **System Resources**: Check CPU, RAM usage during content generation
+- **Database**: Review query performance, check for slow queries
+- **API Rate Limits**: Monitor AI service rate limits (Gemini, OpenAI, etc.)
+- **Browser**: Clear cache, cookies, and local storage
+- **Network**: Check internet connectivity and API endpoint accessibility
 
 ### Authentication Problems
-- Verify API keys are correct
-- Check token expiration
-- Clear browser storage
-- Review authentication logs
+- **API Keys**: Verify all AI service API keys are correct and active
+- **Environment Variables**: Check `.env` files are properly configured
+- **Token Expiration**: Refresh authentication tokens if expired
+- **Browser Storage**: Clear browser storage and try again
+- **CORS Issues**: Check backend CORS configuration
 
 ### Content Generation Issues
-- Verify AI service API keys
-- Check internet connectivity
-- Review content generation logs
-- Ensure sufficient API credits
+- **AI Service Keys**: Verify Gemini, OpenAI, Anthropic API keys
+- **Rate Limits**: Check if you've exceeded API rate limits
+- **Content Quality**: Review prompt engineering and content validation
+- **Error Logs**: Check backend logs for detailed error messages
+- **API Credits**: Ensure sufficient credits for AI services
+
+### ALwrity-Specific Issues
+- **Onboarding**: Check if all required steps are completed
+- **SEO Analysis**: Verify Google Search Console integration
+- **Subscription Limits**: Check if you've exceeded usage limits
+- **Database**: Ensure database is properly initialized
+- **File Permissions**: Check file permissions for uploads and cache
 
 ## 📞 Contact Information
 

@@ -45,6 +45,10 @@ Which component or feature is affected?
 - [ ] Authentication
 - [ ] API
 - [ ] Database
+- [ ] GSC Integration
+- [ ] Subscription System
+- [ ] Monitoring/Billing
+- [ ] Documentation
 - [ ] Other: _______________
 
 ## 📋 Checklist
@@ -56,6 +60,16 @@ Which component or feature is affected?
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] Any dependent changes have been merged and published
+
+### ALwrity-Specific Checklist
+- [ ] API endpoints follow RESTful conventions
+- [ ] AI service integrations handle rate limits and errors gracefully
+- [ ] Content generation includes proper validation and sanitization
+- [ ] Database migrations are included if schema changes are made
+- [ ] Environment variables are documented in env_template.txt
+- [ ] Security considerations have been addressed
+- [ ] Performance impact has been considered
+- [ ] User experience is consistent with existing features
 
 ## 🔍 Code Quality
 - [ ] Code is properly formatted
