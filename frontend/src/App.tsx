@@ -10,6 +10,7 @@ import ContentPlanningDashboard from './components/ContentPlanningDashboard/Cont
 import FacebookWriter from './components/FacebookWriter/FacebookWriter';
 import LinkedInWriter from './components/LinkedInWriter/LinkedInWriter';
 import BlogWriter from './components/BlogWriter/BlogWriter';
+import ProtectedRoute from './components/shared/ProtectedRoute';
 
 import { apiClient } from './api/client';
 
@@ -170,9 +171,31 @@ const App: React.FC = () => {
     );
   }
 
+  // Check if CopilotKit API key is available
+  const copilotApiKey = process.env.REACT_APP_COPILOTKIT_API_KEY;
+  
+  // If no CopilotKit API key, render without CopilotKit wrapper
+  if (!copilotApiKey) {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/" element={<InitialRouteHandler />} />
+          <Route path="/onboarding" element={<Wizard />} />
+          <Route path="/dashboard" element={<ProtectedRoute><MainDashboard /></ProtectedRoute>} />
+          <Route path="/seo" element={<ProtectedRoute><SEODashboard /></ProtectedRoute>} />
+          <Route path="/seo-dashboard" element={<ProtectedRoute><SEODashboard /></ProtectedRoute>} />
+          <Route path="/content-planning" element={<ProtectedRoute><ContentPlanningDashboard /></ProtectedRoute>} />
+          <Route path="/facebook-writer" element={<ProtectedRoute><FacebookWriter /></ProtectedRoute>} />
+          <Route path="/linkedin-writer" element={<ProtectedRoute><LinkedInWriter /></ProtectedRoute>} />
+          <Route path="/blog-writer" element={<ProtectedRoute><BlogWriter /></ProtectedRoute>} />
+        </Routes>
+      </Router>
+    );
+  }
+
   return (
     <CopilotKit 
-      publicApiKey={process.env.REACT_APP_COPILOTKIT_API_KEY}
+      publicApiKey={copilotApiKey}
       showDevConsole={false}
       onError={(e) => console.error("CopilotKit Error:", e)}
       
@@ -182,13 +205,13 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<InitialRouteHandler />} />
             <Route path="/onboarding" element={<Wizard />} />
-            <Route path="/dashboard" element={<MainDashboard />} />
-            <Route path="/seo" element={<SEODashboard />} />
-            <Route path="/seo-dashboard" element={<SEODashboard />} />
-            <Route path="/content-planning" element={<ContentPlanningDashboard />} />
-            <Route path="/facebook-writer" element={<FacebookWriter />} />
-            <Route path="/linkedin-writer" element={<LinkedInWriter />} />
-            <Route path="/blog-writer" element={<BlogWriter />} />
+            <Route path="/dashboard" element={<ProtectedRoute><MainDashboard /></ProtectedRoute>} />
+            <Route path="/seo" element={<ProtectedRoute><SEODashboard /></ProtectedRoute>} />
+            <Route path="/seo-dashboard" element={<ProtectedRoute><SEODashboard /></ProtectedRoute>} />
+            <Route path="/content-planning" element={<ProtectedRoute><ContentPlanningDashboard /></ProtectedRoute>} />
+            <Route path="/facebook-writer" element={<ProtectedRoute><FacebookWriter /></ProtectedRoute>} />
+            <Route path="/linkedin-writer" element={<ProtectedRoute><LinkedInWriter /></ProtectedRoute>} />
+            <Route path="/blog-writer" element={<ProtectedRoute><BlogWriter /></ProtectedRoute>} />
           </Routes>
         </ConditionalCopilotKit>
       </Router>
