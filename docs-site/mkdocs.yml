@@ -97,8 +97,12 @@ extra:
 # Navigation structure
 nav:
   - Home: index.md
+  - About: about.md
   - Getting Started:
     - Quick Start: getting-started/quick-start.md
+    - Installation: getting-started/installation.md
+    - Configuration: getting-started/configuration.md
+    - First Steps: getting-started/first-steps.md
   - Features:
     - Blog Writer:
       - Overview: features/blog-writer/overview.md
