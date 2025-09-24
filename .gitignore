@@ -24,6 +24,10 @@ backend/content_cache.db
 backend/outline_cache.db
 backend/research_cache.db
 
+# Onboarding progress files
+.onboarding_progress.json
+backend/.onboarding_progress.json
+
 # IDE and editor files
 .vscode/
 .idea/
@@ -138,3 +142,4 @@ Pipfile.lock
 # Cache directories
 .cache/
 .pytest_cache/
+.pytest_cache
