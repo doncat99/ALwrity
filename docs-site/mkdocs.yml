@@ -103,10 +103,145 @@ nav:
     - Installation: getting-started/installation.md
     - Configuration: getting-started/configuration.md
     - First Steps: getting-started/first-steps.md
+    - User Installation: user-journeys/getting-started/installation.md
+    - User First Steps: user-journeys/getting-started/first-steps.md
+  - User Journeys:
+    - Overview: user-journeys/overview.md
+    - Content Creators:
+      - Overview: user-journeys/content-creators/overview.md
+      - Getting Started: user-journeys/content-creators/getting-started.md
+      - First Content: user-journeys/content-creators/first-content.md
+      - Features Overview: user-journeys/content-creators/features-overview.md
+      - SEO Optimization: user-journeys/content-creators/seo-optimization.md
+      - Content Strategy: user-journeys/content-creators/content-strategy.md
+      - Multi-Platform: user-journeys/content-creators/multi-platform.md
+      - Scaling: user-journeys/content-creators/scaling.md
+      - Performance Tracking: user-journeys/content-creators/performance-tracking.md
+      - Workflow Optimization: user-journeys/content-creators/workflow-optimization.md
+      - Troubleshooting: user-journeys/content-creators/troubleshooting.md
+    - Non-Tech Content Creators:
+      - Overview: user-journeys/non-tech-creators/overview.md
+      - Getting Started: user-journeys/non-tech-creators/getting-started.md
+      - First Content: user-journeys/non-tech-creators/first-content.md
+      - SEO Basics: user-journeys/non-tech-creators/seo-basics.md
+      - SEO Optimization: user-journeys/non-tech-creators/seo-optimization.md
+      - Content Strategy: user-journeys/non-tech-creators/content-strategy.md
+      - Content Optimization: user-journeys/non-tech-creators/content-optimization.md
+      - Scaling: user-journeys/non-tech-creators/scaling.md
+      - Performance Tracking: user-journeys/non-tech-creators/performance-tracking.md
+      - Workflow Optimization: user-journeys/non-tech-creators/workflow-optimization.md
+      - Audience Growth: user-journeys/non-tech-creators/audience-growth.md
+      - Troubleshooting: user-journeys/non-tech-creators/troubleshooting.md
+      - Advanced Features: user-journeys/non-tech-creators/advanced-features.md
+      - Community & Support: user-journeys/non-tech-creators/community-support.md
+      - Success Stories: user-journeys/non-tech-creators/success-stories.md
+    - Developers:
+      - Overview: user-journeys/developers/overview.md
+      - API Quickstart: user-journeys/developers/api-quickstart.md
+      - Integration Guide: user-journeys/developers/integration-guide.md
+      - Advanced Usage: user-journeys/developers/advanced-usage.md
+      - Deployment: user-journeys/developers/deployment.md
+      - Performance Optimization: user-journeys/developers/performance-optimization.md
+      - Contributing: user-journeys/developers/contributing.md
+      - Self-Host Setup: user-journeys/developers/self-host-setup.md
+      - Codebase Exploration: user-journeys/developers/codebase-exploration.md
+      - Customization: user-journeys/developers/customization.md
+      - Team Collaboration: user-journeys/developers/team-collaboration.md
+      - Scaling: user-journeys/developers/scaling.md
+    - Tech Marketers:
+      - Overview: user-journeys/tech-marketers/overview.md
+      - Strategy Setup: user-journeys/tech-marketers/strategy-setup.md
+      - Content Strategy: user-journeys/tech-marketers/content-strategy.md
+      - SEO Setup: user-journeys/tech-marketers/seo-setup.md
+      - Content Production: user-journeys/tech-marketers/content-production.md
+      - Team Onboarding: user-journeys/tech-marketers/team-onboarding.md
+      - Analytics: user-journeys/tech-marketers/analytics.md
+      - Advanced Analytics: user-journeys/tech-marketers/advanced-analytics.md
+      - Optimization: user-journeys/tech-marketers/optimization.md
+      - Scaling: user-journeys/tech-marketers/scaling.md
+      - Advanced Features: user-journeys/tech-marketers/advanced-features.md
+      - ROI Optimization: user-journeys/tech-marketers/roi-optimization.md
+      - Competitive Analysis: user-journeys/tech-marketers/competitive-analysis.md
+      - Team Management: user-journeys/tech-marketers/team-management.md
+      - Troubleshooting: user-journeys/tech-marketers/troubleshooting.md
+    - Solopreneurs:
+      - Overview: user-journeys/solopreneurs/overview.md
+      - Brand Strategy: user-journeys/solopreneurs/brand-strategy.md
+      - Content Strategy: user-journeys/solopreneurs/content-strategy.md
+      - Social Media Setup: user-journeys/solopreneurs/social-media-setup.md
+      - Email Marketing: user-journeys/solopreneurs/email-marketing.md
+      - Content Production: user-journeys/solopreneurs/content-production.md
+      - Audience Growth: user-journeys/solopreneurs/audience-growth.md
+      - Community Building: user-journeys/solopreneurs/community-building.md
+      - Performance Tracking: user-journeys/solopreneurs/performance-tracking.md
+      - Analytics: user-journeys/solopreneurs/analytics.md
+      - Business Growth: user-journeys/solopreneurs/business-growth.md
+      - Content Monetization: user-journeys/solopreneurs/content-monetization.md
+      - Advanced Branding: user-journeys/solopreneurs/advanced-branding.md
+      - Advanced Features: user-journeys/solopreneurs/advanced-features.md
+      - Troubleshooting: user-journeys/solopreneurs/troubleshooting.md
+    - Content Teams:
+      - Overview: user-journeys/content-teams/overview.md
+      - Team Management: user-journeys/content-teams/team-management.md
+      - Brand Consistency: user-journeys/content-teams/brand-consistency.md
+      - Workflow Setup: user-journeys/content-teams/workflow-setup.md
+      - Advanced Workflows: user-journeys/content-teams/advanced-workflows.md
+      - Performance Analytics: user-journeys/content-teams/performance-analytics.md
+      - Client Management: user-journeys/content-teams/client-management.md
+      - Team Scaling: user-journeys/content-teams/team-scaling.md
+      - Troubleshooting: user-journeys/content-teams/troubleshooting.md
+      - Content Production: user-journeys/content-teams/content-production.md
+      - Workflow Optimization: user-journeys/content-teams/workflow-optimization.md
+      - Scaling: user-journeys/content-teams/scaling.md
+      - Performance Tracking: user-journeys/content-teams/performance-tracking.md
+    - Enterprise Users:
+      - Overview: user-journeys/enterprise/overview.md
+      - Implementation: user-journeys/enterprise/implementation.md
+      - Security & Compliance: user-journeys/enterprise/security-compliance.md
+      - Analytics: user-journeys/enterprise/analytics.md
+      - Performance Optimization: user-journeys/enterprise/performance-optimization.md
+      - Custom Solutions: user-journeys/enterprise/custom-solutions.md
+      - Strategic Planning: user-journeys/enterprise/strategic-planning.md
+      - Team Training: user-journeys/enterprise/team-training.md
+      - Scaling: user-journeys/enterprise/scaling.md
+      - Monitoring: user-journeys/enterprise/monitoring.md
+      - Troubleshooting: user-journeys/enterprise/troubleshooting.md
+      - Advanced Security: user-journeys/enterprise/advanced-security.md
   - Features:
     - Blog Writer:
       - Overview: features/blog-writer/overview.md
+      - Implementation Overview: features/blog-writer/implementation-overview.md
+      - API Reference: features/blog-writer/api-reference.md
+      - Workflow Guide: features/blog-writer/workflow-guide.md
+      - Research Integration: features/blog-writer/research.md
+      - SEO Analysis: features/blog-writer/seo-analysis.md
+      - Implementation Spec: features/blog-writer/implementation-spec.md
     - SEO Dashboard:
       - Overview: features/seo-dashboard/overview.md
+      - GSC Integration: features/seo-dashboard/gsc-integration.md
+      - Metadata Generation: features/seo-dashboard/metadata.md
+      - Design Document: features/seo-dashboard/design-document.md
+    - Content Strategy:
+      - Overview: features/content-strategy/overview.md
+      - Persona Development: features/content-strategy/personas.md
+    - Persona System:
+      - Overview: features/persona/overview.md
+      - User Guide: features/persona/user-guide.md
+      - Platform Integration: features/persona/platform-integration.md
+      - Technical Architecture: features/persona/technical-architecture.md
+      - Implementation Examples: features/persona/implementation-examples.md
+      - Roadmap & Future: features/persona/roadmap.md
+    - AI Features:
+      - Assistive Writing: features/ai/assistive-writing.md
+      - Grounding UI: features/ai/grounding-ui.md
+    - LinkedIn Writer:
+      - Overview: features/linkedin-writer/overview.md
+  - API Reference:
+    - Overview: api/overview.md
+    - Authentication: api/authentication.md
+    - Rate Limiting: api/rate-limiting.md
+    - Error Codes: api/error-codes.md
   - Guides:
     - Troubleshooting: guides/troubleshooting.md
+    - Best Practices: guides/best-practices.md
+    - Performance: guides/performance.md

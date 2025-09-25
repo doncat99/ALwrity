@@ -34,6 +34,22 @@
 
     [:octicons-arrow-right-24: Content Writers](features/blog-writer/overview.md)
 
+-   :material-account:{ .lg .middle } **Persona System**
+
+    ---
+
+    AI-powered personalized writing assistants
+
+    [:octicons-arrow-right-24: Persona System](features/persona/overview.md)
+
+-   :material-account-group:{ .lg .middle } **User Journeys**
+
+    ---
+
+    Personalized paths for different user types
+
+    [:octicons-arrow-right-24: Choose Your Journey](user-journeys/overview.md)
+
 </div>
 
 ## What is ALwrity?
@@ -43,6 +59,7 @@ ALwrity is an AI-powered digital marketing platform that revolutionizes content 
 ### Key Features
 
 - **🤖 AI-Powered Content Generation**: Create blog posts, LinkedIn content, and Facebook posts with advanced AI
+- **👤 Personalized Writing Personas**: AI-powered writing assistants tailored to your unique voice and style
 - **📊 SEO Dashboard**: Comprehensive SEO analysis with Google Search Console integration
 - **🎯 Content Strategy**: AI-driven persona generation and content planning
 - **🔍 Research Integration**: Automated research and fact-checking capabilities

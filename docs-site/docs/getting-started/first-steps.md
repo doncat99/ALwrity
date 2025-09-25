@@ -19,6 +19,31 @@ Before you begin, ensure you have:
 2. **Sign In**: Use your authentication method (if configured)
 3. **Dashboard**: You'll see the main ALwrity dashboard
 
+### 1.2 User Journey Overview
+
+```mermaid
+journey
+    title ALwrity User Journey
+    section Initial Setup
+      Open ALwrity: 5: User
+      Sign In: 4: User
+      View Dashboard: 5: User
+    section Onboarding
+      Enter Business Info: 4: User
+      Set Content Preferences: 4: User
+      Generate Persona: 5: User
+    section Content Creation
+      Choose Content Type: 5: User
+      Input Topic: 4: User
+      Review Research: 5: User
+      Generate Content: 5: User
+      Review & Edit: 4: User
+    section Optimization
+      SEO Analysis: 5: User
+      Apply Recommendations: 4: User
+      Publish Content: 5: User
+```
+
 ### 1.2 Dashboard Overview
 
 The dashboard provides access to:

@@ -1,50 +1,50 @@
 # Blog Writer Overview
 
-The ALwrity Blog Writer is a powerful AI-driven content creation tool that helps you generate high-quality, SEO-optimized blog posts with minimal effort.
+The ALwrity Blog Writer is a powerful AI-driven content creation tool that helps you generate high-quality, SEO-optimized blog posts with minimal effort. It's designed for users with medium to low technical knowledge, making professional content creation accessible to everyone.
 
 ## Key Features
 
 ### 🤖 AI-Powered Content Generation
-- **Topic Research**: Automated research and fact-checking
-- **Content Structure**: Intelligent outline generation
-- **Writing Styles**: Multiple writing styles and tones
-- **SEO Optimization**: Built-in SEO analysis and recommendations
+- **Research Integration**: Automated web research with source verification
+- **Smart Outlines**: AI-generated content outlines that you can customize
+- **Section-by-Section Writing**: Generate content one section at a time
+- **Multiple Writing Styles**: Choose from different tones and styles
 
-### 📊 Research Integration
-- **Real-time Research**: Access to current information
-- **Source Verification**: Fact-checking and source validation
-- **Trend Analysis**: Current trends and topics
-- **Competitor Analysis**: Content gap identification
+### 📊 Research & Analysis
+- **Web Research**: Real-time research with source citations
+- **Fact Checking**: Built-in hallucination detection and verification
+- **Content Optimization**: AI-powered content improvement suggestions
+- **SEO Integration**: Built-in SEO analysis and recommendations
 
-### 🎯 SEO Optimization
-- **Keyword Analysis**: Primary and secondary keyword optimization
-- **Meta Tags**: Automatic meta description and title generation
-- **Readability**: Content readability optimization
-- **Internal Linking**: Smart internal linking suggestions
+### 🎯 User-Friendly Features
+- **Visual Editor**: Easy-to-use WYSIWYG editor with markdown support
+- **Progress Tracking**: Real-time progress monitoring for long tasks
+- **Title Suggestions**: AI-generated title options to choose from
+- **Publishing Tools**: Direct publishing to various platforms
 
 ## How It Works
 
-### 1. Content Planning
-```mermaid
-graph TD
-    A[Topic Input] --> B[Research Phase]
-    B --> C[Outline Generation]
-    C --> D[Content Creation]
-    D --> E[SEO Analysis]
-    E --> F[Final Review]
-```
+### Simple 4-Step Process
 
-### 2. Research Process
-- **Topic Analysis**: Understanding the subject matter
-- **Keyword Research**: Identifying relevant keywords
-- **Competitor Analysis**: Analyzing top-performing content
-- **Source Gathering**: Collecting reliable information
+1. **Research Your Topic** - Enter your topic and keywords, then let AI research the latest information
+2. **Create an Outline** - AI generates a content outline that you can customize and refine
+3. **Write Section by Section** - Generate content for each section using AI, then edit as needed
+4. **Optimize and Publish** - Review SEO suggestions, make final edits, and publish your content
 
-### 3. Content Generation
-- **Introduction**: Engaging opening paragraphs
-- **Body Content**: Well-structured main content
-- **Conclusion**: Compelling closing statements
-- **Call-to-Action**: Strategic CTAs placement
+### What Happens Behind the Scenes
+
+- **Research Phase**: AI searches the web for current information and sources
+- **Outline Generation**: Creates a logical structure with headings and key points
+- **Content Writing**: Generates engaging, informative content for each section
+- **Quality Checks**: Runs fact-checking and SEO analysis automatically
+- **Publishing**: Formats content for your chosen platform
+
+### User-Friendly Features
+
+- **Progress Tracking**: See real-time progress for research and writing tasks
+- **Visual Editor**: Edit content with an easy-to-use WYSIWYG interface
+- **Title Suggestions**: Choose from AI-generated title options
+- **SEO Integration**: Get SEO suggestions as you write
 
 ## Content Types
 
@@ -153,7 +153,7 @@ graph TD
 1. **[Research Integration](research.md)** - Set up automated research
 2. **[SEO Analysis](seo-analysis.md)** - Configure SEO optimization
 3. **[Implementation Spec](implementation-spec.md)** - Technical details
-4. **[Best Practices](../guides/best-practices.md)** - Optimization tips
+4. **[Best Practices](../../guides/best-practices.md)** - Optimization tips
 
 ## Related Features
 
