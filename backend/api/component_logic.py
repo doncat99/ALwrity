@@ -30,6 +30,9 @@ from services.component_logic.web_crawler_logic import WebCrawlerLogic
 from services.research_preferences_service import ResearchPreferencesService
 from services.database import get_db
 
+# Import authentication for user isolation
+from middleware.auth_middleware import get_current_user
+
 # Import the website analysis service
 from services.website_analysis_service import WebsiteAnalysisService
 from services.database import get_db_session
@@ -70,10 +73,15 @@ async def validate_user_info(request: UserInfoRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/ai-research/configure-preferences", response_model=ResearchPreferencesResponse)
-async def configure_research_preferences(request: ResearchPreferencesRequest, db: Session = Depends(get_db)):
-    """Configure research preferences for AI research and save to database."""
+async def configure_research_preferences(
+    request: ResearchPreferencesRequest, 
+    db: Session = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Configure research preferences for AI research and save to database with user isolation."""
     try:
-        logger.info("Configuring research preferences via API")
+        user_id = str(current_user.get('id'))
+        logger.info(f"Configuring research preferences for user: {user_id}")
         
         # Validate preferences using business logic
         preferences = {
@@ -90,11 +98,15 @@ async def configure_research_preferences(request: ResearchPreferencesRequest, db
                 # Save to database
                 preferences_service = ResearchPreferencesService(db)
                 
-                # Use a default session ID for now (you might need to implement session management)
-                session_id = 1  # TODO: Get actual session ID from request context
+                # Use authenticated Clerk user ID for proper user isolation
+                # Convert user_id to int if service expects it, or update service to accept string
+                try:
+                    user_id_int = int(user_id.replace('user_', '').replace('-', '')[:8], 16) % 2147483647
+                except:
+                    user_id_int = hash(user_id) % 2147483647
                 
-                # Save preferences with style data from step 2
-                preferences_id = preferences_service.save_preferences_with_style_data(session_id, preferences)
+                # Save preferences with user ID (not session_id)
+                preferences_id = preferences_service.save_preferences_with_style_data(user_id_int, preferences)
                 
                 if preferences_id:
                     logger.info(f"Research preferences saved to database with ID: {preferences_id}")
@@ -468,10 +480,14 @@ async def crawl_website_content(request: WebCrawlRequest):
         )
 
 @router.post("/style-detection/complete", response_model=StyleDetectionResponse)
-async def complete_style_detection(request: StyleDetectionRequest):
-    """Complete style detection workflow (crawl + analyze + guidelines) with database storage."""
+async def complete_style_detection(
+    request: StyleDetectionRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Complete style detection workflow (crawl + analyze + guidelines) with database storage and user isolation."""
     try:
-        logger.info("[complete_style_detection] Starting complete style detection")
+        user_id = str(current_user.get('id'))
+        logger.info(f"[complete_style_detection] Starting complete style detection for user: {user_id}")
         
         # Get database session
         db_session = get_db_session()
@@ -487,13 +503,16 @@ async def complete_style_detection(request: StyleDetectionRequest):
         style_logic = StyleDetectionLogic()
         analysis_service = WebsiteAnalysisService(db_session)
         
-        # Get session ID (for now using a default, in production this would come from user session)
-        session_id = 1  # TODO: Get from user session
+        # Use authenticated Clerk user ID for proper user isolation
+        try:
+            user_id_int = int(user_id.replace('user_', '').replace('-', '')[:8], 16) % 2147483647
+        except:
+            user_id_int = hash(user_id) % 2147483647
         
         # Check for existing analysis if URL is provided
         existing_analysis = None
         if request.url:
-            existing_analysis = analysis_service.check_existing_analysis(session_id, request.url)
+            existing_analysis = analysis_service.check_existing_analysis(user_id_int, request.url)
         
         # Step 1: Crawl content
         if request.url:
@@ -509,7 +528,7 @@ async def complete_style_detection(request: StyleDetectionRequest):
         
         if not crawl_result['success']:
             # Save error analysis
-            analysis_service.save_error_analysis(session_id, request.url or "text_sample", 
+            analysis_service.save_error_analysis(user_id_int, request.url or "text_sample", 
                                               crawl_result.get('error', 'Crawling failed'))
             return StyleDetectionResponse(
                 success=False,
@@ -531,7 +550,7 @@ async def complete_style_detection(request: StyleDetectionRequest):
                 )
             else:
                 # Save error analysis
-                analysis_service.save_error_analysis(session_id, request.url or "text_sample", error_msg)
+                analysis_service.save_error_analysis(user_id_int, request.url or "text_sample", error_msg)
                 return StyleDetectionResponse(
                     success=False,
                     error=f"Style analysis failed: {error_msg}",
@@ -568,7 +587,7 @@ async def complete_style_detection(request: StyleDetectionRequest):
         
         # Save analysis to database
         if request.url:  # Only save for URL-based analysis
-            analysis_id = analysis_service.save_analysis(session_id, request.url, response_data)
+            analysis_id = analysis_service.save_analysis(user_id_int, request.url, response_data)
             if analysis_id:
                 response_data['analysis_id'] = analysis_id
         
@@ -591,10 +610,14 @@ async def complete_style_detection(request: StyleDetectionRequest):
         )
 
 @router.get("/style-detection/check-existing/{website_url:path}")
-async def check_existing_analysis(website_url: str):
-    """Check if analysis exists for a website URL."""
+async def check_existing_analysis(
+    website_url: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Check if analysis exists for a website URL with user isolation."""
     try:
-        logger.info(f"[check_existing_analysis] Checking for URL: {website_url}")
+        user_id = str(current_user.get('id'))
+        logger.info(f"[check_existing_analysis] Checking for URL: {website_url} (user: {user_id})")
         
         # Get database session
         db_session = get_db_session()
@@ -604,11 +627,14 @@ async def check_existing_analysis(website_url: str):
         # Initialize service
         analysis_service = WebsiteAnalysisService(db_session)
         
-        # Get session ID (for now using a default, in production this would come from user session)
-        session_id = 1  # TODO: Get from user session
+        # Use authenticated Clerk user ID for proper user isolation
+        try:
+            user_id_int = int(user_id.replace('user_', '').replace('-', '')[:8], 16) % 2147483647
+        except:
+            user_id_int = hash(user_id) % 2147483647
         
-        # Check for existing analysis
-        existing_analysis = analysis_service.check_existing_analysis(session_id, website_url)
+        # Check for existing analysis for THIS USER ONLY
+        existing_analysis = analysis_service.check_existing_analysis(user_id_int, website_url)
         
         return existing_analysis
         
@@ -643,10 +669,11 @@ async def get_analysis_by_id(analysis_id: int):
         return {"error": f"Error retrieving analysis: {str(e)}"}
 
 @router.get("/style-detection/session-analyses")
-async def get_session_analyses():
-    """Get all analyses for the current session."""
+async def get_session_analyses(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get all analyses for the current user with proper user isolation."""
     try:
-        logger.info("[get_session_analyses] Getting session analyses")
+        user_id = str(current_user.get('id'))
+        logger.info(f"[get_session_analyses] Getting analyses for user: {user_id}")
         
         # Get database session
         db_session = get_db_session()
@@ -656,12 +683,16 @@ async def get_session_analyses():
         # Initialize service
         analysis_service = WebsiteAnalysisService(db_session)
         
-        # Get session ID (for now using a default, in production this would come from user session)
-        session_id = 1  # TODO: Get from user session
+        # Use authenticated Clerk user ID for proper user isolation
+        try:
+            user_id_int = int(user_id.replace('user_', '').replace('-', '')[:8], 16) % 2147483647
+        except:
+            user_id_int = hash(user_id) % 2147483647
         
-        # Get analyses
-        analyses = analysis_service.get_session_analyses(session_id)
+        # Get analyses for THIS USER ONLY (not all users!)
+        analyses = analysis_service.get_session_analyses(user_id_int)
         
+        logger.info(f"[get_session_analyses] Found {len(analyses) if analyses else 0} analyses for user {user_id}")
         return {"success": True, "analyses": analyses}
         
     except Exception as e:

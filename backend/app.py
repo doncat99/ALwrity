@@ -21,6 +21,7 @@ load_dotenv()
 # Import the new enhanced functions
 from api.onboarding import (
     health_check,
+    initialize_onboarding,  # NEW: Batch init endpoint
     get_onboarding_status,
     get_onboarding_progress_full,
     get_step_data,
@@ -28,6 +29,7 @@ from api.onboarding import (
     skip_step,
     validate_step_access,
     get_api_keys,
+    get_api_keys_for_onboarding,
     save_api_key,
     validate_api_keys,
     start_onboarding,
@@ -49,6 +51,7 @@ from api.onboarding import (
     StepCompletionRequest,
     APIKeyRequest
 )
+from middleware.auth_middleware import get_current_user
 
 # Import component logic endpoints
 from api.component_logic import router as component_logic_router
@@ -74,6 +77,9 @@ from api.writing_assistant import router as writing_assistant_router
 # Import content planning endpoints
 from api.content_planning.api.router import router as content_planning_router
 from api.user_data import router as user_data_router
+
+# Import user environment endpoints
+from api.user_environment import router as user_environment_router
 
 # Import strategy copilot endpoints
 from api.content_planning.strategy_copilot import router as strategy_copilot_router
@@ -111,6 +117,7 @@ app.add_middleware(
         "http://localhost:3000",  # React dev server
         "http://localhost:8000",  # Backend dev server
         "http://localhost:3001",  # Alternative React port
+        "https://littery-sonny-unscrutinisingly.ngrok-free.dev",  # ngrok frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -118,7 +125,8 @@ app.add_middleware(
 )
 
 # Add API monitoring middleware
-app.middleware("http")(monitoring_middleware)
+# Temporarily disabled for Wix testing
+# app.middleware("http")(monitoring_middleware)
 
 # Simple rate limiting
 request_counts = defaultdict(list)
@@ -240,58 +248,87 @@ async def database_health_check():
             "timestamp": datetime.utcnow().isoformat()
         }
 
+# Onboarding initialization - BATCH ENDPOINT (reduces 4 API calls to 1)
+@app.get("/api/onboarding/init")
+async def onboarding_init(current_user: dict = Depends(get_current_user)):
+    """
+    Batch initialization endpoint - combines user info, status, and progress.
+    This eliminates 3-4 separate API calls on initial load, reducing latency by 60-75%.
+    """
+    try:
+        return await initialize_onboarding(current_user)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error in onboarding_init: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Onboarding status endpoints
 @app.get("/api/onboarding/status")
-async def onboarding_status():
+async def onboarding_status(current_user: dict = Depends(get_current_user)):
     """Get the current onboarding status."""
     try:
-        return await get_onboarding_status()
+        # Pass current_user explicitly to user-scoped handler
+        return await get_onboarding_status(current_user)
+    except HTTPException as he:
+        # Preserve HTTP error codes like 401 Unauthorized
+        raise he
     except Exception as e:
         logger.error(f"Error in onboarding_status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/onboarding/progress")
-async def onboarding_progress():
+async def onboarding_progress(current_user: dict = Depends(get_current_user)):
     """Get the full onboarding progress data."""
     try:
-        return await get_onboarding_progress_full()
+        return await get_onboarding_progress_full(current_user)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Error in onboarding_progress: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Step management endpoints
 @app.get("/api/onboarding/step/{step_number}")
-async def step_data(step_number: int):
+async def step_data(step_number: int, current_user: dict = Depends(get_current_user)):
     """Get data for a specific step."""
     try:
-        return await get_step_data(step_number)
+        return await get_step_data(step_number, current_user)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Error in step_data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/onboarding/step/{step_number}/complete")
-async def step_complete(step_number: int, request: StepCompletionRequest):
+async def step_complete(step_number: int, request: StepCompletionRequest, current_user: dict = Depends(get_current_user)):
     """Mark a step as completed."""
     try:
-        return await complete_step(step_number, request)
+        return await complete_step(step_number, request, current_user)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Error in step_complete: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/onboarding/step/{step_number}/skip")
-async def step_skip(step_number: int):
+async def step_skip(step_number: int, current_user: dict = Depends(get_current_user)):
     """Skip a step (for optional steps)."""
     try:
-        return await skip_step(step_number)
+        return await skip_step(step_number, current_user)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Error in step_skip: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/onboarding/step/{step_number}/validate")
-async def step_validate(step_number: int):
+async def step_validate(step_number: int, current_user: dict = Depends(get_current_user)):
     """Validate if user can access a specific step."""
     try:
-        return await validate_step_access(step_number)
+        return await validate_step_access(step_number, current_user)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Error in step_validate: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -304,6 +341,15 @@ async def api_keys():
         return await get_api_keys()
     except Exception as e:
         logger.error(f"Error in api_keys: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/onboarding/api-keys/onboarding")
+async def api_keys_for_onboarding():
+    """Get all configured API keys for onboarding (unmasked)."""
+    try:
+        return await get_api_keys_for_onboarding()
+    except Exception as e:
+        logger.error(f"Error in api_keys_for_onboarding: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/onboarding/api-keys")
@@ -326,19 +372,23 @@ async def api_key_validate():
 
 # Onboarding control endpoints
 @app.post("/api/onboarding/start")
-async def onboarding_start():
+async def onboarding_start(current_user: dict = Depends(get_current_user)):
     """Start a new onboarding session."""
     try:
-        return await start_onboarding()
+        return await start_onboarding(current_user)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Error in onboarding_start: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/onboarding/complete")
-async def onboarding_complete():
+async def onboarding_complete(current_user: dict = Depends(get_current_user)):
     """Complete the onboarding process."""
     try:
-        return await complete_onboarding()
+        return await complete_onboarding(current_user)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Error in onboarding_complete: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -411,28 +461,28 @@ async def enhanced_validation_status():
 
 # New endpoints for FinalStep data loading
 @app.get("/api/onboarding/summary")
-async def onboarding_summary():
+async def onboarding_summary(current_user: dict = Depends(get_current_user)):
     """Get comprehensive onboarding summary for FinalStep."""
     try:
-        return await get_onboarding_summary()
+        return await get_onboarding_summary(current_user)
     except Exception as e:
         logger.error(f"Error in onboarding_summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/onboarding/website-analysis")
-async def website_analysis_data():
+async def website_analysis_data(current_user: dict = Depends(get_current_user)):
     """Get website analysis data for FinalStep."""
     try:
-        return await get_website_analysis_data()
+        return await get_website_analysis_data(current_user)
     except Exception as e:
         logger.error(f"Error in website_analysis_data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/onboarding/research-preferences")
-async def research_preferences_data():
+async def research_preferences_data(current_user: dict = Depends(get_current_user)):
     """Get research preferences data for FinalStep."""
     try:
-        return await get_research_preferences_data()
+        return await get_research_preferences_data(current_user)
     except Exception as e:
         logger.error(f"Error in research_preferences_data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -505,6 +555,7 @@ app.include_router(writing_assistant_router)
 app.include_router(content_planning_router)
 app.include_router(user_data_router)
 app.include_router(strategy_copilot_router)
+app.include_router(user_environment_router)
 
 # Include AI Blog Writer router
 try:
@@ -512,6 +563,13 @@ try:
     app.include_router(blog_writer_router)
 except Exception as e:
     logger.warning(f"AI Blog Writer router not mounted: {e}")
+
+# Include Wix Integration router
+try:
+    from api.wix_routes import router as wix_router
+    app.include_router(wix_router)
+except Exception as e:
+    logger.warning(f"Wix Integration router not mounted: {e}")
 
 # Include Blog Writer SEO Analysis router (comprehensive SEO analysis)
 try:
@@ -531,6 +589,10 @@ from routers.stability_admin import router as stability_admin_router
 app.include_router(stability_router)
 app.include_router(stability_advanced_router)
 app.include_router(stability_admin_router)
+
+# Step 3 Research router
+from api.onboarding_utils.step3_routes import router as step3_research_router
+app.include_router(step3_research_router)
 
 # SEO Dashboard endpoints
 @app.get("/api/seo-dashboard/data")

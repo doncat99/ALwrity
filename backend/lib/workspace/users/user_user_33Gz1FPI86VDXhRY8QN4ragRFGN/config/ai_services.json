@@ -1,0 +1,14 @@
+{
+  "gemini": {
+    "enabled": true,
+    "model": "gemini-pro"
+  },
+  "exa": {
+    "enabled": true,
+    "search_depth": "standard"
+  },
+  "copilotkit": {
+    "enabled": true,
+    "assistant_type": "content"
+  }
+}

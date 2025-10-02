@@ -1,8 +1,13 @@
 # Clerk Authentication
 CLERK_SECRET_KEY=your_clerk_secret_key_here
+CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
 
 # Google Search Console
 GSC_REDIRECT_URI=http://localhost:8000/gsc/callback
+
+# Wix Integration (Headless OAuth - Client ID only, no Client Secret required)
+WIX_CLIENT_ID=75d88e36-1c76-4009-b769-15f4654556df
+WIX_REDIRECT_URI=https://littery-sonny-unscrutinisingly.ngrok-free.dev/wix/callback
 
 # Development Settings
 DISABLE_AUTH=false

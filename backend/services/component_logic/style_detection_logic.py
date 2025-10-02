@@ -71,9 +71,15 @@ class StyleDetectionLogic:
             social_media = content.get('social_media', {})
             content_structure = content.get('content_structure', {})
             
-            # Construct the enhanced analysis prompt
-            prompt = f"""Analyze the following website content for comprehensive writing style, tone, and characteristics. 
-            This is a detailed analysis for content personalization and AI-powered content generation.
+            # Construct the enhanced analysis prompt (strict JSON, minified, stable keys)
+            prompt = f"""Analyze the following website content for comprehensive writing style, tone, and characteristics for personalization and AI generation.
+
+            RULES:
+            - Return ONE single-line MINIFIED JSON object only. No markdown, code fences, comments, or prose.
+            - Use EXACTLY the keys and ordering from the schema below. Do not add extra top-level keys.
+            - For unknown/unavailable fields use empty string "" or empty array [] and explain in meta.uncertainty.
+            - Keep text concise; avoid repeating input text.
+            - Assume token budget; consider only first 5000 chars of main_content and first 10 headings.
 
             WEBSITE INFORMATION:
             - Domain: {domain_info.get('domain_name', 'Unknown')}
@@ -91,10 +97,10 @@ class StyleDetectionLogic:
             - Has Call-to-Action: {content_structure.get('has_call_to_action', False)}
 
             CONTENT TO ANALYZE:
-            Title: {title}
-            Description: {description}
-            Main Content: {main_content[:5000]}  # Enhanced content length
-            Key Headings: {headings[:10]}  # First 10 headings for context
+            - Title: {title}
+            - Description: {description}
+            - Main Content (truncated): {main_content[:5000]}
+            - Key Headings (first 10): {headings[:10]}
 
             ANALYSIS REQUIREMENTS:
             1. Analyze the writing style, tone, and voice characteristics
@@ -106,68 +112,38 @@ class StyleDetectionLogic:
             7. Consider the website type and industry context
             8. Analyze social media presence impact on content style
 
-            IMPORTANT: Respond ONLY with a JSON object in the following format. Do not include any additional text, explanations, or markdown formatting:
+            REQUIRED JSON SCHEMA (stable key order):
             {{
-                "writing_style": {{
-                    "tone": "detailed tone description with context",
-                    "voice": "active/passive with explanation",
-                    "complexity": "simple/moderate/complex with reasoning",
-                    "engagement_level": "low/medium/high with justification",
-                    "brand_personality": "detailed brand personality analysis",
-                    "formality_level": "casual/semi-formal/formal/professional",
-                    "emotional_appeal": "rational/emotional/mixed with examples"
-                }},
-                "content_characteristics": {{
-                    "sentence_structure": "detailed analysis of sentence patterns",
-                    "vocabulary_level": "basic/intermediate/advanced with examples",
-                    "paragraph_organization": "detailed structure analysis",
-                    "content_flow": "detailed flow analysis",
-                    "readability_score": "estimated readability level",
-                    "content_density": "high/medium/low with reasoning",
-                    "visual_elements_usage": "analysis of how visual elements complement text"
-                }},
-                "target_audience": {{
-                    "demographics": ["detailed demographic analysis"],
-                    "expertise_level": "beginner/intermediate/advanced with reasoning",
-                    "industry_focus": "detailed industry analysis",
-                    "geographic_focus": "detailed geographic analysis",
-                    "psychographic_profile": "detailed psychographic analysis",
-                    "pain_points": ["identified audience pain points"],
-                    "motivations": ["identified audience motivations"]
-                }},
-                "content_type": {{
-                    "primary_type": "detailed content type analysis",
-                    "secondary_types": ["list of secondary content types"],
-                    "purpose": "detailed content purpose analysis",
-                    "call_to_action": "detailed CTA analysis",
-                    "conversion_focus": "high/medium/low with reasoning",
-                    "educational_value": "high/medium/low with reasoning"
-                }},
-                "brand_analysis": {{
-                    "brand_voice": "detailed brand voice analysis",
-                    "brand_values": ["identified brand values"],
-                    "brand_positioning": "detailed positioning analysis",
-                    "competitive_differentiation": "detailed differentiation analysis",
-                    "trust_signals": ["identified trust elements"],
-                    "authority_indicators": ["identified authority elements"]
-                }},
-                "content_strategy_insights": {{
-                    "strengths": ["content strengths"],
-                    "weaknesses": ["content weaknesses"],
-                    "opportunities": ["content opportunities"],
-                    "threats": ["content threats"],
-                    "recommended_improvements": ["specific improvement suggestions"],
-                    "content_gaps": ["identified content gaps"]
-                }},
-                "recommended_settings": {{
-                    "writing_tone": "recommended tone for AI generation",
-                    "target_audience": "recommended audience focus",
-                    "content_type": "recommended content type",
-                    "creativity_level": "low/medium/high with reasoning",
-                    "geographic_location": "recommended geographic focus",
-                    "industry_context": "recommended industry approach",
-                    "brand_alignment": "recommended brand alignment strategy"
-                }}
+              "writing_style": {{
+                "tone": "", "voice": "", "complexity": "", "engagement_level": "",
+                "brand_personality": "", "formality_level": "", "emotional_appeal": ""
+              }},
+              "content_characteristics": {{
+                "sentence_structure": "", "vocabulary_level": "", "paragraph_organization": "",
+                "content_flow": "", "readability_score": "", "content_density": "",
+                "visual_elements_usage": ""
+              }},
+              "target_audience": {{
+                "demographics": [], "expertise_level": "", "industry_focus": "", "geographic_focus": "",
+                "psychographic_profile": "", "pain_points": [], "motivations": []
+              }},
+              "content_type": {{
+                "primary_type": "", "secondary_types": [], "purpose": "", "call_to_action": "",
+                "conversion_focus": "", "educational_value": ""
+              }},
+              "brand_analysis": {{
+                "brand_voice": "", "brand_values": [], "brand_positioning": "", "competitive_differentiation": "",
+                "trust_signals": [], "authority_indicators": []
+              }},
+              "content_strategy_insights": {{
+                "strengths": [], "weaknesses": [], "opportunities": [], "threats": [],
+                "recommended_improvements": [], "content_gaps": []
+              }},
+              "recommended_settings": {{
+                "writing_tone": "", "target_audience": "", "content_type": "", "creativity_level": "",
+                "geographic_location": "", "industry_context": "", "brand_alignment": ""
+              }},
+              "meta": {{"schema_version": "1.1", "confidence": 0.0, "notes": "", "uncertainty": {{"fields": []}}}}
             }}
             """
             
@@ -290,22 +266,25 @@ class StyleDetectionLogic:
             
             main_content = content.get("main_content", "")
             
-            prompt = f"""Analyze the following content for recurring writing patterns and style characteristics.
-            Focus on identifying patterns in sentence structure, vocabulary usage, and writing techniques.
-
-            Content: {main_content[:3000]}
-
-            IMPORTANT: Respond ONLY with a JSON object in the following format:
+            prompt = f"""Analyze the content for recurring writing patterns and style characteristics.
+            
+            RULES:
+            - Return ONE single-line MINIFIED JSON object only. No markdown, code fences, comments, or prose.
+            - Use EXACTLY the keys and ordering from the schema below. No extra top-level keys.
+            - If uncertain, set empty values and list field names in meta.uncertainty.fields.
+            - Keep responses concise and avoid quoting long input spans.
+            
+            Content (truncated to 3000 chars): {main_content[:3000]}
+            
+            REQUIRED JSON SCHEMA (stable key order):
             {{
-                "patterns": {{
-                    "sentence_length": "short/medium/long",
-                    "vocabulary_patterns": ["list of patterns"],
-                    "rhetorical_devices": ["list of devices used"],
-                    "paragraph_structure": "description",
-                    "transition_phrases": ["list of common transitions"]
-                }},
-                "style_consistency": "high/medium/low",
-                "unique_elements": ["list of unique style elements"]
+              "patterns": {{
+                "sentence_length": "", "vocabulary_patterns": [], "rhetorical_devices": [],
+                "paragraph_structure": "", "transition_phrases": []
+              }},
+              "style_consistency": "",
+              "unique_elements": [],
+              "meta": {{"schema_version": "1.1", "confidence": 0.0, "notes": "", "uncertainty": {{"fields": []}}}}
             }}
             """
             
@@ -352,7 +331,7 @@ class StyleDetectionLogic:
             brand_analysis = analysis_results.get('brand_analysis', {})
             content_strategy_insights = analysis_results.get('content_strategy_insights', {})
             
-            prompt = f"""Based on the following comprehensive style analysis, generate detailed content creation guidelines for AI-powered content generation.
+            prompt = f"""Generate actionable content creation guidelines based on the style analysis.
 
             ANALYSIS DATA:
             Writing Style: {writing_style}
@@ -362,85 +341,31 @@ class StyleDetectionLogic:
             Content Strategy Insights: {content_strategy_insights}
 
             REQUIREMENTS:
-            1. Create actionable guidelines for AI content generation
-            2. Provide specific recommendations for maintaining brand voice
-            3. Include strategies for audience engagement
-            4. Address content gaps and opportunities
-            5. Consider competitive positioning
-            6. Provide technical writing recommendations
-            7. Include SEO and conversion optimization tips
-            8. Address content structure and formatting
+            - Return ONE single-line MINIFIED JSON object only. No markdown, code fences, comments, or prose.
+            - Use EXACTLY the keys and ordering from the schema below. No extra top-level keys.
+            - Provide concise, implementation-ready bullets with an example for key items (e.g., tone and CTA examples).
+            - Include negative guidance (what to avoid) tied to brand constraints where applicable.
+            - If uncertain, set empty values and list field names in meta.uncertainty.fields.
 
-            IMPORTANT: Respond ONLY with a JSON object in the following format:
+            IMPORTANT: REQUIRED JSON SCHEMA (stable key order):
             {{
-                "guidelines": {{
-                    "tone_recommendations": [
-                        "specific tone guidelines with examples",
-                        "brand voice consistency tips",
-                        "emotional appeal strategies"
-                    ],
-                    "structure_guidelines": [
-                        "content structure recommendations",
-                        "formatting best practices",
-                        "organization strategies"
-                    ],
-                    "vocabulary_suggestions": [
-                        "specific vocabulary recommendations",
-                        "industry terminology guidance",
-                        "language complexity advice"
-                    ],
-                    "engagement_tips": [
-                        "audience engagement strategies",
-                        "interaction techniques",
-                        "conversion optimization tips"
-                    ],
-                    "audience_considerations": [
-                        "specific audience targeting advice",
-                        "pain point addressing strategies",
-                        "motivation-based content tips"
-                    ],
-                    "brand_alignment": [
-                        "brand voice consistency guidelines",
-                        "brand value integration tips",
-                        "competitive differentiation strategies"
-                    ],
-                    "seo_optimization": [
-                        "keyword integration strategies",
-                        "content optimization tips",
-                        "search visibility recommendations"
-                    ],
-                    "conversion_optimization": [
-                        "call-to-action strategies",
-                        "conversion funnel optimization",
-                        "lead generation techniques"
-                    ]
-                }},
-                "best_practices": [
-                    "comprehensive best practices list",
-                    "industry-specific recommendations",
-                    "quality assurance guidelines"
-                ],
-                "avoid_elements": [
-                    "elements to avoid with explanations",
-                    "common pitfalls to prevent",
-                    "brand-inappropriate content types"
-                ],
-                "content_strategy": "comprehensive content strategy recommendation with specific action items",
-                "ai_generation_tips": [
-                    "specific tips for AI content generation",
-                    "prompt optimization strategies",
-                    "quality control measures"
-                ],
-                "competitive_advantages": [
-                    "identified competitive advantages",
-                    "differentiation strategies",
-                    "market positioning recommendations"
-                ],
-                "content_calendar_suggestions": [
-                    "content frequency recommendations",
-                    "topic planning strategies",
-                    "seasonal content opportunities"
-                ]
+              "guidelines": {{
+                "tone_recommendations": [],
+                "structure_guidelines": [],
+                "vocabulary_suggestions": [],
+                "engagement_tips": [],
+                "audience_considerations": [],
+                "brand_alignment": [],
+                "seo_optimization": [],
+                "conversion_optimization": []
+              }},
+              "best_practices": [],
+              "avoid_elements": [],
+              "content_strategy": "",
+              "ai_generation_tips": [],
+              "competitive_advantages": [],
+              "content_calendar_suggestions": [],
+              "meta": {{"schema_version": "1.1", "confidence": 0.0, "notes": "", "uncertainty": {{"fields": []}}}}
             }}
             """
             

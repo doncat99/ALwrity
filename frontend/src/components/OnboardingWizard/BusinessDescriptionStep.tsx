@@ -6,7 +6,7 @@ import { onboardingCache } from '../../services/onboardingCache';
 
 interface BusinessDescriptionStepProps {
   onBack: () => void;
-  onContinue: () => void;
+  onContinue: (businessData?: BusinessInfo) => void;
 }
 
 const BusinessDescriptionStep: React.FC<BusinessDescriptionStepProps> = ({ onBack, onContinue }) => {
@@ -56,7 +56,7 @@ const BusinessDescriptionStep: React.FC<BusinessDescriptionStepProps> = ({ onBac
       console.log('✅ Business info saved to cache.');
 
       setTimeout(() => {
-        onContinue();
+        onContinue(response);
       }, 1500); // Give user time to see success message
     } catch (err) {
       console.error('❌ Error saving business info:', err);
@@ -101,7 +101,7 @@ const BusinessDescriptionStep: React.FC<BusinessDescriptionStepProps> = ({ onBac
             onChange={handleChange}
             fullWidth
             margin="normal"
-            helperText={`${formData.industry.length}/100 characters`}
+            helperText={`${(formData.industry || '').length}/100 characters`}
             inputProps={{ maxLength: 100 }}
             disabled={loading}
           />

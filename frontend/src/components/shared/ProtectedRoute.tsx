@@ -1,57 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { Box, CircularProgress, Typography } from '@mui/material';
-import { apiClient } from '../../api/client';
+import { useAuth } from '@clerk/clerk-react';
+import { Box, CircularProgress, Typography, Alert, Button } from '@mui/material';
+import { Refresh as RefreshIcon } from '@mui/icons-material';
+import { useOnboarding } from '../../contexts/OnboardingContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-interface OnboardingStatus {
-  is_completed: boolean;
-  current_step: number;
-  completion_percentage: number;
-  next_step?: number;
-  started_at: string;
-  completed_at?: string;
-  can_proceed_to_final: boolean;
-}
-
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const [loading, setLoading] = useState(true);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { isSignedIn } = useAuth();
+  
+  // Use onboarding context instead of making API calls
+  const { 
+    loading, 
+    error, 
+    isOnboardingComplete, 
+    refresh,
+    clearError 
+  } = useOnboarding();
 
-  useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        console.log('ProtectedRoute: Checking onboarding status...');
-        const response = await apiClient.get('/api/onboarding/status');
-        const status: OnboardingStatus = response.data;
-        
-        console.log('ProtectedRoute: Onboarding status:', status);
-        
-        if (status.is_completed) {
-          console.log('ProtectedRoute: Onboarding is complete, allowing access');
-          setOnboardingComplete(true);
-        } else {
-          console.log('ProtectedRoute: Onboarding not complete, redirecting to onboarding');
-          setOnboardingComplete(false);
-        }
-      } catch (err) {
-        console.error('ProtectedRoute: Error checking onboarding status:', err);
-        setError('Failed to check onboarding status');
-        // On error, assume onboarding is not complete for security
-        setOnboardingComplete(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkOnboardingStatus();
-  }, []);
-
+  // Loading state - show spinner
   if (loading) {
+    console.log('ProtectedRoute: Loading onboarding state from context...');
     return (
       <Box
         display="flex"
@@ -69,7 +41,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
+  // Error state - show error with retry
   if (error) {
+    console.error('ProtectedRoute: Error from context:', error);
     return (
       <Box
         display="flex"
@@ -83,24 +57,46 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         <Typography variant="h5" color="error" gutterBottom>
           Access Error
         </Typography>
-        <Typography variant="body1" color="textSecondary" textAlign="center">
+        <Alert 
+          severity="error" 
+          sx={{ maxWidth: 500, mb: 2 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={() => {
+                clearError();
+                refresh();
+              }}
+              startIcon={<RefreshIcon />}
+            >
+              Retry
+            </Button>
+          }
+        >
           {error}
-        </Typography>
+        </Alert>
         <Typography variant="body2" color="textSecondary" textAlign="center">
-          Please complete the setup process first.
+          Please try refreshing or complete the setup process first.
         </Typography>
       </Box>
     );
   }
 
-  // If onboarding is not complete, redirect to onboarding
-  if (!onboardingComplete) {
-    console.log('ProtectedRoute: Redirecting to onboarding');
+  // Not signed in - redirect to landing
+  if (!isSignedIn) {
+    console.log('ProtectedRoute: Not signed in, redirecting to landing');
+    return <Navigate to="/" replace />;
+  }
+
+  // Onboarding not complete - redirect to onboarding
+  if (!isOnboardingComplete) {
+    console.log('ProtectedRoute: Onboarding not complete (from context), redirecting');
     return <Navigate to="/onboarding" replace />;
   }
 
-  // If onboarding is complete, render the protected component
-  console.log('ProtectedRoute: Rendering protected component');
+  // All checks passed - render protected component
+  console.log('ProtectedRoute: Access granted (from context), rendering component');
   return <>{children}</>;
 };
 

@@ -1,0 +1,69 @@
+{
+  "steps": [
+    {
+      "step_number": 1,
+      "title": "AI LLM Providers",
+      "description": "Configure AI language model providers",
+      "status": "completed",
+      "completed_at": "2025-09-30T11:54:21.688932",
+      "data": {
+        "api_keys": {
+          "gemini": "AIzaSyB6QrCiOBAzh8xLdmSumec2ysdHeyqyxgw",
+          "exa": "0d004fc9-c59c-4a60-92ec-b394d41eee8b",
+          "copilotkit": "ck_pub_ed6d122496c9b82a37417b89ddb3e9fe"
+        }
+      },
+      "validation_errors": []
+    },
+    {
+      "step_number": 2,
+      "title": "Website Analysis",
+      "description": "Set up website analysis and crawling",
+      "status": "pending",
+      "completed_at": null,
+      "data": null,
+      "validation_errors": []
+    },
+    {
+      "step_number": 3,
+      "title": "AI Research",
+      "description": "Configure AI research capabilities",
+      "status": "pending",
+      "completed_at": null,
+      "data": null,
+      "validation_errors": []
+    },
+    {
+      "step_number": 4,
+      "title": "Personalization",
+      "description": "Set up personalization features",
+      "status": "pending",
+      "completed_at": null,
+      "data": null,
+      "validation_errors": []
+    },
+    {
+      "step_number": 5,
+      "title": "Integrations",
+      "description": "Configure ALwrity integrations",
+      "status": "pending",
+      "completed_at": null,
+      "data": null,
+      "validation_errors": []
+    },
+    {
+      "step_number": 6,
+      "title": "Complete Setup",
+      "description": "Finalize and complete onboarding",
+      "status": "pending",
+      "completed_at": null,
+      "data": null,
+      "validation_errors": []
+    }
+  ],
+  "current_step": 2,
+  "started_at": "2025-09-29T17:22:14.375002",
+  "last_updated": "2025-09-30T11:54:21.688938",
+  "is_completed": false,
+  "completed_at": null
+}

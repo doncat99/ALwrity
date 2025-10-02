@@ -47,11 +47,11 @@ export async function getCurrentStep() {
   return { step: res.data.current_step || 1 };
 }
 
-export async function setCurrentStep(step: number) {
+export async function setCurrentStep(step: number, stepData?: any) {
   // Complete the current step to move to the next one
-  console.log('setCurrentStep: Completing step', step);
+  console.log('setCurrentStep: Completing step', step, 'with data:', stepData);
   const res: AxiosResponse<OnboardingStepResponse> = await apiClient.post(`/api/onboarding/step/${step}/complete`, {
-    data: {},
+    data: stepData || {},
     validation_errors: []
   });
   console.log('setCurrentStep: Backend response:', res.data);
@@ -95,6 +95,43 @@ export async function getApiKeys() {
   throw lastError;
 }
 
+export async function getApiKeysForOnboarding() {
+  const maxRetries = 3;
+  let lastError: any;
+  
+  console.log('getApiKeysForOnboarding: Starting API call to /api/onboarding/api-keys/onboarding');
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`getApiKeysForOnboarding: Attempt ${attempt + 1}/${maxRetries}`);
+      const res: AxiosResponse<any> = await apiClient.get('/api/onboarding/api-keys/onboarding');
+      console.log('getApiKeysForOnboarding: API call successful');
+      return res.data.api_keys || {};
+    } catch (error: any) {
+      lastError = error;
+      console.log(`getApiKeysForOnboarding: Attempt ${attempt + 1} failed:`, error.response?.status, error.message);
+      
+      // If it's a rate limit error (429), wait and retry
+      if (error.response?.status === 429) {
+        const retryAfter = error.response?.data?.retry_after || 60;
+        const delay = Math.min(retryAfter * 1000, 5000); // Max 5 seconds
+        
+        console.log(`getApiKeysForOnboarding: Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // For other errors, don't retry
+      console.log('getApiKeysForOnboarding: Non-rate-limit error, not retrying');
+      throw error;
+    }
+  }
+  
+  // If we've exhausted all retries, throw the last error
+  console.log('getApiKeysForOnboarding: All retries exhausted');
+  throw lastError;
+}
+
 export async function saveApiKey(provider: string, api_key: string, description?: string) {
   const res: AxiosResponse<APIKeyResponse> = await apiClient.post('/api/onboarding/api-keys', { 
     provider, 
@@ -124,6 +161,20 @@ export async function getOnboardingConfig() {
 export async function getStepData(stepNumber: number) {
   const res: AxiosResponse<any> = await apiClient.get(`/api/onboarding/step/${stepNumber}`);
   return res.data;
+}
+
+export async function getStep1ApiKeysFromProgress(): Promise<{ gemini?: string; exa?: string; copilotkit?: string }> {
+  try {
+    const step = await getStepData(1);
+    const keys = step?.data?.api_keys || {};
+    return {
+      gemini: keys.gemini || undefined,
+      exa: keys.exa || undefined,
+      copilotkit: keys.copilotkit || undefined,
+    };
+  } catch (_e) {
+    return {};
+  }
 }
 
 export async function skipStep(stepNumber: number) {

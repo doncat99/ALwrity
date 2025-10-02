@@ -233,6 +233,19 @@ def validate_api_key(provider: str, api_key: str) -> Dict[str, Any]:
             if len(api_key) < 10:
                 return {'valid': False, 'error': 'Metaphor API key seems too short'}
         
+        elif provider == "exa":
+            # Exa API keys are UUIDs (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+            import re
+            exa_uuid_regex = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
+            if not exa_uuid_regex.match(api_key):
+                return {'valid': False, 'error': 'Exa API key must be a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)'}
+        
+        elif provider == "copilotkit":
+            if not api_key.startswith("ck_pub_"):
+                return {'valid': False, 'error': 'CopilotKit API key must start with "ck_pub_"'}
+            if len(api_key) < 20:
+                return {'valid': False, 'error': 'CopilotKit API key seems too short'}
+        
         elif provider == "firecrawl":
             if len(api_key) < 10:
                 return {'valid': False, 'error': 'Firecrawl API key seems too short'}
@@ -277,21 +290,49 @@ def validate_step_data(step_number: int, data: Dict[str, Any]) -> List[str]:
     """Validate step-specific data with enhanced logic."""
     errors = []
     
-    if step_number == 1:  # AI LLM Providers
+    logger.info(f"[validate_step_data] Validating step {step_number} with data: {data}")
+    
+    if step_number == 1:  # AI LLM Providers - Now requires Gemini, Exa, and CopilotKit
+        required_providers = ['gemini', 'exa', 'copilotkit']
+        missing_providers = []
+        
+        logger.info(f"[validate_step_data] Step 1 validation - data type: {type(data)}, data: {data}")
+        
         if not data or 'api_keys' not in data:
-            errors.append("At least one API key must be configured")
+            logger.warning(f"[validate_step_data] No data or api_keys missing. data: {data}")
+            errors.append("API keys configuration is required")
         elif not data['api_keys']:
-            errors.append("At least one API key must be configured")
+            logger.warning(f"[validate_step_data] api_keys is empty. data: {data}")
+            errors.append("API keys configuration is required")
         else:
-            # Validate each configured API key
-            for provider in data['api_keys']:
-                if provider not in ['openai', 'gemini', 'anthropic', 'mistral']:
-                    errors.append(f"Unknown provider: {provider}")
+            # Check for all required providers
+            for provider in required_providers:
+                if provider not in data['api_keys'] or not data['api_keys'][provider]:
+                    missing_providers.append(provider)
+            
+            if missing_providers:
+                errors.append(f"Missing required API keys: {', '.join(missing_providers)}")
+            
+            # Validate each configured API key format
+            for provider, api_key in data['api_keys'].items():
+                if provider in required_providers and api_key:
+                    if provider == 'gemini' and not api_key.startswith('AIza'):
+                        errors.append("Gemini API key must start with 'AIza'")
+                    elif provider == 'exa':
+                        # Exa API keys are UUIDs (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+                        import re
+                        exa_uuid_regex = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
+                        if not exa_uuid_regex.match(api_key):
+                            errors.append("Exa API key must be a valid UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)")
+                    elif provider == 'copilotkit' and not api_key.startswith('ck_pub_'):
+                        errors.append("CopilotKit API key must start with 'ck_pub_'")
     
     elif step_number == 2:  # Website Analysis
-        if not data or 'website_url' not in data:
+        # Accept both 'website' and 'website_url' for backwards compatibility
+        website_url = data.get('website') or data.get('website_url') if data else None
+        if not website_url:
             errors.append("Website URL is required")
-        elif not validate_website_url(data['website_url']):
+        elif not validate_website_url(website_url):
             errors.append("Invalid website URL format")
     
     elif step_number == 3:  # AI Research

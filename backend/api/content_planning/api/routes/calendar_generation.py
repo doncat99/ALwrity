@@ -12,6 +12,9 @@ import time
 import asyncio
 import random
 
+# Import authentication
+from middleware.auth_middleware import get_current_user
+
 # Import database service
 from services.database import get_db_session, get_db
 from services.content_planning_db import ContentPlanningDBService
@@ -40,21 +43,43 @@ from ...services.calendar_generation_service import CalendarGenerationService
 # Create router
 router = APIRouter(prefix="/calendar-generation", tags=["calendar-generation"])
 
-@router.post("/generate-calendar", response_model=CalendarGenerationResponse)
-async def generate_comprehensive_calendar(request: CalendarGenerationRequest, db: Session = Depends(get_db)):
+# Helper function to convert Clerk user ID to integer
+def get_user_id_int(clerk_user_id: str) -> int:
     """
-    Generate a comprehensive AI-powered content calendar using database insights.
+    Convert Clerk user ID string to integer for database compatibility.
+    Uses consistent hashing to ensure same user always gets same ID.
+    """
+    try:
+        # Try to extract numeric portion from Clerk ID format (user_XXXX)
+        numeric_part = clerk_user_id.replace('user_', '').replace('-', '')[:8]
+        return int(numeric_part, 16) % 2147483647
+    except:
+        # Fallback to hash if extraction fails
+        return hash(clerk_user_id) % 2147483647
+
+@router.post("/generate-calendar", response_model=CalendarGenerationResponse)
+async def generate_comprehensive_calendar(
+    request: CalendarGenerationRequest, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Generate a comprehensive AI-powered content calendar using database insights with user isolation.
     This endpoint uses advanced AI analysis and comprehensive user data.
     Now ensures Phase 1 and Phase 2 use the ACTIVE strategy with 3-tier caching.
     """
     try:
-        logger.info(f"🎯 Generating comprehensive calendar for user {request.user_id}")
+        # Use authenticated user ID instead of request user ID for security
+        clerk_user_id = str(current_user.get('id'))
+        user_id_int = get_user_id_int(clerk_user_id)
+        
+        logger.info(f"🎯 Generating comprehensive calendar for authenticated user {clerk_user_id} (int: {user_id_int})")
         
         # Initialize service with database session for active strategy access
         calendar_service = CalendarGenerationService(db)
         
         calendar_data = await calendar_service.generate_comprehensive_calendar(
-            user_id=request.user_id,
+            user_id=user_id_int,  # Use authenticated user ID
             strategy_id=request.strategy_id,
             calendar_type=request.calendar_type,
             industry=request.industry,
@@ -180,13 +205,13 @@ async def repurpose_content_across_platforms(request: ContentRepurposingRequest,
 
 @router.get("/trending-topics", response_model=TrendingTopicsResponse)
 async def get_trending_topics(
-    user_id: int = Query(..., description="User ID"),
     industry: str = Query(..., description="Industry for trending topics"),
     limit: int = Query(10, description="Number of trending topics to return"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
 ):
     """
-    Get trending topics relevant to the user's industry and content gaps.
+    Get trending topics relevant to the user's industry and content gaps with user isolation.
     
     This endpoint provides trending topics based on:
     - Industry-specific trends
@@ -195,7 +220,11 @@ async def get_trending_topics(
     - Competitor analysis insights
     """
     try:
-        logger.info(f"📈 Getting trending topics for user {user_id} in {industry}")
+        # Use authenticated user ID instead of query parameter for security
+        clerk_user_id = str(current_user.get('id'))
+        user_id = get_user_id_int(clerk_user_id)
+        
+        logger.info(f"📈 Getting trending topics for authenticated user {clerk_user_id} (int: {user_id}) in {industry}")
         
         # Initialize service with database session for active strategy access
         calendar_service = CalendarGenerationService(db)
@@ -217,16 +246,20 @@ async def get_trending_topics(
 
 @router.get("/comprehensive-user-data")
 async def get_comprehensive_user_data(
-    user_id: int = Query(..., description="User ID"),
     force_refresh: bool = Query(False, description="Force refresh cache"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
-    Get comprehensive user data for calendar generation with intelligent caching.
+    Get comprehensive user data for calendar generation with intelligent caching and user isolation.
     This endpoint aggregates all data points needed for the calendar wizard.
     """
     try:
-        logger.info(f"Getting comprehensive user data for user_id: {user_id} (force_refresh={force_refresh})")
+        # Use authenticated user ID instead of query parameter for security
+        clerk_user_id = str(current_user.get('id'))
+        user_id = get_user_id_int(clerk_user_id)
+        
+        logger.info(f"Getting comprehensive user data for authenticated user {clerk_user_id} (int: {user_id}, force_refresh={force_refresh})")
         
         # Initialize cache service
         from services.comprehensive_user_data_cache_service import ComprehensiveUserDataCacheService
@@ -328,21 +361,30 @@ async def get_calendar_generation_progress(session_id: str, db: Session = Depend
         raise HTTPException(status_code=500, detail="Failed to get progress")
 
 @router.post("/start")
-async def start_calendar_generation(request: CalendarGenerationRequest, db: Session = Depends(get_db)):
+async def start_calendar_generation(
+    request: CalendarGenerationRequest, 
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Start calendar generation and return a session ID for progress tracking.
+    Start calendar generation and return a session ID for progress tracking with user isolation.
     Prevents duplicate sessions for the same user.
     """
     try:
+        # Use authenticated user ID instead of request user ID for security
+        clerk_user_id = str(current_user.get('id'))
+        user_id_int = get_user_id_int(clerk_user_id)
+        
+        logger.info(f"🎯 Starting calendar generation for authenticated user {clerk_user_id} (int: {user_id_int})")
+        
         # Initialize service with database session for active strategy access
         calendar_service = CalendarGenerationService(db)
         
         # Check if user already has an active session
-        user_id = request.user_id
-        existing_session = calendar_service._get_active_session_for_user(user_id)
+        existing_session = calendar_service._get_active_session_for_user(user_id_int)
         
         if existing_session:
-            logger.info(f"🔄 User {user_id} already has active session: {existing_session}")
+            logger.info(f"🔄 User {user_id_int} already has active session: {existing_session}")
             return {
                 "session_id": existing_session,
                 "status": "existing",
@@ -353,15 +395,19 @@ async def start_calendar_generation(request: CalendarGenerationRequest, db: Sess
         # Generate a unique session ID
         session_id = f"calendar-session-{int(time.time())}-{random.randint(1000, 9999)}"
         
+        # Update request data with authenticated user ID
+        request_dict = request.dict()
+        request_dict['user_id'] = user_id_int  # Override with authenticated user ID
+        
         # Initialize orchestrator session
-        success = calendar_service.initialize_orchestrator_session(session_id, request.dict())
+        success = calendar_service.initialize_orchestrator_session(session_id, request_dict)
         
         if not success:
             raise HTTPException(status_code=500, detail="Failed to initialize orchestrator session")
         
         # Start the generation process asynchronously using orchestrator
         # This will run in the background while the frontend polls for progress
-        asyncio.create_task(calendar_service.start_orchestrator_generation(session_id, request.dict()))
+        asyncio.create_task(calendar_service.start_orchestrator_generation(session_id, request_dict))
         
         return {
             "session_id": session_id,

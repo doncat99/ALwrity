@@ -31,8 +31,12 @@ def llm_text_gen(prompt: str, system_prompt: Optional[str] = None, json_struct: 
         logger.info("[llm_text_gen] Starting text generation")
         logger.debug(f"[llm_text_gen] Prompt length: {len(prompt)} characters")
         
-        # Initialize API key manager
+        # Initialize API key manager and reload keys from .env file
         api_key_manager = APIKeyManager()
+        api_key_manager.load_api_keys()  # Force reload from .env file
+        
+        # Debug: Log loaded API keys
+        logger.debug(f"[llm_text_gen] Loaded API keys: {api_key_manager.get_all_keys()}")
         
         # Set default values for LLM parameters
         gpt_provider = "google"  # Default to Google Gemini

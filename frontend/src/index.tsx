@@ -5,27 +5,29 @@ import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
 import './styles/global.css';
 
-// Create a custom theme for better professional appearance
+// Global Material theme (dark / black)
 const theme = createTheme({
   palette: {
+    mode: 'dark',
     primary: {
       main: '#6366f1', // Indigo-500
-      light: '#818cf8', // Indigo-400
-      dark: '#4f46e5', // Indigo-600
+      light: '#8b90ff',
+      dark: '#4f46e5',
     },
     secondary: {
       main: '#8b5cf6', // Violet-500
-      light: '#a78bfa', // Violet-400
-      dark: '#7c3aed', // Violet-600
+      light: '#a78bfa',
+      dark: '#7c3aed',
     },
     background: {
-      default: '#f8fafc', // Slate-50
-      paper: '#ffffff',
+      default: '#0b0f14', // near-black
+      paper: '#0f1520',   // dark surface
     },
     text: {
-      primary: '#1e293b', // Slate-800
-      secondary: '#64748b', // Slate-500
+      primary: '#e6e8f0',
+      secondary: '#94a3b8',
     },
+    divider: 'rgba(148,163,184,0.16)'
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
@@ -66,7 +68,9 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+          backgroundImage: 'none',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+          border: '1px solid rgba(99, 102, 241, 0.12)'
         },
       },
     },
@@ -79,6 +83,13 @@ const theme = createTheme({
         },
       },
     },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+        }
+      }
+    }
   },
 });
 

@@ -6,6 +6,7 @@ replacing mock research with real-time industry information.
 
 Available Services:
 - GoogleSearchService: Real-time industry research using Google Custom Search API
+- ExaService: Competitor discovery and analysis using Exa API
 - Source ranking and credibility assessment
 - Content extraction and insight generation
 
@@ -14,8 +15,10 @@ Version: 1.0
 Last Updated: January 2025
 """
 
-from services.research.google_search_service import GoogleSearchService
+from .google_search_service import GoogleSearchService
+from .exa_service import ExaService
 
 __all__ = [
-    "GoogleSearchService"
+    "GoogleSearchService",
+    "ExaService"
 ]

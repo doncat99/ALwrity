@@ -23,10 +23,12 @@ import {
   HelpOutline,
   Close
 } from '@mui/icons-material';
+import UserBadge from '../shared/UserBadge';
 import { startOnboarding, getCurrentStep, setCurrentStep, getProgress } from '../../api/onboarding';
+import { apiClient } from '../../api/client';
 import ApiKeyStep from './ApiKeyStep';
 import WebsiteStep from './WebsiteStep';
-import ResearchStep from './ResearchStep';
+import CompetitorAnalysisStep from './CompetitorAnalysisStep';
 import PersonalizationStep from './PersonalizationStep';
 import IntegrationsStep from './IntegrationsStep';
 import FinalStep from './FinalStep';
@@ -34,7 +36,7 @@ import FinalStep from './FinalStep';
 const steps = [
   { label: 'API Keys', description: 'Connect your AI services', icon: '🔑' },
   { label: 'Website', description: 'Set up your website', icon: '🌐' },
-  { label: 'Research', description: 'Configure research tools', icon: '🔍' },
+  { label: 'Research', description: 'Discover competitors', icon: '🔍' },
   { label: 'Personalization', description: 'Customize your experience', icon: '⚙️' },
   { label: 'Integrations', description: 'Connect additional services', icon: '🔗' },
   { label: 'Finish', description: 'Complete setup', icon: '✅' }
@@ -57,6 +59,8 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [showProgressMessage, setShowProgressMessage] = useState(false);
   const [progressMessage, setProgressMessage] = useState('');
+  // sessionId removed - backend uses Clerk user ID from auth token
+  const [stepData, setStepData] = useState<any>(null);
   const [stepHeaderContent, setStepHeaderContent] = useState<StepHeaderContent>({
     title: steps[0].label,
     description: steps[0].description
@@ -72,27 +76,49 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         setLoading(true);
         console.log('Wizard: Starting initialization...');
         
-        // Check if there's existing progress first
-        const stepResponse = await getCurrentStep();
-        console.log('Wizard: Backend returned step:', stepResponse.step);
+        // Check if we already have init data from App (cached in sessionStorage)
+        const cachedInit = sessionStorage.getItem('onboarding_init');
         
-        // Only start onboarding if we're at step 1 (no progress)
-        if (stepResponse.step === 1) {
-          console.log('Wizard: No existing progress, starting new onboarding');
-          await startOnboarding();
-        } else {
-          console.log('Wizard: Existing progress found, continuing from step:', stepResponse.step);
+        if (cachedInit) {
+          console.log('Wizard: Using cached init data from batch endpoint');
+          const data = JSON.parse(cachedInit);
+          
+          // Extract data from batch response
+          const { user, onboarding, session } = data;
+          
+          // Set state from cached data - NO API CALLS NEEDED!
+          setActiveStep(onboarding.current_step - 1);
+          setProgressState(onboarding.completion_percentage);
+          // Note: Session managed by Clerk auth, no need to track separately
+          
+          console.log('Wizard: Initialized from cache:', {
+            step: onboarding.current_step,
+            progress: onboarding.completion_percentage,
+            userId: session.session_id  // Clerk user ID from backend
+          });
+          
+          setLoading(false);
+          return; // ← Skip redundant API calls!
         }
         
-        // Get the current step and progress
-        const finalStepResponse = await getCurrentStep();
-        const progressResponse = await getProgress();
-        console.log('Wizard: Final step:', finalStepResponse.step);
-        console.log('Wizard: Backend returned progress:', progressResponse.progress);
-        console.log('Wizard: Setting activeStep to:', finalStepResponse.step - 1);
-        setActiveStep(finalStepResponse.step - 1);
-        setProgressState(progressResponse.progress);
-        console.log('Wizard: Initialization complete');
+        // Fallback: If no cached data (shouldn't happen), make batch call
+        console.log('Wizard: No cached data, making batch init call');
+        const response = await apiClient.get('/api/onboarding/init');
+        const { user, onboarding, session } = response.data;
+        
+        // Cache for future use
+        sessionStorage.setItem('onboarding_init', JSON.stringify(response.data));
+        
+        // Set state from API response
+        setActiveStep(onboarding.current_step - 1);
+        setProgressState(onboarding.completion_percentage);
+        // Note: Session managed by Clerk auth, no need to track separately
+        
+        console.log('Wizard: Initialized from API:', {
+          step: onboarding.current_step,
+          progress: onboarding.completion_percentage,
+          userId: session.session_id  // Clerk user ID from backend
+        });
       } catch (error) {
         console.error('Error initializing onboarding:', error);
       } finally {
@@ -102,8 +128,26 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     init();
   }, []);
 
-  const handleNext = async () => {
-    console.log('Wizard: handleNext called');
+  const handleNext = async (rawStepData?: any) => {
+    if (rawStepData && typeof rawStepData === 'object') {
+      if (typeof rawStepData.preventDefault === 'function') {
+        rawStepData.preventDefault();
+      }
+      if (typeof rawStepData.stopPropagation === 'function') {
+        rawStepData.stopPropagation();
+      }
+    }
+
+    const currentStepData = rawStepData && typeof rawStepData === 'object' && 'nativeEvent' in rawStepData
+      ? undefined
+      : rawStepData;
+
+    // Store step data in state
+    if (currentStepData) {
+      setStepData(currentStepData);
+    }
+
+    console.log('Wizard: handleNext called with stepData:', currentStepData);
     console.log('Wizard: Current activeStep:', activeStep);
     console.log('Wizard: Steps length:', steps.length);
     
@@ -124,13 +168,28 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     
     // Complete the current step (activeStep + 1 because steps are 1-indexed)
     const currentStepNumber = activeStep + 1;
-    console.log('Wizard: Completing current step:', currentStepNumber);
-    await setCurrentStep(currentStepNumber);
-    
-    // Check what step the backend thinks we should be on after completion
-    console.log('Wizard: Checking backend step after completion...');
-    const stepResponse = await getCurrentStep();
-    console.log('Wizard: Backend says current step should be:', stepResponse.step);
+
+    const stepWasCompleted = currentStepData && typeof currentStepData === 'object' && (currentStepData.website || currentStepData.businessData);
+
+    if (!stepWasCompleted) {
+      console.warn('Wizard: No serialized step data supplied; skipping backend completion for step', currentStepNumber);
+    } else {
+      console.log('Wizard: Completing current step:', currentStepNumber, 'with data:', currentStepData);
+
+      try {
+        await setCurrentStep(currentStepNumber, currentStepData);
+      } catch (error) {
+        console.error('Wizard: Failed to complete step with backend. Aborting progression.', error);
+        setShowProgressMessage(false);
+        setProgressMessage('');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Wizard: Checking backend step after completion...');
+      const stepResponse = await getCurrentStep();
+      console.log('Wizard: Backend says current step should be:', stepResponse.step);
+    }
     
     setActiveStep(nextStep);
     console.log('Wizard: Setting activeStep to:', nextStep);
@@ -151,7 +210,8 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     setDirection('left');
     const prevStep = activeStep - 1;
     setActiveStep(prevStep);
-    await setCurrentStep(prevStep + 1);
+    // Do not complete a step when navigating back; just update UI state
+    // Backend step progression should only occur on forward completion with valid data
     
     // Update progress
     const newProgress = ((prevStep + 1) / steps.length) * 100;
@@ -162,7 +222,7 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     if (stepIndex <= activeStep) {
       setDirection(stepIndex > activeStep ? 'right' : 'left');
       setActiveStep(stepIndex);
-      setCurrentStep(stepIndex + 1);
+      // Do not complete a step on arbitrary step navigation; only adjust UI
     }
   };
 
@@ -181,10 +241,18 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
   };
 
   const renderStepContent = (step: number) => {
+    console.log('Wizard: renderStepContent called with step:', step, 'stepData:', stepData);
+    
     const stepComponents = [
       <ApiKeyStep key="api-keys" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
       <WebsiteStep key="website" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
-      <ResearchStep key="research" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
+      <CompetitorAnalysisStep 
+        key="research" 
+        onContinue={handleNext} 
+        onBack={handleBack}
+        userUrl={stepData?.website || ''}
+        industryContext={stepData?.industryContext}
+      />,
       <PersonalizationStep key="personalization" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
       <IntegrationsStep key="integrations" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
       <FinalStep key="final" onContinue={handleComplete} updateHeaderContent={updateHeaderContent} />
@@ -327,7 +395,9 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
           
           {/* Top Row - Title and Actions */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, position: 'relative', zIndex: 1 }}>
-            <Box sx={{ flex: 1 }} />
+            <Box sx={{ flex: 1 }}>
+              <UserBadge colorMode="dark" />
+            </Box>
             <Box sx={{ flex: 2, textAlign: 'center' }}>
               <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.025em' }}>
                 {stepHeaderContent.title}

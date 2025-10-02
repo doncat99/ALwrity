@@ -35,14 +35,14 @@ class StepData:
 class OnboardingProgress:
     """Manages onboarding progress with persistence and validation."""
     
-    def __init__(self):
+    def __init__(self, progress_file: Optional[str] = None):
         self.steps = self._initialize_steps()
         self.current_step = 1
         self.started_at = datetime.now().isoformat()
         self.last_updated = datetime.now().isoformat()
         self.is_completed = False
         self.completed_at = None
-        self.progress_file = ".onboarding_progress.json"
+        self.progress_file = progress_file or ".onboarding_progress.json"
         
         # Load existing progress if available
         self.load_progress()
@@ -297,9 +297,11 @@ class APIKeyManager:
             "mistral": None,
             "tavily": None,
             "serper": None,
-            "metaphor": None,
+            "metaphor": None,  # legacy mapping for Exa, kept for backward compatibility
+            "exa": None,
             "firecrawl": None,
-            "stability": None
+            "stability": None,
+            "copilotkit": None,
         }
         self.load_api_keys()
         
@@ -370,9 +372,9 @@ class APIKeyManager:
                 }
             },
             "Deep Search": {
-                "METAPHOR_API_KEY": {
+                "EXA_API_KEY": {
                     "url": "https://dashboard.exa.ai/login",
-                    "description": "Enables advanced web search capabilities",
+                    "description": "Exa (formerly Metaphor) for advanced web search",
                     "setup_steps": [
                         "Visit the Exa AI dashboard",
                         "Sign up for a free account",
@@ -400,6 +402,17 @@ class APIKeyManager:
                         "Create an account",
                         "Navigate to API settings",
                         "Generate your API key"
+                    ]
+                }
+            },
+            "UI": {
+                "COPILOTKIT_API_KEY": {
+                    "url": "https://copilotkit.ai",
+                    "description": "CopilotKit public API key for in-app assistant",
+                    "setup_steps": [
+                        "Sign up or log in to CopilotKit",
+                        "Navigate to API Keys",
+                        "Generate a public API key (ck_pub_...)"
                     ]
                 }
             }
@@ -443,9 +456,11 @@ class APIKeyManager:
             "MISTRAL_API_KEY": "mistral",
             "TAVILY_API_KEY": "tavily",
             "SERPER_API_KEY": "serper",
-            "METAPHOR_API_KEY": "metaphor",
+            "METAPHOR_API_KEY": "metaphor",  # legacy
+            "EXA_API_KEY": "exa",
             "FIRECRAWL_API_KEY": "firecrawl",
-            "STABILITY_API_KEY": "stability"
+            "STABILITY_API_KEY": "stability",
+            "COPILOTKIT_API_KEY": "copilotkit",
         }
         
         for env_var, provider in env_mapping.items():
@@ -485,9 +500,11 @@ class APIKeyManager:
                 "mistral": "MISTRAL_API_KEY",
                 "tavily": "TAVILY_API_KEY",
                 "serper": "SERPER_API_KEY",
-                "metaphor": "METAPHOR_API_KEY",
+                "metaphor": "METAPHOR_API_KEY",  # legacy
+                "exa": "EXA_API_KEY",
                 "firecrawl": "FIRECRAWL_API_KEY",
-                "stability": "STABILITY_API_KEY"
+                "stability": "STABILITY_API_KEY",
+                "copilotkit": "COPILOTKIT_API_KEY",
             }
             
             env_var = env_mapping.get(provider)
@@ -529,12 +546,24 @@ class APIKeyManager:
 
 # Global instance for the application
 _onboarding_progress = None
+_user_onboarding_progress_cache: Dict[str, OnboardingProgress] = {}
 
 def get_onboarding_progress() -> OnboardingProgress:
     """Get the global onboarding progress instance."""
     if not hasattr(get_onboarding_progress, '_instance'):
         get_onboarding_progress._instance = OnboardingProgress()
     return get_onboarding_progress._instance
+
+def get_onboarding_progress_for_user(user_id: str) -> OnboardingProgress:
+    """Get or create a per-user onboarding progress instance persisted to a user-specific file."""
+    global _user_onboarding_progress_cache
+    safe_user_id = ''.join([c if c.isalnum() or c in ('-', '_') else '_' for c in str(user_id)])
+    if safe_user_id in _user_onboarding_progress_cache:
+        return _user_onboarding_progress_cache[safe_user_id]
+    progress_file = f".onboarding_progress_{safe_user_id}.json"
+    instance = OnboardingProgress(progress_file=progress_file)
+    _user_onboarding_progress_cache[safe_user_id] = instance
+    return instance
 
 def get_api_key_manager() -> APIKeyManager:
     """Get the global API key manager instance."""

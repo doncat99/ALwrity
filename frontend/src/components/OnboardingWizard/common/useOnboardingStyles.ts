@@ -1,4 +1,4 @@
-import { useTheme } from '@mui/material';
+import { useTheme, alpha } from '@mui/material/styles';
 
 export const useOnboardingStyles = () => {
   const theme = useTheme();
@@ -235,6 +235,230 @@ export const useOnboardingStyles = () => {
     
     buttonSpacing: {
       gap: 2,
+    },
+
+    // Analysis step styles
+    analysisContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+      width: '100%',
+    },
+
+    analysisHeaderCard: {
+      mb: 2,
+      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.08) 100%)',
+      borderRadius: 2,
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+      border: `1px solid rgba(255, 255, 255, 0.1)`,
+      backdropFilter: 'blur(20px)',
+      overflow: 'hidden',
+    },
+
+    analysisCardContent: {
+      p: { xs: 2, md: 3 },
+    },
+
+    analysisHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 1.5,
+      mb: 2,
+    },
+
+    analysisHeaderIcon: {
+      fontSize: 28,
+      color: theme.palette.success.main,
+    },
+
+    analysisHeaderTitle: {
+      fontWeight: 700,
+      letterSpacing: '-0.025em',
+      color: theme.palette.text.primary,
+      fontSize: '1.5rem',
+    },
+
+    analysisHeaderSubtitle: {
+      color: theme.palette.text.secondary,
+      fontSize: '0.95rem',
+      lineHeight: 1.5,
+      mt: 0.5,
+    },
+
+    analysisSection: {
+      mb: 2.5,
+    },
+
+    analysisSectionHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 1,
+      fontWeight: 600,
+      color: theme.palette.text.primary,
+      fontSize: '1.1rem',
+      mb: 1.5,
+    },
+
+    analysisSubheader: {
+      fontWeight: 600,
+      mb: 0.5,
+      color: theme.palette.text.secondary,
+      fontSize: '0.9rem',
+    },
+
+    analysisDivider: {
+      my: 2,
+      opacity: 0.6,
+    },
+
+    analysisParagraph: {
+      lineHeight: 1.6,
+      fontSize: '0.95rem',
+      color: theme.palette.text.primary,
+    },
+
+    analysisGradientPaperPrimary: {
+      p: { xs: 2, md: 2.5 },
+      borderRadius: 2,
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white',
+      boxShadow: '0 12px 28px rgba(118, 75, 162, 0.4)',
+      border: '1px solid rgba(118, 75, 162, 0.4)',
+      backdropFilter: 'blur(10px)',
+    },
+
+    analysisGradientPaperWarning: {
+      p: { xs: 2, md: 2.5 },
+      borderRadius: 2,
+      background: 'linear-gradient(135deg, #ff9800 0%, #ff5722 100%)',
+      color: 'white',
+      boxShadow: '0 12px 28px rgba(255, 87, 34, 0.4)',
+      border: '1px solid rgba(255, 152, 0, 0.4)',
+      backdropFilter: 'blur(10px)',
+    },
+
+    analysisGradientPaperSuccess: {
+      p: { xs: 2, md: 2.5 },
+      borderRadius: 2,
+      background: 'linear-gradient(135deg, #4caf50 0%, #43a047 100%)',
+      color: 'white',
+      boxShadow: '0 12px 28px rgba(76, 175, 80, 0.4)',
+      border: '1px solid rgba(67, 160, 71, 0.4)',
+      backdropFilter: 'blur(10px)',
+    },
+
+    analysisGradientPaperInfo: {
+      p: { xs: 2, md: 2.5 },
+      borderRadius: 2,
+      background: 'linear-gradient(135deg, #2196f3 0%, #21cbf3 100%)',
+      color: 'white',
+      boxShadow: '0 12px 28px rgba(33, 150, 243, 0.4)',
+      border: '1px solid rgba(33, 203, 243, 0.4)',
+      backdropFilter: 'blur(10px)',
+    },
+
+    analysisGradientPaperAccent: {
+      p: { xs: 2, md: 2.5 },
+      borderRadius: 2,
+      background: 'linear-gradient(135deg, #9c27b0 0%, #673ab7 100%)',
+      color: 'white',
+      boxShadow: '0 12px 28px rgba(156, 39, 176, 0.4)',
+      border: '1px solid rgba(103, 58, 183, 0.4)',
+      backdropFilter: 'blur(10px)',
+    },
+
+    analysisAccentPaperError: {
+      p: { xs: 2, md: 2.5 },
+      mb: 2,
+      borderRadius: 2,
+      borderLeft: `4px solid ${theme.palette.error.main}`,
+      background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(244, 67, 54, 0.08) 100%)',
+      border: `1px solid rgba(244, 67, 54, 0.2)`,
+      backdropFilter: 'blur(10px)',
+    },
+
+    analysisAccentPaperSuccess: {
+      p: { xs: 2, md: 2.5 },
+      mb: 2,
+      borderRadius: 2,
+      borderLeft: `4px solid ${theme.palette.success.main}`,
+      background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.08) 100%)',
+      border: `1px solid rgba(76, 175, 80, 0.2)`,
+      backdropFilter: 'blur(10px)',
+    },
+
+    analysisAccentPaperInfo: {
+      p: { xs: 2, md: 2.5 },
+      mb: 2,
+      borderRadius: 2,
+      borderLeft: `4px solid ${theme.palette.info.main}`,
+      background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.08) 100%)',
+      border: `1px solid rgba(33, 150, 243, 0.2)`,
+      backdropFilter: 'blur(10px)',
+    },
+
+    analysisAccentIconError: {
+      color: theme.palette.error.main,
+    },
+
+    analysisAccentIconSuccess: {
+      color: theme.palette.success.main,
+    },
+
+    analysisAccentIconInfo: {
+      color: theme.palette.info.main,
+    },
+
+    analysisList: {
+      pl: 2,
+      m: 0,
+      listStyle: 'disc',
+      '& li': {
+        marginBottom: 1,
+      },
+    },
+
+    analysisListItem: {
+      lineHeight: 1.6,
+    },
+
+    analysisLabel: {
+      fontWeight: 600,
+      opacity: 0.85,
+    },
+
+    analysisValue: {
+      fontWeight: 500,
+    },
+
+    analysisInfoBadge: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 1,
+      px: 1.5,
+      py: 0.5,
+      borderRadius: 999,
+      background: alpha(theme.palette.primary.light, 0.15),
+      color: theme.palette.primary.main,
+      fontSize: '0.875rem',
+      fontWeight: 600,
+    },
+
+    analysisCheckboxContainer: {
+      p: { xs: 2.5, md: 3 },
+      background: alpha(theme.palette.primary.light, 0.2),
+      borderRadius: 2,
+      border: `2px solid ${alpha(theme.palette.primary.main, 0.28)}`,
+      mb: 3,
+    },
+
+    analysisSuccessAlert: {
+      borderRadius: 2,
+      mb: 0,
+    },
+
+    analysisAlertText: {
+      fontWeight: 500,
     },
   };
 

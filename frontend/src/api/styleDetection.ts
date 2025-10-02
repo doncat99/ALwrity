@@ -1,5 +1,7 @@
 /** Style Detection API Integration */
 
+import { apiClient } from './client';
+
 export interface StyleAnalysisRequest {
   content: {
     main_content: string;
@@ -56,19 +58,8 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
  */
 export const analyzeContentStyle = async (request: StyleAnalysisRequest): Promise<StyleAnalysisResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/style-detection/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+    const response = await apiClient.post('/api/onboarding/style-detection/analyze', request);
+    return response.data;
   } catch (error) {
     console.error('Error analyzing content style:', error);
     return {
@@ -84,19 +75,8 @@ export const analyzeContentStyle = async (request: StyleAnalysisRequest): Promis
  */
 export const crawlWebsiteContent = async (request: WebCrawlRequest): Promise<WebCrawlResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/style-detection/crawl`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+    const response = await apiClient.post('/api/onboarding/style-detection/crawl', request);
+    return response.data;
   } catch (error) {
     console.error('Error crawling website content:', error);
     return {
@@ -112,19 +92,8 @@ export const crawlWebsiteContent = async (request: WebCrawlRequest): Promise<Web
  */
 export const completeStyleDetection = async (request: StyleDetectionRequest): Promise<StyleDetectionResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/style-detection/complete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+    const response = await apiClient.post('/api/onboarding/style-detection/complete', request);
+    return response.data;
   } catch (error) {
     console.error('Error in complete style detection:', error);
     return {
@@ -140,18 +109,8 @@ export const completeStyleDetection = async (request: StyleDetectionRequest): Pr
  */
 export const getStyleDetectionConfiguration = async (): Promise<any> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/style-detection/configuration-options`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+    const response = await apiClient.get('/api/onboarding/style-detection/configuration-options');
+    return response.data;
   } catch (error) {
     console.error('Error getting style detection configuration:', error);
     return {
@@ -193,18 +152,8 @@ export const validateStyleDetectionRequest = (request: StyleDetectionRequest): {
  */
 export const checkExistingAnalysis = async (websiteUrl: string): Promise<any> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/style-detection/check-existing/${encodeURIComponent(websiteUrl)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+    const response = await apiClient.get(`/api/onboarding/style-detection/check-existing/${encodeURIComponent(websiteUrl)}`);
+    return response.data;
   } catch (error) {
     console.error('Error checking existing analysis:', error);
     return {
@@ -218,18 +167,8 @@ export const checkExistingAnalysis = async (websiteUrl: string): Promise<any> =>
  */
 export const getAnalysisById = async (analysisId: number): Promise<any> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/style-detection/analysis/${analysisId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+    const response = await apiClient.get(`/api/onboarding/style-detection/analysis/${analysisId}`);
+    return response.data;
   } catch (error) {
     console.error('Error getting analysis by ID:', error);
     return {
@@ -243,18 +182,8 @@ export const getAnalysisById = async (analysisId: number): Promise<any> => {
  */
 export const getSessionAnalyses = async (): Promise<any> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/style-detection/session-analyses`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+    const response = await apiClient.get('/api/onboarding/style-detection/session-analyses');
+    return response.data;
   } catch (error) {
     console.error('Error getting session analyses:', error);
     return {
@@ -268,18 +197,8 @@ export const getSessionAnalyses = async (): Promise<any> => {
  */
 export const deleteAnalysis = async (analysisId: number): Promise<any> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/onboarding/style-detection/analysis/${analysisId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+    const response = await apiClient.delete(`/api/onboarding/style-detection/analysis/${analysisId}`);
+    return response.data;
   } catch (error) {
     console.error('Error deleting analysis:', error);
     return {
