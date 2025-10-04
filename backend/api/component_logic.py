@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from loguru import logger
 from typing import Dict, Any
 from datetime import datetime
+import hashlib
 
 from models.component_logic import (
     UserInfoRequest, UserInfoResponse,
@@ -44,6 +45,23 @@ research_utilities = ResearchUtilities()
 
 # Create router
 router = APIRouter(prefix="/api/onboarding", tags=["component_logic"])
+
+# Utility function for consistent user ID to integer conversion
+def clerk_user_id_to_int(user_id: str) -> int:
+    """
+    Convert Clerk user ID to consistent integer for database session_id.
+    Uses SHA256 hashing for deterministic, consistent results across all requests.
+    
+    Args:
+        user_id: Clerk user ID (e.g., 'user_2qA6V8bFFnhPRGp8JYxP4YTJtHl')
+    
+    Returns:
+        int: Deterministic integer derived from user ID
+    """
+    # Use SHA256 for consistent hashing (unlike Python's hash() which varies per process)
+    user_id_hash = hashlib.sha256(user_id.encode()).hexdigest()
+    # Take first 8 characters of hex and convert to int, mod to fit in INT range
+    return int(user_id_hash[:8], 16) % 2147483647
 
 # AI Research Endpoints
 
@@ -99,11 +117,8 @@ async def configure_research_preferences(
                 preferences_service = ResearchPreferencesService(db)
                 
                 # Use authenticated Clerk user ID for proper user isolation
-                # Convert user_id to int if service expects it, or update service to accept string
-                try:
-                    user_id_int = int(user_id.replace('user_', '').replace('-', '')[:8], 16) % 2147483647
-                except:
-                    user_id_int = hash(user_id) % 2147483647
+                # Use consistent SHA256-based conversion
+                user_id_int = clerk_user_id_to_int(user_id)
                 
                 # Save preferences with user ID (not session_id)
                 preferences_id = preferences_service.save_preferences_with_style_data(user_id_int, preferences)
@@ -504,10 +519,8 @@ async def complete_style_detection(
         analysis_service = WebsiteAnalysisService(db_session)
         
         # Use authenticated Clerk user ID for proper user isolation
-        try:
-            user_id_int = int(user_id.replace('user_', '').replace('-', '')[:8], 16) % 2147483647
-        except:
-            user_id_int = hash(user_id) % 2147483647
+        # Use consistent SHA256-based conversion
+        user_id_int = clerk_user_id_to_int(user_id)
         
         # Check for existing analysis if URL is provided
         existing_analysis = None
@@ -536,11 +549,44 @@ async def complete_style_detection(
                 timestamp=datetime.now().isoformat()
             )
         
-        # Step 2: Analyze style
-        style_analysis = style_logic.analyze_content_style(crawl_result['content'])
+        # Step 2-4: Parallelize AI API calls for performance (3 calls → 1 parallel batch)
+        import asyncio
+        from functools import partial
+        
+        # Prepare parallel tasks
+        logger.info("[complete_style_detection] Starting parallel AI analysis...")
+        
+        async def run_style_analysis():
+            """Run style analysis in executor"""
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, partial(style_logic.analyze_content_style, crawl_result['content']))
+        
+        async def run_patterns_analysis():
+            """Run patterns analysis in executor (if requested)"""
+            if not request.include_patterns:
+                return None
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, partial(style_logic.analyze_style_patterns, crawl_result['content']))
+        
+        # Execute style and patterns analysis in parallel
+        style_analysis, patterns_result = await asyncio.gather(
+            run_style_analysis(),
+            run_patterns_analysis(),
+            return_exceptions=True
+        )
+        
+        # Check if style_analysis failed
+        if isinstance(style_analysis, Exception):
+            error_msg = str(style_analysis)
+            logger.error(f"Style analysis failed with exception: {error_msg}")
+            analysis_service.save_error_analysis(user_id_int, request.url or "text_sample", error_msg)
+            return StyleDetectionResponse(
+                success=False,
+                error=f"Style analysis failed: {error_msg}",
+                timestamp=datetime.now().isoformat()
+            )
         
         if not style_analysis or not style_analysis.get('success'):
-            # Check if it's an API key issue
             error_msg = style_analysis.get('error', 'Unknown error') if style_analysis else 'Analysis failed'
             if 'API key' in error_msg or 'configure' in error_msg:
                 return StyleDetectionResponse(
@@ -549,7 +595,6 @@ async def complete_style_detection(
                     timestamp=datetime.now().isoformat()
                 )
             else:
-                # Save error analysis
                 analysis_service.save_error_analysis(user_id_int, request.url or "text_sample", error_msg)
                 return StyleDetectionResponse(
                     success=False,
@@ -557,17 +602,20 @@ async def complete_style_detection(
                     timestamp=datetime.now().isoformat()
                 )
         
-        # Step 3: Analyze patterns (optional)
+        # Process patterns result
         style_patterns = None
-        if request.include_patterns:
-            patterns_result = style_logic.analyze_style_patterns(crawl_result['content'])
-            if patterns_result and patterns_result.get('success'):
+        if request.include_patterns and patterns_result and not isinstance(patterns_result, Exception):
+            if patterns_result.get('success'):
                 style_patterns = patterns_result.get('patterns')
         
-        # Step 4: Generate guidelines (optional)
+        # Step 4: Generate guidelines (depends on style_analysis, must run after)
         style_guidelines = None
         if request.include_guidelines:
-            guidelines_result = style_logic.generate_style_guidelines(style_analysis.get('analysis', {}))
+            loop = asyncio.get_event_loop()
+            guidelines_result = await loop.run_in_executor(
+                None, 
+                partial(style_logic.generate_style_guidelines, style_analysis.get('analysis', {}))
+            )
             if guidelines_result and guidelines_result.get('success'):
                 style_guidelines = guidelines_result.get('guidelines')
         
@@ -628,10 +676,8 @@ async def check_existing_analysis(
         analysis_service = WebsiteAnalysisService(db_session)
         
         # Use authenticated Clerk user ID for proper user isolation
-        try:
-            user_id_int = int(user_id.replace('user_', '').replace('-', '')[:8], 16) % 2147483647
-        except:
-            user_id_int = hash(user_id) % 2147483647
+        # Use consistent SHA256-based conversion
+        user_id_int = clerk_user_id_to_int(user_id)
         
         # Check for existing analysis for THIS USER ONLY
         existing_analysis = analysis_service.check_existing_analysis(user_id_int, website_url)
@@ -684,10 +730,8 @@ async def get_session_analyses(current_user: Dict[str, Any] = Depends(get_curren
         analysis_service = WebsiteAnalysisService(db_session)
         
         # Use authenticated Clerk user ID for proper user isolation
-        try:
-            user_id_int = int(user_id.replace('user_', '').replace('-', '')[:8], 16) % 2147483647
-        except:
-            user_id_int = hash(user_id) % 2147483647
+        # Use consistent SHA256-based conversion
+        user_id_int = clerk_user_id_to_int(user_id)
         
         # Get analyses for THIS USER ONLY (not all users!)
         analyses = analysis_service.get_session_analyses(user_id_int)

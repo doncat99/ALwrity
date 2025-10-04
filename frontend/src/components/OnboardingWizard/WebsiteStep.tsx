@@ -8,27 +8,17 @@ import {
   Alert,
   CircularProgress,
   Card,
-  CardContent,
   Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  DialogContentText,
-  Fade,
-  LinearProgress,
-  Stepper,
-  Step,
-  StepLabel,
-  Checkbox,
-  FormControlLabel
+  DialogContentText
 } from '@mui/material';
 import {
   Analytics as AnalyticsIcon,
   History as HistoryIcon,
-  Business as BusinessIcon,
-  Star as StarIcon,
-  Verified as VerifiedIcon
+  Business as BusinessIcon
 } from '@mui/icons-material';
 
 // Extracted components
@@ -37,7 +27,6 @@ import { AnalysisResultsDisplay, AnalysisProgressDisplay } from './WebsiteStep/c
 // Extracted utilities
 import {
   fixUrlFormat,
-  extractDomainName,
   checkExistingAnalysis,
   loadExistingAnalysis,
   performAnalysis,
@@ -336,18 +325,17 @@ const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderConte
       return;
     }
 
-    const stepData = {
-      website: fixedUrl,
-      domainName: result.domainName || domainName,
-      analysis: result.analysis,
-      useAnalysisForGenAI,
-    };
+    // Set the loaded analysis data for display
+    setDomainName(result.domainName || domainName);
+    setAnalysis(result.analysis);
+    setSuccess('Previous analysis loaded successfully!');
 
     // Store in localStorage for Step 3 (Competitor Analysis)
     localStorage.setItem('website_url', fixedUrl);
     localStorage.setItem('website_analysis_data', JSON.stringify(result.analysis));
 
-    onContinue(stepData);
+    // DO NOT call onContinue() here - let user review the analysis first
+    // User will click "Continue" button when ready to proceed
   };
 
   const handleNewAnalysis = async () => {

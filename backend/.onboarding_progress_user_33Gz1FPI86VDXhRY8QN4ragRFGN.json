@@ -5,7 +5,7 @@
       "title": "AI LLM Providers",
       "description": "Configure AI language model providers",
       "status": "completed",
-      "completed_at": "2025-09-30T11:54:21.688932",
+      "completed_at": "2025-10-03T17:29:12.878656",
       "data": {
         "api_keys": {
           "gemini": "AIzaSyB6QrCiOBAzh8xLdmSumec2ysdHeyqyxgw",
@@ -19,9 +19,175 @@
       "step_number": 2,
       "title": "Website Analysis",
       "description": "Set up website analysis and crawling",
-      "status": "pending",
-      "completed_at": null,
-      "data": null,
+      "status": "completed",
+      "completed_at": "2025-10-03T17:42:17.953305",
+      "data": {
+        "website": "https://alwrity.com",
+        "domainName": "Alwrity.com",
+        "analysis": {
+          "writing_style": {
+            "tone": "Informative, enthusiastic",
+            "voice": "Helpful, direct",
+            "complexity": "Moderate",
+            "engagement_level": "High",
+            "brand_personality": "Innovative, friendly",
+            "formality_level": "Semi-formal",
+            "emotional_appeal": "Benefit-driven"
+          },
+          "content_characteristics": {
+            "sentence_structure": "Varied",
+            "vocabulary_level": "Accessible",
+            "paragraph_organization": "Clear, concise",
+            "content_flow": "Logical, user-centric",
+            "readability_score": "Good",
+            "content_density": "Moderate",
+            "visual_elements_usage": "High"
+          },
+          "target_audience": {
+            "demographics": [
+              "Marketers",
+              "Bloggers",
+              "Content creators"
+            ],
+            "expertise_level": "Beginner to intermediate",
+            "industry_focus": "General, tech",
+            "geographic_focus": "",
+            "psychographic_profile": [
+              "Tech-savvy",
+              "Value-conscious",
+              "Efficiency-seeking"
+            ],
+            "pain_points": [
+              "Time-consuming content creation",
+              "Lack of SEO knowledge",
+              "Writer's block"
+            ],
+            "motivations": [
+              "Efficiency",
+              "Increased website traffic",
+              "Content quality"
+            ]
+          },
+          "content_type": {
+            "primary_type": "AI writing tool promotion",
+            "secondary_types": [
+              "Blog posts",
+              "Marketing materials"
+            ],
+            "purpose": "Promote AI tools, generate leads",
+            "call_to_action": "Try Now!",
+            "conversion_focus": "Tool usage",
+            "educational_value": "Moderate"
+          },
+          "recommended_settings": {
+            "writing_tone": "Enthusiastic, informative",
+            "target_audience": "Content creators, marketers",
+            "content_type": "AI tool promotion, blog",
+            "creativity_level": "High",
+            "geographic_location": "",
+            "industry_context": "AI, Content Creation",
+            "brand_alignment": "Strong"
+          },
+          "guidelines": {
+            "tone_recommendations": [
+              "Informative & Enthusiastic: Maintain a helpful and engaging tone. Example: 'Let's dive into how AI can revolutionize your content creation!'"
+            ],
+            "structure_guidelines": [
+              "Clear & Concise: Use headings, subheadings, and bullet points for easy readability. Example: Break down complex topics into digestible sections.",
+              "Logical Flow: Organize content with a user-centric approach, starting with the problem and offering solutions. Example: Start with the pain points of content creation and then introduce your AI tools."
+            ],
+            "vocabulary_suggestions": [
+              "Accessible Language: Avoid jargon; use clear and concise language. Example: Instead of 'leverage AI,' use 'use AI.'"
+            ],
+            "engagement_tips": [
+              "Visuals: Incorporate images, screenshots, and videos to enhance understanding. Example: Include screenshots of your AI tools in action.",
+              "Benefit-Driven: Focus on the benefits for the user. Example: 'Save time and create high-quality content with our AI.'"
+            ],
+            "audience_considerations": [
+              "Targeted Content: Address the needs of marketers, bloggers, and content creators. Example: Provide specific examples relevant to their workflows.",
+              "Address Pain Points: Acknowledge and solve common content creation challenges. Example: Offer solutions to writer's block and SEO optimization."
+            ],
+            "brand_alignment": [
+              "Helpful & Innovative Voice: Maintain a helpful, innovative, and friendly brand voice. Example: Offer free resources and tutorials.",
+              "Open Source Focus: Highlight the open-source nature of the tools. Example: Mention the benefits of open-source for users.",
+              "Value Proposition: Clearly communicate the value of the tools. Example: 'Create fact-based, multilingual content efficiently.'"
+            ],
+            "seo_optimization": [
+              "Keyword Research: Identify relevant keywords and incorporate them naturally. Example: Use keywords like 'AI content creation,' 'SEO optimization,' and 'free AI tools.'",
+              "Optimize Headings & Meta Descriptions: Use keywords in headings and create compelling meta descriptions. Example: Write a meta description that includes a clear call to action and keyword."
+            ],
+            "conversion_optimization": [
+              "Clear CTAs: Include clear calls to action. Example: 'Try our free AI tool today!'",
+              "Focus on Benefits: Emphasize the value proposition. Example: 'Sign up to get instant access to AI-powered content creation.'"
+            ]
+          },
+          "best_practices": [
+            "Provide In-Depth Tutorials: Offer detailed guides and tutorials to showcase the tools' capabilities.",
+            "Showcase Diverse Use Cases: Demonstrate how the tools can be applied in various scenarios.",
+            "Build Community: Encourage user interaction and feedback.",
+            "Integrate with Platforms: Explore integrations with popular content platforms."
+          ],
+          "avoid_elements": [
+            "Overly Technical Jargon: Steer clear of overly complex technical terms that may alienate the audience.",
+            "Misleading Claims: Avoid making exaggerated claims about AI capabilities.",
+            "Negative Brand Association: Do not use language that portrays the brand as anything other than helpful and accessible."
+          ],
+          "content_strategy": "Focus on creating informative, user-centric content that highlights the benefits of open-source AI tools for content creation, addressing the pain points of the target audience while providing practical solutions and SEO optimization.",
+          "ai_generation_tips": [
+            "Fact-Checking: Always verify the information generated by AI tools.",
+            "Human Oversight: Review and refine AI-generated content for accuracy, clarity, and brand voice.",
+            "Experimentation: Test different prompts and inputs to optimize output."
+          ],
+          "competitive_advantages": [
+            "Fact-Based Content: Emphasize the ability to generate fact-based content.",
+            "Open Source: Highlight the benefits of open-source for users (e.g., transparency, community support, customization).",
+            "Multilingual Support: Promote the multilingual capabilities of the tools."
+          ],
+          "content_calendar_suggestions": [
+            "Tutorials: Create step-by-step guides on using the AI tools for different content types.",
+            "Use Case Studies: Showcase successful implementations of the tools.",
+            "SEO Optimization Guides: Provide tips and best practices for improving search engine rankings.",
+            "Industry News & Trends: Share insights on the latest developments in AI and content creation."
+          ],
+          "style_patterns": {
+            "patterns": {
+              "sentence_length": "short to medium",
+              "vocabulary_patterns": [
+                "keywords related to AI and content generation",
+                "action-oriented verbs"
+              ],
+              "rhetorical_devices": [
+                "repetition",
+                "call to action"
+              ],
+              "paragraph_structure": "varied, often short and focused",
+              "transition_phrases": [
+                "Click to",
+                "and"
+              ]
+            },
+            "style_consistency": "consistent in tone and purpose",
+            "unique_elements": [
+              "focus on AI-powered content creation tools",
+              "integration with platforms like WordPress"
+            ],
+            "meta": {
+              "schema_version": "1.1",
+              "confidence": 0.8,
+              "notes": "The content is promotional and tool-focused.",
+              "uncertainty": {
+                "fields": []
+              }
+            }
+          },
+          "style_consistency": "consistent in tone and purpose",
+          "unique_elements": [
+            "focus on AI-powered content creation tools",
+            "integration with platforms like WordPress"
+          ]
+        },
+        "useAnalysisForGenAI": true
+      },
       "validation_errors": []
     },
     {
@@ -61,9 +227,9 @@
       "validation_errors": []
     }
   ],
-  "current_step": 2,
+  "current_step": 3,
   "started_at": "2025-09-29T17:22:14.375002",
-  "last_updated": "2025-09-30T11:54:21.688938",
+  "last_updated": "2025-10-03T17:42:17.953324",
   "is_completed": false,
   "completed_at": null
 }

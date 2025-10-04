@@ -14,22 +14,15 @@ import {
   Checkbox,
   FormControlLabel,
   Alert,
-  Paper,
-  Tooltip
+  Paper
 } from '@mui/material';
 import {
   AutoAwesome as AutoAwesomeIcon,
   Verified as VerifiedIcon,
-  Psychology as PsychologyIcon,
   Analytics as AnalyticsIcon,
   TrendingUp as TrendingUpIcon,
-  Language as LanguageIcon,
-  Palette as PaletteIcon,
-  Speed as SpeedIcon,
-  Group as GroupIcon,
   Business as BusinessIcon,
-  Lightbulb as LightbulbIcon,
-  Warning as WarningIcon
+  Lightbulb as LightbulbIcon
 } from '@mui/icons-material';
 
 // Import rendering utilities
@@ -45,7 +38,12 @@ import {
 } from '../utils/renderUtils';
 
 // Import extracted components
-import { EnhancedGuidelinesSection, KeyInsightsGrid } from './index';
+import { 
+  EnhancedGuidelinesSection, 
+  KeyInsightsGrid,
+  ContentCharacteristicsSection,
+  TargetAudienceAnalysisSection
+} from './index';
 import { useOnboardingStyles } from '../../common/useOnboardingStyles';
 
 interface StyleAnalysis {
@@ -169,10 +167,24 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           <Box sx={styles.analysisHeader}>
             <VerifiedIcon sx={styles.analysisHeaderIcon} />
             <Box>
-              <Typography variant="h4" sx={styles.analysisHeaderTitle} gutterBottom>
+              <Typography 
+                variant="h4" 
+                sx={{
+                  ...styles.analysisHeaderTitle,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
                 {domainName} Style Analysis
               </Typography>
-              <Typography variant="body1" sx={styles.analysisHeaderSubtitle}>
+              <Typography 
+                variant="body1" 
+                sx={{
+                  ...styles.analysisHeaderSubtitle,
+                  color: '#4a5568 !important' // Force dark secondary text
+                }}
+              >
                 Comprehensive content analysis and personalized recommendations
               </Typography>
             </Box>
@@ -186,253 +198,32 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           />
 
           {/* Content Characteristics Section */}
-          {analysis.content_characteristics && (
-            <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
-                <AnalyticsIcon color="info" />
-                Content Characteristics
-              </Typography>
-               <Grid container spacing={2}>
-                 {analysis.content_characteristics.vocabulary_level && (
-                   <Grid item xs={12} md={6}>
-                     <Tooltip title="The complexity and sophistication of words used in the content. Higher levels use more advanced vocabulary while accessible levels use simpler, everyday words." arrow>
-                       <Box>
-                         {renderKeyInsight(
-                           'Vocabulary Level',
-                           analysis.content_characteristics.vocabulary_level,
-                           <LanguageIcon />,
-                           'info'
-                         )}
-                       </Box>
-                     </Tooltip>
-                   </Grid>
-                 )}
-                
-                 {analysis.content_characteristics.readability_score && (
-                   <Grid item xs={12} md={6}>
-                     <Tooltip title="How easy it is for readers to understand the content. Higher scores mean the content is easier to read and comprehend." arrow>
-                       <Box>
-                         {renderKeyInsight(
-                           'Readability Score',
-                           analysis.content_characteristics.readability_score,
-                           <SpeedIcon />,
-                           'success'
-                         )}
-                       </Box>
-                     </Tooltip>
-                   </Grid>
-                 )}
-                 
-                 {analysis.content_characteristics.content_density && (
-                   <Grid item xs={12} md={6}>
-                     <Tooltip title="How much information is packed into each section. Moderate density balances information with readability." arrow>
-                       <Box>
-                         {renderKeyInsight(
-                           'Content Density',
-                           analysis.content_characteristics.content_density,
-                           <PaletteIcon />,
-                           'warning'
-                         )}
-                       </Box>
-                     </Tooltip>
-                   </Grid>
-                 )}
-                 
-                 {analysis.content_characteristics.sentence_structure && (
-                   <Grid item xs={12} md={6}>
-                     <Tooltip title="The variety and complexity of sentence patterns used. Varied structures keep readers engaged." arrow>
-                       <Box>
-                         {renderKeyInsight(
-                           'Sentence Structure',
-                           analysis.content_characteristics.sentence_structure,
-                           <AnalyticsIcon />,
-                           'secondary'
-                         )}
-                       </Box>
-                     </Tooltip>
-                   </Grid>
-                 )}
-                
-                 {analysis.content_characteristics.paragraph_organization && (
-                   <Grid item xs={12} md={6}>
-                     <Tooltip title="How paragraphs are structured and organized. Clear organization helps readers follow the content easily." arrow>
-                       <Box>
-                         {renderKeyInsight(
-                           'Paragraph Organization',
-                           analysis.content_characteristics.paragraph_organization,
-                           <AnalyticsIcon />,
-                           'primary'
-                         )}
-                       </Box>
-                     </Tooltip>
-                   </Grid>
-                 )}
-                 
-                 {analysis.content_characteristics.content_flow && (
-                   <Grid item xs={12} md={6}>
-                     <Tooltip title="How smoothly the content moves from one idea to the next. Good flow keeps readers engaged throughout." arrow>
-                       <Box>
-                         {renderKeyInsight(
-                           'Content Flow',
-                           analysis.content_characteristics.content_flow,
-                           <TrendingUpIcon />,
-                           'success'
-                         )}
-                       </Box>
-                     </Tooltip>
-                   </Grid>
-                 )}
-                 
-                 {analysis.content_characteristics.visual_elements_usage && (
-                   <Grid item xs={12} md={6}>
-                     <Tooltip title="How often images, charts, and other visual elements are used to support the text content." arrow>
-                       <Box>
-                         {renderKeyInsight(
-                           'Visual Elements Usage',
-                           analysis.content_characteristics.visual_elements_usage,
-                           <PaletteIcon />,
-                           'warning'
-                         )}
-                       </Box>
-                     </Tooltip>
-                   </Grid>
-                 )}
-              </Grid>
-            </Box>
-          )}
+          <ContentCharacteristicsSection 
+            contentCharacteristics={analysis.content_characteristics as any}
+          />
 
-          {/* Detailed Target Audience Section */}
-          {analysis.target_audience && (
-            <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
-                <GroupIcon color="info" />
-                Target Audience Analysis
-               </Typography>
-               <Grid container spacing={2}>
-                 {analysis.target_audience.demographics && analysis.target_audience.demographics.length > 0 && (
-                  <Grid item xs={12} md={6}>
-                    {renderKeyInsight(
-                      'Demographics',
-                      analysis.target_audience.demographics,
-                      <GroupIcon />,
-                      'info'
-                    )}
-                  </Grid>
-                )}
-                
-                {analysis.target_audience.industry_focus && (
-                  <Grid item xs={12} md={6}>
-                    {renderKeyInsight(
-                      'Industry Focus',
-                      analysis.target_audience.industry_focus,
-                      <BusinessIcon />,
-                      'primary'
-                    )}
-                  </Grid>
-                )}
-                
-                {analysis.target_audience.geographic_focus && (
-                  <Grid item xs={12} md={6}>
-                    {renderKeyInsight(
-                      'Geographic Focus',
-                      analysis.target_audience.geographic_focus,
-                      <AnalyticsIcon />,
-                      'secondary'
-                    )}
-                  </Grid>
-                )}
-                
-                  {analysis.target_audience.psychographic_profile && (
-                    <Grid item xs={12} md={6}>
-                      <Paper elevation={2} sx={styles.analysisAccentPaperSuccess}>
-                        <Box display="flex" alignItems="center" gap={2}>
-                          <Box sx={styles.analysisAccentIconSuccess}>
-                            <PsychologyIcon />
-                          </Box>
-                          <Box flex={1}>
-                            <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                              Psychographic Profile
-                            </Typography>
-                            <Box component="ul" sx={styles.analysisList}>
-                              {Array.isArray(analysis.target_audience.psychographic_profile)
-                                ? analysis.target_audience.psychographic_profile.map((item: string, index: number) => (
-                                    <Typography component="li" variant="body2" key={index} sx={styles.analysisListItem}>
-                                      {item}
-                                    </Typography>
-                                  ))
-                                : (
-                                    <Typography component="li" variant="body2" sx={styles.analysisListItem}>
-                                      {analysis.target_audience.psychographic_profile}
-                                    </Typography>
-                                  )}
-                            </Box>
-                          </Box>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  )}
-                
-                {analysis.target_audience.pain_points && analysis.target_audience.pain_points.length > 0 && (
-                  <Grid item xs={12} md={6}>
-                    <Paper elevation={2} sx={styles.analysisAccentPaperError}>
-                      <Box display="flex" alignItems="center" gap={2}>
-                        <Box sx={styles.analysisAccentIconError}>
-                          <WarningIcon />
-                        </Box>
-                        <Box flex={1}>
-                          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                            Pain Points
-                          </Typography>
-                          <Box component="ul" sx={styles.analysisList}>
-                            {analysis.target_audience.pain_points.map((painPoint: string, index: number) => (
-                              <Typography component="li" variant="body2" key={index} sx={styles.analysisListItem}>
-                                {painPoint}
-                              </Typography>
-                            ))}
-                          </Box>
-                        </Box>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                )}
-                
-                {analysis.target_audience.motivations && analysis.target_audience.motivations.length > 0 && (
-                  <Grid item xs={12} md={6}>
-                    <Paper elevation={2} sx={styles.analysisAccentPaperSuccess}>
-                      <Box display="flex" alignItems="center" gap={2}>
-                        <Box sx={styles.analysisAccentIconSuccess}>
-                          <TrendingUpIcon />
-                        </Box>
-                        <Box flex={1}>
-                          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                            Motivations
-                          </Typography>
-                          <Box component="ul" sx={styles.analysisList}>
-                            {analysis.target_audience.motivations.map((motivation: string, index: number) => (
-                              <Typography component="li" variant="body2" key={index} sx={styles.analysisListItem}>
-                                {motivation}
-                              </Typography>
-                            ))}
-                          </Box>
-                        </Box>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                )}
-              </Grid>
-            </Box>
-          )}
+          {/* Target Audience Analysis Section */}
+          <TargetAudienceAnalysisSection 
+            targetAudience={analysis.target_audience as any}
+          />
 
           {/* Content Type Details Section */}
           {analysis.content_type && (
-            <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
-                <BusinessIcon color="primary" />
+            <Box sx={{ ...styles.analysisSection, mt: 4 }}>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }}
+              >
+                <BusinessIcon sx={{ color: '#667eea !important' }} />
                 Content Type Analysis
                </Typography>
                <Grid container spacing={2}>
                  {analysis.content_type.purpose && (
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                     {renderKeyInsight(
                       'Content Purpose',
                       analysis.content_type.purpose,
@@ -443,7 +234,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                 )}
                 
                 {analysis.content_type.call_to_action && (
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                     {renderKeyInsight(
                       'Call to Action Style',
                       analysis.content_type.call_to_action,
@@ -454,7 +245,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                 )}
                 
                 {analysis.content_type.conversion_focus && (
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                     {renderKeyInsight(
                       'Conversion Focus',
                       analysis.content_type.conversion_focus,
@@ -465,7 +256,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                 )}
                 
                 {analysis.content_type.educational_value && (
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                     {renderKeyInsight(
                       'Educational Value',
                       analysis.content_type.educational_value,
@@ -507,7 +298,15 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           {/* Content Strategy */}
           {analysis.content_strategy && (
             <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
                 <AutoAwesomeIcon color="primary" />
                 Content Strategy
               </Typography>
@@ -522,14 +321,22 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           {/* Recommended Settings for AI Generation */}
           {analysis.recommended_settings && (
             <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
                 <AutoAwesomeIcon color="primary" />
                 Recommended AI Generation Settings
               </Typography>
               <Paper elevation={3} sx={styles.analysisGradientPaperPrimary}>
                 <Grid container spacing={2}>
                   {analysis.recommended_settings.writing_tone && (
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                       <Typography variant="subtitle2" sx={styles.analysisSubheader}>
                         Writing Tone:
                       </Typography>
@@ -540,7 +347,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                   )}
                   
                   {analysis.recommended_settings.target_audience && (
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                       <Typography variant="subtitle2" sx={styles.analysisSubheader}>
                         Target Audience:
                       </Typography>
@@ -551,7 +358,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                   )}
                   
                   {analysis.recommended_settings.content_type && (
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                       <Typography variant="subtitle2" sx={styles.analysisSubheader}>
                         Content Type:
                       </Typography>
@@ -562,7 +369,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                   )}
                   
                   {analysis.recommended_settings.creativity_level && (
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                       <Typography variant="subtitle2" sx={styles.analysisSubheader}>
                         Creativity Level:
                       </Typography>
@@ -573,7 +380,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                   )}
                   
                   {analysis.recommended_settings.industry_context && (
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                       <Typography variant="subtitle2" sx={styles.analysisSubheader}>
                         Industry Context:
                       </Typography>
@@ -584,7 +391,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                   )}
                   
                   {analysis.recommended_settings.geographic_location && (
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                       <Typography variant="subtitle2" sx={styles.analysisSubheader}>
                         Geographic Focus:
                       </Typography>
@@ -595,7 +402,7 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                   )}
 
                   {analysis.recommended_settings.brand_alignment && (
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                       <Typography variant="subtitle2" sx={styles.analysisSubheader}>
                         Brand Alignment:
                       </Typography>
@@ -628,7 +435,15 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           {/* Style Consistency Section */}
           {analysis.style_consistency && (
             <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
                 <AnalyticsIcon color="info" />
                 Style Consistency
               </Typography>
@@ -643,7 +458,15 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           {/* Unique Elements Section */}
           {analysis.unique_elements && analysis.unique_elements.length > 0 && (
             <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
                 <AutoAwesomeIcon color="primary" />
                 Unique Style Elements
               </Typography>
@@ -670,13 +493,13 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           {/* Best Practices & Avoid Elements */}
            <Grid container spacing={2} sx={styles.analysisSection}>
             {analysis.best_practices && (
-              <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                 {renderBestPracticesSection(analysis.best_practices)}
               </Grid>
             )}
             
             {analysis.avoid_elements && (
-              <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
                 {renderAvoidElementsSection(analysis.avoid_elements)}
               </Grid>
             )}
@@ -685,7 +508,15 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           {/* Competitive Advantages */}
           {analysis.competitive_advantages && analysis.competitive_advantages.length > 0 && (
             <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
                 <TrendingUpIcon color="success" />
                 Competitive Advantages
               </Typography>
@@ -704,7 +535,15 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
           {/* Content Calendar Suggestions */}
           {analysis.content_calendar_suggestions && analysis.content_calendar_suggestions.length > 0 && (
             <Box sx={styles.analysisSection}>
-              <Typography variant="h5" sx={styles.analysisSectionHeader} gutterBottom>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
                 <AnalyticsIcon color="primary" />
                 Content Calendar Suggestions
               </Typography>
@@ -713,6 +552,56 @@ const AnalysisResultsDisplay: React.FC<AnalysisResultsDisplayProps> = ({
                   {analysis.content_calendar_suggestions.map((suggestion: string, index: number) => (
                     <Typography component="li" variant="body1" key={index} sx={styles.analysisListItem}>
                       {suggestion}
+                    </Typography>
+                  ))}
+                </Box>
+              </Paper>
+            </Box>
+          )}
+
+          {/* Content Strategy */}
+          {analysis.content_strategy && (
+            <Box sx={styles.analysisSection}>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
+                <BusinessIcon color="primary" />
+                Content Strategy Overview
+              </Typography>
+              <Paper elevation={3} sx={styles.analysisGradientPaperPrimary}>
+                <Typography variant="body1" sx={styles.analysisParagraph}>
+                  {analysis.content_strategy}
+                </Typography>
+              </Paper>
+            </Box>
+          )}
+
+          {/* AI Generation Tips */}
+          {analysis.ai_generation_tips && analysis.ai_generation_tips.length > 0 && (
+            <Box sx={styles.analysisSection}>
+              <Typography 
+                variant="h5" 
+                sx={{
+                  ...styles.analysisSectionHeader,
+                  color: '#1a202c !important', // Force dark text
+                  fontWeight: '700 !important'
+                }} 
+                gutterBottom
+              >
+                <AutoAwesomeIcon color="secondary" />
+                AI Content Generation Tips
+              </Typography>
+              <Paper elevation={3} sx={styles.analysisGradientPaperAccent}>
+                <Box component="ul" sx={styles.analysisList}>
+                  {analysis.ai_generation_tips.map((tip: string, index: number) => (
+                    <Typography component="li" variant="body1" key={index} sx={styles.analysisListItem}>
+                      {tip}
                     </Typography>
                   ))}
                 </Box>

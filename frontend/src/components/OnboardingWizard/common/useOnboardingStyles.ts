@@ -6,8 +6,9 @@ export const useOnboardingStyles = () => {
   const styles = {
     // Layout styles
     container: {
-      maxWidth: 800,
-      mx: 'auto',
+      maxWidth: '100%', // Use full width for maximum data display
+      mx: 0, // Remove auto margins to use full width
+      px: { xs: 1, md: 2 }, // Minimal padding to maximize content area
     },
     
     // Header styles
@@ -241,17 +242,25 @@ export const useOnboardingStyles = () => {
     analysisContainer: {
       display: 'flex',
       flexDirection: 'column',
-      gap: 2,
+      gap: 3,
       width: '100%',
+      maxWidth: '100%',  // Use full width for maximum data display
+      mx: 0, // Remove auto margins to use full width
+      px: { xs: 1, md: 2 }, // Minimal padding to maximize content area
     },
 
     analysisHeaderCard: {
-      mb: 2,
-      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.08) 100%)',
-      borderRadius: 2,
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-      border: `1px solid rgba(255, 255, 255, 0.1)`,
-      backdropFilter: 'blur(20px)',
+      mb: 3,
+      background: theme.palette.mode === 'dark' 
+        ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.08) 100%)'
+        : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+      borderRadius: 3,
+      boxShadow: theme.palette.mode === 'dark'
+        ? '0 8px 32px rgba(0, 0, 0, 0.4)'
+        : '0 4px 20px rgba(0, 0, 0, 0.08)',
+      border: theme.palette.mode === 'dark'
+        ? `1px solid rgba(255, 255, 255, 0.1)`
+        : `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
       overflow: 'hidden',
     },
 
@@ -274,12 +283,12 @@ export const useOnboardingStyles = () => {
     analysisHeaderTitle: {
       fontWeight: 700,
       letterSpacing: '-0.025em',
-      color: theme.palette.text.primary,
+      color: theme.palette.mode === 'dark' ? '#ffffff' : '#1a202c', // High contrast dark text
       fontSize: '1.5rem',
     },
 
     analysisHeaderSubtitle: {
-      color: theme.palette.text.secondary,
+      color: theme.palette.mode === 'dark' ? '#e2e8f0' : '#4a5568', // High contrast secondary text
       fontSize: '0.95rem',
       lineHeight: 1.5,
       mt: 0.5,
@@ -292,11 +301,19 @@ export const useOnboardingStyles = () => {
     analysisSectionHeader: {
       display: 'flex',
       alignItems: 'center',
-      gap: 1,
-      fontWeight: 600,
-      color: theme.palette.text.primary,
-      fontSize: '1.1rem',
-      mb: 1.5,
+      gap: 1.5,
+      fontWeight: 700,
+      color: theme.palette.mode === 'dark' ? '#ffffff' : '#1a202c', // High contrast dark text
+      fontSize: '1.25rem',
+      mb: 2,
+      pb: 1.5,
+      borderBottom: `3px solid ${theme.palette.mode === 'dark' 
+        ? alpha(theme.palette.primary.main, 0.4)
+        : alpha(theme.palette.primary.main, 0.25)}`, // More prominent border
+      '& .MuiSvgIcon-root': {
+        fontSize: '1.5rem',
+        color: theme.palette.mode === 'dark' ? theme.palette.primary.light : theme.palette.primary.main,
+      }
     },
 
     analysisSubheader: {

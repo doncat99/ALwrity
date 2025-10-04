@@ -117,26 +117,24 @@ class ClerkAuthMiddleware:
                     # Use cached PyJWKClient to avoid repeated JWKS fetches
                     if jwks_url not in self._jwks_client_cache:
                         logger.info(f"Creating new PyJWKClient for {jwks_url} with caching enabled")
-                        # Create client with caching: cache_keys=True, max_cached_keys=16, cache_jwk_set_timeout=3600 (1 hour)
+                        # Create client with caching enabled (cache_keys=True keeps keys in memory)
                         self._jwks_client_cache[jwks_url] = PyJWKClient(
                             jwks_url,
                             cache_keys=True,
-                            max_cached_keys=16,
-                            cache_jwk_set_timeout=3600,  # Cache JWKS for 1 hour
-                            timeout=10  # 10 second timeout for JWKS fetch
+                            max_cached_keys=16
                         )
                     
                     jwks_client = self._jwks_client_cache[jwks_url]
                     signing_key = jwks_client.get_signing_key_from_jwt(token)
                     
                     # Verify and decode the token with clock skew tolerance
-                    # Add 60 seconds leeway to handle clock skew between client/server
+                    # Add 300 seconds (5 minutes) leeway to handle clock skew and token refresh delays
                     decoded_token = jwt.decode(
                         token,
                         signing_key.key,
                         algorithms=["RS256"],
                         options={"verify_signature": True, "verify_exp": True},
-                        leeway=60  # Allow 60 seconds clock skew
+                        leeway=300  # Allow 5 minutes leeway for token refresh during navigation
                     )
                     
                     # Extract user information
@@ -171,7 +169,7 @@ class ClerkAuthMiddleware:
                     decoded_token = jwt.decode(
                         token, 
                         options={"verify_signature": False},
-                        leeway=60  # Allow 60 seconds clock skew
+                        leeway=300  # Allow 5 minutes leeway for token refresh
                     )
                     
                     # Extract user information from the token

@@ -82,13 +82,64 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
   const [showHighlightsModal, setShowHighlightsModal] = useState(false);
   const [selectedCompetitorHighlights, setSelectedCompetitorHighlights] = useState<string[]>([]);
   const [selectedCompetitorTitle, setSelectedCompetitorTitle] = useState<string>('');
+  const [usingCachedData, setUsingCachedData] = useState(false);
 
-  const startCompetitorDiscovery = useCallback(async () => {
+  // Check for cached competitor analysis data
+  const loadCachedAnalysis = useCallback(() => {
+    try {
+      const cachedData = localStorage.getItem('competitor_analysis_data');
+      const cachedUrl = localStorage.getItem('competitor_analysis_url');
+      const cacheTimestamp = localStorage.getItem('competitor_analysis_timestamp');
+      
+      // Get current URL for comparison
+      const finalUserUrl = userUrl || localStorage.getItem('website_url') || '';
+      
+      if (cachedData && cachedUrl === finalUserUrl && cacheTimestamp) {
+        const cacheAge = Date.now() - parseInt(cacheTimestamp);
+        const cacheValidDuration = 24 * 60 * 60 * 1000; // 24 hours
+        
+        // Check if cache is still valid (less than 24 hours old)
+        if (cacheAge < cacheValidDuration) {
+          const parsedData = JSON.parse(cachedData);
+          
+          console.log('CompetitorAnalysisStep: Loading cached competitor analysis:', {
+            url: cachedUrl,
+            cacheAge: Math.round(cacheAge / (60 * 1000)),
+            competitors: parsedData.competitors?.length || 0
+          });
+          
+          setCompetitors(parsedData.competitors || []);
+          setSocialMediaAccounts(parsedData.social_media_accounts || {});
+          setSocialMediaCitations(parsedData.social_media_citations || []);
+          setResearchSummary(parsedData.research_summary || null);
+          setUsingCachedData(true);
+          
+          return true; // Successfully loaded from cache
+        } else {
+          console.log('CompetitorAnalysisStep: Cache expired, will run fresh analysis');
+        }
+      }
+      
+      return false; // No valid cache found
+    } catch (err) {
+      console.error('Error loading cached analysis:', err);
+      return false;
+    }
+  }, [userUrl]);
+
+  const startCompetitorDiscovery = useCallback(async (force = false) => {
+    // Check cache first unless forced
+    if (!force && loadCachedAnalysis()) {
+      console.log('CompetitorAnalysisStep: Using cached competitor analysis');
+      return;
+    }
+
     setIsAnalyzing(true);
     setShowProgressModal(true);
     setError(null);
     setAnalysisProgress(0);
     setAnalysisStep('Initializing competitor discovery...');
+    setUsingCachedData(false);
 
     try {
       setAnalysisStep('Validating session...');
@@ -139,10 +190,28 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
         setAnalysisProgress(100);
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        setCompetitors(result.competitors || []);
-        setSocialMediaAccounts(result.social_media_accounts || {});
-        setSocialMediaCitations(result.social_media_citations || []);
-        setResearchSummary(result.research_summary || null);
+        const analysisData = {
+          competitors: result.competitors || [],
+          social_media_accounts: result.social_media_accounts || {},
+          social_media_citations: result.social_media_citations || [],
+          research_summary: result.research_summary || null
+        };
+
+        setCompetitors(analysisData.competitors);
+        setSocialMediaAccounts(analysisData.social_media_accounts);
+        setSocialMediaCitations(analysisData.social_media_citations);
+        setResearchSummary(analysisData.research_summary);
+        
+        // Cache the analysis results
+        try {
+          localStorage.setItem('competitor_analysis_data', JSON.stringify(analysisData));
+          localStorage.setItem('competitor_analysis_url', finalUserUrl);
+          localStorage.setItem('competitor_analysis_timestamp', Date.now().toString());
+          console.log('CompetitorAnalysisStep: Cached competitor analysis for future use');
+        } catch (cacheErr) {
+          console.warn('Failed to cache competitor analysis:', cacheErr);
+        }
+        
         setShowProgressModal(false);
         setIsAnalyzing(false);
       } else {
@@ -154,11 +223,23 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
       setIsAnalyzing(false);
       setShowProgressModal(false);
     }
-  }, [userUrl, industryContext]);  // sessionId removed from dependencies
+  }, [userUrl, industryContext, loadCachedAnalysis]);  // sessionId removed from dependencies
 
+  // Initialize: Check cache first, then run analysis if needed
   useEffect(() => {
-    startCompetitorDiscovery();
-  }, [startCompetitorDiscovery]);
+    const initialize = async () => {
+      // Try to load from cache first
+      const cacheLoaded = loadCachedAnalysis();
+      
+      // If no cache found, run fresh analysis
+      if (!cacheLoaded) {
+        await startCompetitorDiscovery(false);
+      }
+    };
+    
+    initialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   const handleContinue = () => {
     const researchData = {
@@ -180,20 +261,58 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
   return (
     <Box sx={classes.container}>
       <Box sx={classes.header}>
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            fontWeight: 600, 
+            mb: 2,
+            color: '#1a202c !important' // Force dark text for readability
+          }}
+        >
           Research Your Competition
         </Typography>
-        <Typography variant="h6" sx={{ color: 'text.secondary', fontWeight: 400 }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: '#4a5568 !important', // Force dark secondary text
+            fontWeight: 400 
+          }}
+        >
           Discover your competitors and analyze their strategies to gain competitive advantage
         </Typography>
       </Box>
+
+      {usingCachedData && !error && (
+        <Alert 
+          severity="info" 
+          sx={{ 
+            mb: 3,
+            background: 'linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%)',
+            border: '1px solid #81d4fa',
+            color: '#01579b',
+            '& .MuiAlert-icon': {
+              color: '#0277bd'
+            }
+          }}
+        >
+          Loaded previously analyzed competitor data. 
+          <Button 
+            startIcon={<RefreshIcon />} 
+            onClick={() => startCompetitorDiscovery(true)}
+            sx={{ ml: 2 }}
+            size="small"
+          >
+            Run Fresh Analysis
+          </Button>
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
           <Button 
             startIcon={<RefreshIcon />} 
-            onClick={startCompetitorDiscovery}
+            onClick={() => startCompetitorDiscovery(true)}
             sx={{ ml: 2 }}
           >
             Retry
@@ -204,23 +323,36 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
       {!isAnalyzing && !error && (competitors.length > 0 || researchSummary) && (
         <Box>
           {researchSummary && (
-            <Paper sx={{ p: 3, mb: 4, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+            <Paper sx={{ 
+              p: 3, 
+              mb: 4, 
+              background: 'linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%)', // Warm sky-blue gradient
+              border: '1px solid #81d4fa',
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(3, 169, 244, 0.15)'
+            }}>
               <Typography variant="h6" gutterBottom fontWeight={600} color="primary">
                 <AssessmentIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                 Research Summary
               </Typography>
               
               <Grid container spacing={3} mt={1}>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} sm={6} md={3}>
                   <Typography variant="h4" color="primary" fontWeight={700}>
                     {researchSummary.total_competitors}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body2" 
+                    sx={{ color: '#4a5568 !important' }} // Force dark text for readability
+                  >
                     Competitors Found
                   </Typography>
                 </Grid>
-                <Grid item xs={12} md={9}>
-                  <Typography variant="body1" color="text.secondary">
+                <Grid item xs={12} sm={6} md={9}>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ color: '#2d3748 !important' }} // Force dark text for readability
+                  >
                     {researchSummary.market_insights}
                   </Typography>
                 </Grid>
@@ -231,8 +363,14 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
           {/* Social Media Accounts Section */}
           {Object.keys(socialMediaAccounts).length > 0 && (
             <>
-              <Typography variant="h6" gutterBottom fontWeight={600} mb={3}>
-                <ShareIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+              <Typography 
+                variant="h6" 
+                gutterBottom 
+                fontWeight={600} 
+                mb={3}
+                sx={{ color: '#1a202c !important' }} // Force dark text
+              >
+                <ShareIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#667eea !important' }} />
                 Social Media Presence
               </Typography>
               
@@ -250,8 +388,18 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
                   };
                   
                   return (
-                    <Grid item xs={12} sm={6} md={4} key={platform}>
-                      <Card sx={{ height: '100%' }}>
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={platform}>
+                      <Card sx={{ 
+                        height: '100%',
+                        background: 'linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%)',
+                        border: '1px solid #81d4fa',
+                        boxShadow: '0 4px 12px rgba(3, 169, 244, 0.15)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 8px 20px rgba(3, 169, 244, 0.25)'
+                        }
+                      }}>
                         <CardContent>
                           <Box display="flex" alignItems="center" gap={2}>
                             <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}>
@@ -282,25 +430,52 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
             </>
           )}
 
-          <Typography variant="h6" gutterBottom fontWeight={600} mb={3}>
-            <BusinessIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          <Typography 
+            variant="h6" 
+            gutterBottom 
+            fontWeight={600} 
+            mb={3}
+            sx={{ color: '#1a202c !important' }} // Force dark text
+          >
+            <BusinessIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#667eea !important' }} />
             Discovered Competitors ({competitors.length})
           </Typography>
 
           <Grid container spacing={3}>
             {competitors.map((competitor, index) => (
-              <Grid item xs={12} md={6} lg={4} key={index}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={index}>
+                <Card sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  background: 'linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%)',
+                  border: '1px solid #81d4fa',
+                  boxShadow: '0 4px 12px rgba(3, 169, 244, 0.15)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 8px 20px rgba(3, 169, 244, 0.25)'
+                  }
+                }}>
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Box display="flex" alignItems="flex-start" gap={2} mb={2}>
                       <Avatar sx={{ width: 40, height: 40 }}>
                         <BusinessIcon />
                       </Avatar>
                       <Box flex={1}>
-                        <Typography variant="h6" fontWeight={600} gutterBottom>
+                        <Typography 
+                          variant="h6" 
+                          fontWeight={600} 
+                          gutterBottom
+                          sx={{ color: '#1a202c !important' }} // Force dark text for readability
+                        >
                           {competitor.title}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                        <Typography 
+                          variant="body2" 
+                          gutterBottom
+                          sx={{ color: '#4a5568 !important' }} // Force dark text for readability
+                        >
                           {competitor.domain}
                         </Typography>
                         <Chip 
@@ -311,7 +486,11 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
                       </Box>
                     </Box>
 
-                    <Typography variant="body2" color="text.secondary" mb={2}>
+                    <Typography 
+                      variant="body2" 
+                      mb={2}
+                      sx={{ color: '#2d3748 !important' }} // Force dark text for readability
+                    >
                       {competitor.summary.length > 150 
                         ? `${competitor.summary.substring(0, 150)}...` 
                         : competitor.summary

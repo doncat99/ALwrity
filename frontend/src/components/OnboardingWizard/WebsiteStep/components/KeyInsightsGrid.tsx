@@ -56,7 +56,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
   return (
     <Grid container spacing={2} sx={{ mb: 2.5 }}>
        {writing_style?.tone && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="The emotional quality and attitude of the writing - how it makes readers feel and the mood it creates." arrow>
              <Box>
                {renderKeyInsight(
@@ -71,7 +71,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
       
        {writing_style?.complexity && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="How sophisticated or simple the content is. Moderate complexity balances depth with accessibility." arrow>
              <Box>
                {renderKeyInsight(
@@ -86,7 +86,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
        
        {writing_style?.voice && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="The unique personality and style of the writing - what makes it distinctive and recognizable." arrow>
              <Box>
                {renderKeyInsight(
@@ -101,7 +101,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
        
        {writing_style?.engagement_level && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="How well the content captures and maintains reader attention throughout the piece." arrow>
              <Box>
                {renderKeyInsight(
@@ -116,7 +116,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
       
        {writing_style?.brand_personality && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="The human characteristics and traits associated with the brand, like friendly, professional, or innovative." arrow>
              <Box>
                {renderKeyInsight(
@@ -131,7 +131,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
        
        {writing_style?.formality_level && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="How formal or casual the writing style is. Semi-formal strikes a balance between professional and approachable." arrow>
              <Box>
                {renderKeyInsight(
@@ -146,7 +146,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
        
        {writing_style?.emotional_appeal && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="How the content connects with readers' emotions - what feelings it aims to evoke." arrow>
              <Box>
                {renderKeyInsight(
@@ -161,7 +161,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
       
        {target_audience?.expertise_level && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="The skill level and experience of the intended readers - from beginners to experts in the subject matter." arrow>
              <Box>
                {renderKeyInsight(
@@ -176,7 +176,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
 
        {target_audience?.geographic_focus && target_audience.geographic_focus.trim() !== '' && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="The geographical regions or areas the content is primarily intended for - local, national, or global reach." arrow>
              <Box>
                {renderKeyInsight(
@@ -191,7 +191,7 @@ const KeyInsightsGrid: React.FC<KeyInsightsGridProps> = ({
        )}
        
        {content_type?.primary_type && (
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} sm={6} md={4} lg={3} xl={2}>
            <Tooltip title="The main category or format of content being created - blog posts, tutorials, product descriptions, etc." arrow>
              <Box>
                {renderKeyInsight(

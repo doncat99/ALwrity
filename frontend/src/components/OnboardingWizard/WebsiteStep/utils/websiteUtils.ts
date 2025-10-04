@@ -117,13 +117,28 @@ export const loadExistingAnalysis = async (analysisId: number, website: string):
       // Extract domain name for personalization
       const extractedDomain = extractDomainName(website);
       
-      // Combine all analysis data into a comprehensive object
+      // Database structure: flat fields at top level
+      // Need to combine them into the format expected by UI
       const comprehensiveAnalysis = {
-        ...result.analysis.style_analysis,
-        guidelines: result.analysis.style_guidelines,
+        // Top-level style analysis fields from database
+        writing_style: result.analysis.writing_style,
+        content_characteristics: result.analysis.content_characteristics,
+        target_audience: result.analysis.target_audience,
+        content_type: result.analysis.content_type,
+        brand_analysis: result.analysis.brand_analysis,
+        content_strategy_insights: result.analysis.content_strategy_insights,
+        recommended_settings: result.analysis.recommended_settings,
+        
+        // Extract guidelines from style_guidelines object
+        guidelines: result.analysis.style_guidelines?.guidelines,
         best_practices: result.analysis.style_guidelines?.best_practices,
         avoid_elements: result.analysis.style_guidelines?.avoid_elements,
         content_strategy: result.analysis.style_guidelines?.content_strategy,
+        ai_generation_tips: result.analysis.style_guidelines?.ai_generation_tips,
+        competitive_advantages: result.analysis.style_guidelines?.competitive_advantages,
+        content_calendar_suggestions: result.analysis.style_guidelines?.content_calendar_suggestions,
+        
+        // Style patterns
         style_patterns: result.analysis.style_patterns,
         style_consistency: result.analysis.style_patterns?.style_consistency,
         unique_elements: result.analysis.style_patterns?.unique_elements
@@ -193,10 +208,13 @@ export const performAnalysis = async (
       // Combine all analysis data into a comprehensive object
       const comprehensiveAnalysis = {
         ...result.style_analysis,
-        guidelines: result.style_guidelines,
+        guidelines: result.style_guidelines?.guidelines,
         best_practices: result.style_guidelines?.best_practices,
         avoid_elements: result.style_guidelines?.avoid_elements,
         content_strategy: result.style_guidelines?.content_strategy,
+        ai_generation_tips: result.style_guidelines?.ai_generation_tips,
+        competitive_advantages: result.style_guidelines?.competitive_advantages,
+        content_calendar_suggestions: result.style_guidelines?.content_calendar_suggestions,
         style_patterns: result.style_patterns,
         style_consistency: result.style_patterns?.style_consistency,
         unique_elements: result.style_patterns?.unique_elements

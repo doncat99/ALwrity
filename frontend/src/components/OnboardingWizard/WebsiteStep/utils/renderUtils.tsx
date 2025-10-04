@@ -20,6 +20,7 @@ import {
   Zoom,
   Divider
 } from '@mui/material';
+import { useTheme, alpha } from '@mui/material/styles';
 import {
   ExpandMore as ExpandMoreIcon,
   CheckCircle as CheckIcon,
@@ -39,49 +40,120 @@ import {
 } from '@mui/icons-material';
 
 /**
- * Renders a key insight card with icon and value
+ * Key Insight Card Component
+ */
+interface KeyInsightProps {
+  title: string;
+  value: string | string[];
+  icon: React.ReactNode;
+  color?: 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info';
+}
+
+const KeyInsightCard: React.FC<KeyInsightProps> = ({ 
+  title, 
+  value, 
+  icon, 
+  color = 'primary' 
+}) => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  
+  // Helper function to safely get palette colors
+  const getPaletteColor = (colorKey: string) => {
+    const palette = theme.palette as any;
+    return palette[colorKey] || palette.primary;
+  };
+  
+  const paletteColor = getPaletteColor(color);
+  
+  return (
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2.5, 
+        mb: 0, 
+        borderRadius: 2.5,
+        background: isDark
+          ? `linear-gradient(135deg, ${alpha(paletteColor.main, 0.08)} 0%, ${alpha(paletteColor.main, 0.04)} 100%)`
+          : `linear-gradient(135deg, ${alpha(paletteColor.main, 0.06)} 0%, ${alpha(paletteColor.light, 0.08)} 100%)`,
+        border: `2px solid`,
+        borderColor: isDark 
+          ? alpha(paletteColor.main, 0.2)
+          : alpha(paletteColor.main, 0.15),
+        borderLeftWidth: '5px',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+          background: isDark
+            ? `linear-gradient(135deg, ${alpha(paletteColor.main, 0.12)} 0%, ${alpha(paletteColor.main, 0.08)} 100%)`
+            : `linear-gradient(135deg, ${alpha(paletteColor.main, 0.10)} 0%, ${alpha(paletteColor.light, 0.12)} 100%)`,
+          borderColor: alpha(paletteColor.main, 0.4),
+          transform: 'translateY(-4px)',
+          boxShadow: isDark
+            ? `0 12px 40px ${alpha(paletteColor.main, 0.2)}`
+            : `0 12px 40px ${alpha(paletteColor.main, 0.15)}`
+        }
+      }}
+    >
+      <Box display="flex" alignItems="center" gap={2}>
+        <Box 
+          sx={{ 
+            color: `${color}.main`, 
+            fontSize: '1.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 48,
+            height: 48,
+            borderRadius: 2,
+            background: isDark
+              ? alpha(paletteColor.main, 0.15)
+              : alpha(paletteColor.main, 0.1),
+          }}
+        >
+          {icon}
+        </Box>
+        <Box flex={1}>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              fontWeight: 700, 
+              fontSize: '0.75rem',
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+              color: isDark ? '#ffffff !important' : '#000000 !important', // Maximum contrast
+              mb: 0.5,
+              display: 'block'
+            }}
+          >
+            {title}
+          </Typography>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              fontWeight: 600,
+              fontSize: '1.05rem',
+              color: isDark ? '#ffffff !important' : '#000000 !important', // Maximum contrast
+              lineHeight: 1.4
+            }}
+          >
+            {Array.isArray(value) ? value.join(', ') : value}
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
+  );
+};
+
+/**
+ * Backward-compatible wrapper function for renderKeyInsight
+ * @deprecated Use KeyInsightCard component directly instead
  */
 export const renderKeyInsight = (
-  title: string, 
-  value: string | string[], 
-  icon: React.ReactNode, 
-  color: string = 'primary'
-) => (
-  <Paper 
-    elevation={3} 
-    sx={{ 
-      p: 2, 
-      mb: 1.5, 
-      borderRadius: 2,
-      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.12) 100%)',
-      border: `1px solid rgba(255, 255, 255, 0.15)`,
-      borderLeft: `4px solid`,
-      borderLeftColor: `${color}.main`,
-      backdropFilter: 'blur(10px)',
-      transition: 'all 0.2s ease-in-out',
-      '&:hover': {
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.16) 100%)',
-        border: `1px solid rgba(255, 255, 255, 0.25)`,
-        transform: 'translateY(-2px)',
-        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)'
-      }
-    }}
-  >
-    <Box display="flex" alignItems="center" gap={2}>
-      <Box sx={{ color: `${color}.main`, fontSize: '1.2rem' }}>
-        {icon}
-      </Box>
-      <Box flex={1}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 600, fontSize: '0.85rem' }}>
-          {title}
-        </Typography>
-        <Typography variant="body1" fontWeight={600} color="text.primary" sx={{ fontSize: '0.95rem' }}>
-          {Array.isArray(value) ? value.join(', ') : value}
-        </Typography>
-      </Box>
-    </Box>
-  </Paper>
-);
+  title: string,
+  value: string | string[],
+  icon: React.ReactNode,
+  color: 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info' = 'primary'
+) => <KeyInsightCard title={title} value={value} icon={icon} color={color} />;
 
 /**
  * Renders a guidelines card with title, items, and icon

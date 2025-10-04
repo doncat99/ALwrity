@@ -41,11 +41,17 @@ class WebsiteAnalysisService:
             
             if existing_analysis:
                 # Update existing analysis
-                existing_analysis.writing_style = analysis_data.get('style_analysis', {}).get('writing_style')
-                existing_analysis.content_characteristics = analysis_data.get('style_analysis', {}).get('content_characteristics')
-                existing_analysis.target_audience = analysis_data.get('style_analysis', {}).get('target_audience')
-                existing_analysis.content_type = analysis_data.get('style_analysis', {}).get('content_type')
-                existing_analysis.recommended_settings = analysis_data.get('style_analysis', {}).get('recommended_settings')
+                style_analysis = analysis_data.get('style_analysis', {})
+                existing_analysis.writing_style = style_analysis.get('writing_style')
+                existing_analysis.content_characteristics = style_analysis.get('content_characteristics')
+                existing_analysis.target_audience = style_analysis.get('target_audience')
+                existing_analysis.content_type = style_analysis.get('content_type')
+                existing_analysis.recommended_settings = style_analysis.get('recommended_settings')
+                # Store brand_analysis and content_strategy_insights if model supports it
+                if hasattr(existing_analysis, 'brand_analysis'):
+                    existing_analysis.brand_analysis = style_analysis.get('brand_analysis')
+                if hasattr(existing_analysis, 'content_strategy_insights'):
+                    existing_analysis.content_strategy_insights = style_analysis.get('content_strategy_insights')
                 existing_analysis.crawl_result = analysis_data.get('crawl_result')
                 existing_analysis.style_patterns = analysis_data.get('style_patterns')
                 existing_analysis.style_guidelines = analysis_data.get('style_guidelines')
@@ -59,20 +65,28 @@ class WebsiteAnalysisService:
                 return existing_analysis.id
             else:
                 # Create new analysis
-                analysis = WebsiteAnalysis(
-                    session_id=session_id,
-                    website_url=website_url,
-                    writing_style=analysis_data.get('style_analysis', {}).get('writing_style'),
-                    content_characteristics=analysis_data.get('style_analysis', {}).get('content_characteristics'),
-                    target_audience=analysis_data.get('style_analysis', {}).get('target_audience'),
-                    content_type=analysis_data.get('style_analysis', {}).get('content_type'),
-                    recommended_settings=analysis_data.get('style_analysis', {}).get('recommended_settings'),
-                    crawl_result=analysis_data.get('crawl_result'),
-                    style_patterns=analysis_data.get('style_patterns'),
-                    style_guidelines=analysis_data.get('style_guidelines'),
-                    status='completed',
-                    warning_message=analysis_data.get('warning')
-                )
+                style_analysis = analysis_data.get('style_analysis', {})
+                analysis_args = {
+                    'session_id': session_id,
+                    'website_url': website_url,
+                    'writing_style': style_analysis.get('writing_style'),
+                    'content_characteristics': style_analysis.get('content_characteristics'),
+                    'target_audience': style_analysis.get('target_audience'),
+                    'content_type': style_analysis.get('content_type'),
+                    'recommended_settings': style_analysis.get('recommended_settings'),
+                    'crawl_result': analysis_data.get('crawl_result'),
+                    'style_patterns': analysis_data.get('style_patterns'),
+                    'style_guidelines': analysis_data.get('style_guidelines'),
+                    'status': 'completed',
+                    'warning_message': analysis_data.get('warning')
+                }
+                # Add brand_analysis and content_strategy_insights if model supports it
+                if hasattr(WebsiteAnalysis, 'brand_analysis'):
+                    analysis_args['brand_analysis'] = style_analysis.get('brand_analysis')
+                if hasattr(WebsiteAnalysis, 'content_strategy_insights'):
+                    analysis_args['content_strategy_insights'] = style_analysis.get('content_strategy_insights')
+                
+                analysis = WebsiteAnalysis(**analysis_args)
                 
                 self.db.add(analysis)
                 self.db.commit()
