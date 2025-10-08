@@ -23,8 +23,17 @@ def start_backend(enable_reload=False, production_mode=False):
     """Start the backend server."""
     print("🚀 Starting ALwrity Backend...")
     
-    # Set environment variables
-    os.environ.setdefault("HOST", "0.0.0.0")
+    # Set host based on environment and mode
+    # Use 127.0.0.1 for local production testing on Windows
+    # Use 0.0.0.0 for actual cloud deployments (Render, Railway, etc.)
+    default_host = os.getenv("RENDER") or os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("DEPLOY_ENV")
+    if default_host:
+        # Cloud deployment detected - use 0.0.0.0
+        os.environ.setdefault("HOST", "0.0.0.0")
+    else:
+        # Local deployment - use 127.0.0.1 for better Windows compatibility
+        os.environ.setdefault("HOST", "127.0.0.1")
+    
     os.environ.setdefault("PORT", "8000")
     
     # Set reload based on argument or environment variable
@@ -35,7 +44,7 @@ def start_backend(enable_reload=False, production_mode=False):
         os.environ.setdefault("RELOAD", "false")
         print("   🏭 Production mode: Auto-reload disabled")
     
-    host = os.getenv("HOST", "0.0.0.0")
+    host = os.getenv("HOST")
     port = int(os.getenv("PORT", "8000"))
     reload = os.getenv("RELOAD", "false").lower() == "true"
     
@@ -187,17 +196,19 @@ def main():
     if not database_setup.setup_essential_tables():
         print("[WARNING] Database setup had issues, continuing...")
     
-    # Setup advanced features only in development
+    # Setup advanced features in development, verify in all modes
     if not production_mode:
         database_setup.setup_advanced_tables()
-        database_setup.verify_tables()
     
-    # Setup linguistic analysis (skip in production)
-    if not production_mode and not production_optimizer.skip_linguistic_setup():
-        if not production_optimizer.skip_spacy_setup():
-            dependency_manager.setup_spacy_model()
-        if not production_optimizer.skip_nltk_setup():
-            dependency_manager.setup_nltk_data()
+    # Always verify database tables (important for both dev and production)
+    database_setup.verify_tables()
+    
+    # Setup linguistic analysis (always check, download only if needed)
+    # This ensures models are verified in both dev and production
+    if not production_optimizer.skip_spacy_setup():
+        dependency_manager.setup_spacy_model()
+    if not production_optimizer.skip_nltk_setup():
+        dependency_manager.setup_nltk_data()
     
     # Start backend
     return start_backend(enable_reload=enable_reload, production_mode=production_mode)

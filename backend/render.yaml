@@ -3,10 +3,12 @@ services:
   - type: web
     name: alwrity-backend
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm && python -m nltk.downloader punkt_tab stopwords averaged_perceptron_tagger
     startCommand: python start_alwrity_backend.py --production
     healthCheckPath: /health
     envVars:
+      - key: DEPLOY_ENV
+        value: render
       - key: HOST
         value: 0.0.0.0
       - key: PORT

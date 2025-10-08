@@ -13,9 +13,9 @@ class ProductionOptimizer:
     
     def __init__(self):
         self.production_optimizations = {
-            'disable_spacy_download': True,
-            'disable_nltk_download': True,
-            'skip_linguistic_setup': True,
+            'disable_spacy_download': False,  # Allow spaCy verification (required for persona generation)
+            'disable_nltk_download': False,   # Allow NLTK verification (required for persona generation)
+            'skip_linguistic_setup': False,   # Always verify linguistic models are available
             'minimal_database_setup': True,
             'skip_file_creation': True
         }
@@ -39,7 +39,8 @@ class ProductionOptimizer:
     def _set_production_env_vars(self) -> None:
         """Set production-specific environment variables."""
         production_vars = {
-            'HOST': '0.0.0.0',
+            # Note: HOST is not set here - it's auto-detected by start_backend()
+            # Based on deployment environment (cloud vs local)
             'PORT': '8000',
             'RELOAD': 'false',
             'LOG_LEVEL': 'INFO',
@@ -53,19 +54,14 @@ class ProductionOptimizer:
             print(f"   ✅ {key}={value}")
     
     def _disable_heavy_operations(self) -> None:
-        """Disable operations that are too heavy for production startup."""
-        print("   ⚡ Disabling heavy operations for production...")
+        """Configure operations for production startup."""
+        print("   ⚡ Configuring operations for production...")
         
-        # Disable spaCy model download
-        os.environ.setdefault('DISABLE_SPACY_DOWNLOAD', 'true')
+        # Note: spaCy and NLTK verification are allowed in production
+        # Models should be pre-installed during build phase (via render.yaml or similar)
+        # The setup will verify models exist without re-downloading
         
-        # Disable NLTK data download
-        os.environ.setdefault('DISABLE_NLTK_DOWNLOAD', 'true')
-        
-        # Skip linguistic analyzer setup
-        os.environ.setdefault('SKIP_LINGUISTIC_SETUP', 'true')
-        
-        print("   ✅ Heavy operations disabled")
+        print("   ✅ Production operations configured")
     
     def _optimize_logging(self) -> None:
         """Optimize logging for production."""
