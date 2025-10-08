@@ -10,7 +10,75 @@ import sys
 import argparse
 from pathlib import Path
 
-# Import modular utilities
+
+def bootstrap_linguistic_models():
+    """
+    Bootstrap spaCy and NLTK models BEFORE any imports.
+    This prevents import-time failures when EnhancedLinguisticAnalyzer is loaded.
+    """
+    import subprocess
+    
+    print("🔍 Bootstrapping linguistic models...")
+    
+    # Check and download spaCy model
+    try:
+        import spacy
+        try:
+            nlp = spacy.load("en_core_web_sm")
+            print("   ✅ spaCy model 'en_core_web_sm' available")
+        except OSError:
+            print("   ⚠️  spaCy model 'en_core_web_sm' not found, downloading...")
+            try:
+                subprocess.check_call([
+                    sys.executable, "-m", "spacy", "download", "en_core_web_sm"
+                ])
+                print("   ✅ spaCy model downloaded successfully")
+            except subprocess.CalledProcessError as e:
+                print(f"   ❌ Failed to download spaCy model: {e}")
+                print("   Please run: python -m spacy download en_core_web_sm")
+                return False
+    except ImportError:
+        print("   ⚠️  spaCy not installed - skipping")
+    
+    # Check and download NLTK data
+    try:
+        import nltk
+        essential_data = [
+            ('punkt_tab', 'tokenizers/punkt_tab'),
+            ('stopwords', 'corpora/stopwords'),
+            ('averaged_perceptron_tagger', 'taggers/averaged_perceptron_tagger')
+        ]
+        
+        for data_package, path in essential_data:
+            try:
+                nltk.data.find(path)
+                print(f"   ✅ NLTK {data_package} available")
+            except LookupError:
+                print(f"   ⚠️  NLTK {data_package} not found, downloading...")
+                try:
+                    nltk.download(data_package, quiet=True)
+                    print(f"   ✅ NLTK {data_package} downloaded")
+                except Exception as e:
+                    print(f"   ⚠️  Failed to download {data_package}: {e}")
+                    # Try fallback
+                    if data_package == 'punkt_tab':
+                        try:
+                            nltk.download('punkt', quiet=True)
+                            print(f"   ✅ NLTK punkt (fallback) downloaded")
+                        except:
+                            pass
+    except ImportError:
+        print("   ⚠️  NLTK not installed - skipping")
+    
+    print("✅ Linguistic model bootstrap complete")
+    return True
+
+
+# Bootstrap linguistic models BEFORE any imports that might need them
+if __name__ == "__main__":
+    bootstrap_linguistic_models()
+
+# NOW import modular utilities (after bootstrap)
 from alwrity_utils import (
     DependencyManager,
     EnvironmentSetup,
@@ -203,12 +271,8 @@ def main():
     # Always verify database tables (important for both dev and production)
     database_setup.verify_tables()
     
-    # Setup linguistic analysis (always check, download only if needed)
-    # This ensures models are verified in both dev and production
-    if not production_optimizer.skip_spacy_setup():
-        dependency_manager.setup_spacy_model()
-    if not production_optimizer.skip_nltk_setup():
-        dependency_manager.setup_nltk_data()
+    # Note: Linguistic models (spaCy/NLTK) are bootstrapped before imports
+    # See bootstrap_linguistic_models() at the top of this file
     
     # Start backend
     return start_backend(enable_reload=enable_reload, production_mode=production_mode)
