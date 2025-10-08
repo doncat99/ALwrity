@@ -1,7 +1,6 @@
 /** Google Search Console API client for ALwrity frontend. */
 
 import { apiClient } from './client';
-import { useAuth } from '@clerk/clerk-react';
 
 export interface GSCSite {
   siteUrl: string;
@@ -76,11 +75,9 @@ class GSCAPI {
    * Get Google Search Console OAuth authorization URL
    */
   async getAuthUrl(): Promise<{ auth_url: string }> {
-    console.log('GSC API: Getting OAuth authorization URL');
     try {
       const client = await this.getAuthenticatedClient();
       const response = await client.get(`${this.baseUrl}/auth/url`);
-      console.log('GSC API: OAuth URL retrieved successfully');
       return response.data;
     } catch (error) {
       console.error('GSC API: Error getting OAuth URL:', error);
@@ -92,13 +89,11 @@ class GSCAPI {
    * Handle OAuth callback (typically called from popup)
    */
   async handleCallback(code: string, state: string): Promise<{ success: boolean; message: string }> {
-    console.log('GSC API: Handling OAuth callback');
     try {
       const client = await this.getAuthenticatedClient();
       const response = await client.get(`${this.baseUrl}/callback`, {
         params: { code, state }
       });
-      console.log('GSC API: OAuth callback handled successfully');
       return response.data;
     } catch (error) {
       console.error('GSC API: Error handling OAuth callback:', error);
@@ -110,11 +105,9 @@ class GSCAPI {
    * Get user's Google Search Console sites
    */
   async getSites(): Promise<{ sites: GSCSite[] }> {
-    console.log('GSC API: Getting user sites');
     try {
       const client = await this.getAuthenticatedClient();
       const response = await client.get(`${this.baseUrl}/sites`);
-      console.log(`GSC API: Retrieved ${response.data.sites.length} sites`);
       return response.data;
     } catch (error) {
       console.error('GSC API: Error getting sites:', error);
@@ -126,11 +119,9 @@ class GSCAPI {
    * Get search analytics data
    */
   async getAnalytics(request: GSCAnalyticsRequest): Promise<GSCAnalyticsResponse> {
-    console.log('GSC API: Getting analytics data for site:', request.site_url);
     try {
       const client = await this.getAuthenticatedClient();
       const response = await client.post(`${this.baseUrl}/analytics`, request);
-      console.log('GSC API: Analytics data retrieved successfully');
       return response.data;
     } catch (error) {
       console.error('GSC API: Error getting analytics:', error);
@@ -142,11 +133,9 @@ class GSCAPI {
    * Get sitemaps for a specific site
    */
   async getSitemaps(siteUrl: string): Promise<{ sitemaps: GSCSitemap[] }> {
-    console.log('GSC API: Getting sitemaps for site:', siteUrl);
     try {
       const client = await this.getAuthenticatedClient();
       const response = await client.get(`${this.baseUrl}/sitemaps/${encodeURIComponent(siteUrl)}`);
-      console.log(`GSC API: Retrieved ${response.data.sitemaps.length} sitemaps`);
       return response.data;
     } catch (error) {
       console.error('GSC API: Error getting sitemaps:', error);
@@ -158,11 +147,9 @@ class GSCAPI {
    * Get GSC connection status
    */
   async getStatus(): Promise<GSCStatusResponse> {
-    console.log('GSC API: Getting connection status');
     try {
       const client = await this.getAuthenticatedClient();
       const response = await client.get(`${this.baseUrl}/status`);
-      console.log('GSC API: Status retrieved, connected:', response.data.connected);
       return response.data;
     } catch (error) {
       console.error('GSC API: Error getting status:', error);
@@ -171,14 +158,26 @@ class GSCAPI {
   }
 
   /**
+   * Clear incomplete GSC credentials
+   */
+  async clearIncomplete(): Promise<{ success: boolean; message: string }> {
+    try {
+      const client = await this.getAuthenticatedClient();
+      const response = await client.post(`${this.baseUrl}/clear-incomplete`);
+      return response.data;
+    } catch (error) {
+      console.error('GSC API: Error clearing incomplete credentials:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Disconnect GSC account
    */
   async disconnect(): Promise<{ success: boolean; message: string }> {
-    console.log('GSC API: Disconnecting GSC account');
     try {
       const client = await this.getAuthenticatedClient();
       const response = await client.delete(`${this.baseUrl}/disconnect`);
-      console.log('GSC API: Account disconnected successfully');
       return response.data;
     } catch (error) {
       console.error('GSC API: Error disconnecting account:', error);
@@ -190,10 +189,8 @@ class GSCAPI {
    * Health check
    */
   async healthCheck(): Promise<{ status: string; service: string; timestamp: string }> {
-    console.log('GSC API: Performing health check');
     try {
       const response = await apiClient.get(`${this.baseUrl}/health`);
-      console.log('GSC API: Health check passed');
       return response.data;
     } catch (error) {
       console.error('GSC API: Health check failed:', error);

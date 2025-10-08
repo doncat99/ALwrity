@@ -73,6 +73,8 @@ const KeyInsightCard: React.FC<KeyInsightProps> = ({
         p: 2.5, 
         mb: 0, 
         borderRadius: 2.5,
+        // Force high-contrast base color so nested text never inherits a light color
+        color: isDark ? '#ffffff' : '#1a202c',
         background: isDark
           ? `linear-gradient(135deg, ${alpha(paletteColor.main, 0.08)} 0%, ${alpha(paletteColor.main, 0.04)} 100%)`
           : `linear-gradient(135deg, ${alpha(paletteColor.main, 0.06)} 0%, ${alpha(paletteColor.light, 0.08)} 100%)`,
@@ -116,11 +118,12 @@ const KeyInsightCard: React.FC<KeyInsightProps> = ({
           <Typography 
             variant="caption" 
             sx={{ 
-              fontWeight: 700, 
-              fontSize: '0.75rem',
-              letterSpacing: '0.5px',
+              fontWeight: 800, 
+              fontSize: '0.78rem',
+              letterSpacing: '0.6px',
               textTransform: 'uppercase',
-              color: isDark ? '#ffffff !important' : '#000000 !important', // Maximum contrast
+              color: isDark ? '#ffffff !important' : '#0f172a !important',
+              textShadow: isDark ? 'none' : '0 1px 0 rgba(255,255,255,0.6)',
               mb: 0.5,
               display: 'block'
             }}
@@ -130,10 +133,10 @@ const KeyInsightCard: React.FC<KeyInsightProps> = ({
           <Typography 
             variant="body1" 
             sx={{ 
-              fontWeight: 600,
-              fontSize: '1.05rem',
-              color: isDark ? '#ffffff !important' : '#000000 !important', // Maximum contrast
-              lineHeight: 1.4
+              fontWeight: 700,
+              fontSize: '1.1rem',
+              color: isDark ? '#ffffff !important' : '#0b1220 !important',
+              lineHeight: 1.35
             }}
           >
             {Array.isArray(value) ? value.join(', ') : value}

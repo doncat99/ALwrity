@@ -129,6 +129,8 @@ celerybeat.pid
 
 .cursorignore
 
+gsc_credentials_template.json
+
 # mypy
 .mypy_cache/
 .dmypy.json

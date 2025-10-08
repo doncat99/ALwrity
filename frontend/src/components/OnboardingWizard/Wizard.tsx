@@ -1,37 +1,23 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { 
   Box, 
-  Stepper, 
-  Step, 
-  StepLabel, 
-  Button, 
-  Typography, 
   Paper,
-  LinearProgress,
   Fade,
   Slide,
   useTheme,
-  useMediaQuery,
-  IconButton,
-  Tooltip,
-  Container
+  useMediaQuery
 } from '@mui/material';
-import { 
-  ArrowBack, 
-  ArrowForward, 
-  CheckCircle,
-  HelpOutline,
-  Close
-} from '@mui/icons-material';
-import UserBadge from '../shared/UserBadge';
-import { startOnboarding, getCurrentStep, setCurrentStep, getProgress } from '../../api/onboarding';
+import { getCurrentStep, setCurrentStep } from '../../api/onboarding';
 import { apiClient } from '../../api/client';
 import ApiKeyStep from './ApiKeyStep';
 import WebsiteStep from './WebsiteStep';
 import CompetitorAnalysisStep from './CompetitorAnalysisStep';
-import PersonalizationStep from './PersonalizationStep';
+import PersonaStep from './PersonaStep';
 import IntegrationsStep from './IntegrationsStep';
 import FinalStep from './FinalStep';
+import { WizardHeader } from './common/WizardHeader';
+import { WizardNavigation } from './common/WizardNavigation';
+import { WizardLoadingState } from './common/WizardLoadingState';
 
 const steps = [
   { label: 'API Keys', description: 'Connect your AI services', icon: '🔑' },
@@ -61,13 +47,115 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
   const [progressMessage, setProgressMessage] = useState('');
   // sessionId removed - backend uses Clerk user ID from auth token
   const [stepData, setStepData] = useState<any>(null);
+  const [competitorDataCollector, setCompetitorDataCollector] = useState<(() => any) | null>(null);
+  const [isCurrentStepValid, setIsCurrentStepValid] = useState<boolean>(false);
   const [stepHeaderContent, setStepHeaderContent] = useState<StepHeaderContent>({
     title: steps[0].label,
     description: steps[0].description
   });
+
+  // Step validation function
+  const isStepDataValid = useCallback((step: number, data: any): boolean => {
+    console.log(`Wizard: Validating step ${step} with data:`, data);
+    
+    switch (step) {
+      case 0: // API Keys
+        const hasApiKeys = data && data.api_keys && Object.keys(data.api_keys).length > 0;
+        console.log(`Wizard: Step 0 (API Keys) validation:`, hasApiKeys);
+        return hasApiKeys;
+      
+      case 1: // Website Analysis
+        const hasWebsite = data && (data.website || data.website_url);
+        console.log(`Wizard: Step 1 (Website) validation:`, hasWebsite);
+        return hasWebsite;
+      
+      case 2: // Competitor Analysis
+        const hasCompetitorData = data && (data.competitors || data.researchSummary || data.sitemapAnalysis);
+        console.log(`Wizard: Step 2 (Competitor Analysis) validation:`, hasCompetitorData, 'Data keys:', data ? Object.keys(data) : 'no data');
+        return hasCompetitorData;
+      
+      case 3: // Persona Generation
+        const hasValidPersonaData = data && 
+                                  data.corePersona && 
+                                  data.platformPersonas && 
+                                  Object.keys(data.platformPersonas).length > 0 &&
+                                  data.qualityMetrics;
+        console.log(`Wizard: Step 3 (Persona Generation) validation:`, {
+          hasValidPersonaData,
+          hasCorePersona: !!(data && data.corePersona),
+          hasPlatformPersonas: !!(data && data.platformPersonas),
+          platformPersonasCount: data && data.platformPersonas ? Object.keys(data.platformPersonas).length : 0,
+          hasQualityMetrics: !!(data && data.qualityMetrics),
+          dataKeys: data ? Object.keys(data) : 'no data'
+        });
+        return hasValidPersonaData;
+      
+      case 4: // Integrations
+        console.log(`Wizard: Step 4 (Integrations) validation: always true (optional)`);
+        return true; // Integrations step is optional
+      
+      case 5: // Final Step
+        console.log(`Wizard: Step 5 (Final) validation: always true`);
+        return true; // Final step is always valid
+      
+      default:
+        console.log(`Wizard: Unknown step ${step} validation: false`);
+        return false;
+    }
+  }, []);
   
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Use refs to avoid dependency cycles
+  const stepDataRef = useRef(stepData);
+  const competitorDataCollectorRef = useRef(competitorDataCollector);
+  const personaStepRef = useRef<{ handleContinue: () => void } | null>(null);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    stepDataRef.current = stepData;
+    console.log('Wizard: stepData changed:', stepData);
+  }, [stepData]);
+  
+  useEffect(() => {
+    competitorDataCollectorRef.current = competitorDataCollector;
+    console.log('Wizard: competitorDataCollector changed:', competitorDataCollector);
+  }, [competitorDataCollector]);
+
+  // Validate current step data
+  useEffect(() => {
+    console.log(`Wizard: Validation effect triggered - activeStep: ${activeStep}, stepData:`, stepData);
+    console.log(`Wizard: stepData type:`, typeof stepData, 'keys:', stepData ? Object.keys(stepData) : 'no data');
+    
+    // For CompetitorAnalysisStep, also check the competitorDataCollector data
+    let dataToValidate = stepData;
+    if (activeStep === 2 && competitorDataCollector) {
+      console.log(`Wizard: Using competitorDataCollector data for validation:`, competitorDataCollector);
+      dataToValidate = competitorDataCollector;
+    }
+    
+    const isValid = isStepDataValid(activeStep, dataToValidate);
+    console.log(`Wizard: Validation result for step ${activeStep}:`, isValid);
+    console.log(`Wizard: Setting isCurrentStepValid to:`, isValid);
+    setIsCurrentStepValid(isValid);
+  }, [activeStep, stepData, isStepDataValid, competitorDataCollector]);
+  
+  // Debug: log all state changes
+  useEffect(() => {
+    console.log('Wizard: Render triggered - activeStep:', activeStep, 'direction:', direction);
+  }, [activeStep, direction]);
+
+  // Memoize the onDataReady callback to prevent infinite loops
+  const handleCompetitorDataReady = useCallback((dataCollector: (() => any) | undefined) => {
+    console.log('Wizard: onDataReady called with:', dataCollector);
+    console.log('Wizard: dataCollector type:', typeof dataCollector);
+    if (typeof dataCollector === 'function') {
+      setCompetitorDataCollector(dataCollector);
+    } else {
+      console.error('Wizard: dataCollector is not a function:', dataCollector);
+    }
+  }, []);
 
   useEffect(() => {
     console.log('Wizard: Component mounted');
@@ -82,21 +170,39 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         if (cachedInit) {
           console.log('Wizard: Using cached init data from batch endpoint');
           const data = JSON.parse(cachedInit);
-          
+
           // Extract data from batch response
-          const { user, onboarding, session } = data;
-          
+          const { onboarding, session } = data;
+
+          // Load step data, especially research data from step 3 and persona data from step 4
+          if (onboarding.steps && Array.isArray(onboarding.steps)) {
+            // Load research preferences from step 3
+            const step3Data = onboarding.steps.find((step: any) => step.step_number === 3);
+            if (step3Data && step3Data.data) {
+              console.log('Wizard: Loading research data from step 3:', Object.keys(step3Data.data));
+              setStepData((prevData: any) => ({ ...prevData, ...step3Data.data }));
+            }
+
+            // Load persona data from step 4
+            const step4Data = onboarding.steps.find((step: any) => step.step_number === 4);
+            if (step4Data && step4Data.data) {
+              console.log('Wizard: Loading persona data from step 4:', Object.keys(step4Data.data));
+              setStepData((prevData: any) => ({ ...prevData, ...step4Data.data }));
+            }
+          }
+
           // Set state from cached data - NO API CALLS NEEDED!
           setActiveStep(onboarding.current_step - 1);
           setProgressState(onboarding.completion_percentage);
           // Note: Session managed by Clerk auth, no need to track separately
-          
+
           console.log('Wizard: Initialized from cache:', {
             step: onboarding.current_step,
             progress: onboarding.completion_percentage,
-            userId: session.session_id  // Clerk user ID from backend
+            userId: session.session_id,  // Clerk user ID from backend
+            hasPersonaData: !!stepData
           });
-          
+
           setLoading(false);
           return; // ← Skip redundant API calls!
         }
@@ -104,20 +210,38 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         // Fallback: If no cached data (shouldn't happen), make batch call
         console.log('Wizard: No cached data, making batch init call');
         const response = await apiClient.get('/api/onboarding/init');
-        const { user, onboarding, session } = response.data;
-        
+        const { onboarding, session } = response.data;
+
+        // Load step data, especially research data from step 3 and persona data from step 4
+        if (onboarding.steps && Array.isArray(onboarding.steps)) {
+          // Load research preferences from step 3
+          const step3Data = onboarding.steps.find((step: any) => step.step_number === 3);
+          if (step3Data && step3Data.data) {
+            console.log('Wizard: Loading research data from step 3 API call:', Object.keys(step3Data.data));
+            setStepData((prevData: any) => ({ ...prevData, ...step3Data.data }));
+          }
+
+          // Load persona data from step 4
+          const step4Data = onboarding.steps.find((step: any) => step.step_number === 4);
+          if (step4Data && step4Data.data) {
+            console.log('Wizard: Loading persona data from step 4 API call:', Object.keys(step4Data.data));
+            setStepData((prevData: any) => ({ ...prevData, ...step4Data.data }));
+          }
+        }
+
         // Cache for future use
         sessionStorage.setItem('onboarding_init', JSON.stringify(response.data));
-        
+
         // Set state from API response
         setActiveStep(onboarding.current_step - 1);
         setProgressState(onboarding.completion_percentage);
         // Note: Session managed by Clerk auth, no need to track separately
-        
+
         console.log('Wizard: Initialized from API:', {
           step: onboarding.current_step,
           progress: onboarding.completion_percentage,
-          userId: session.session_id  // Clerk user ID from backend
+          userId: session.session_id,  // Clerk user ID from backend
+          hasPersonaData: !!stepData
         });
       } catch (error) {
         console.error('Error initializing onboarding:', error);
@@ -126,9 +250,16 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
       }
     };
     init();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount - stepData is used for logging only
 
-  const handleNext = async (rawStepData?: any) => {
+  const handleNext = useCallback(async (rawStepData?: any) => {
+    console.log('Wizard: handleNext called');
+    console.log('Wizard: Current step:', activeStep);
+    console.log('Wizard: Step data:', stepDataRef.current);
+    console.log('Wizard: competitorDataCollector:', competitorDataCollectorRef.current);
+    console.log('Wizard: competitorDataCollector type:', typeof competitorDataCollectorRef.current);
+    
     if (rawStepData && typeof rawStepData === 'object') {
       if (typeof rawStepData.preventDefault === 'function') {
         rawStepData.preventDefault();
@@ -138,9 +269,109 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
       }
     }
 
-    const currentStepData = rawStepData && typeof rawStepData === 'object' && 'nativeEvent' in rawStepData
+    let currentStepData = rawStepData && typeof rawStepData === 'object' && 'nativeEvent' in rawStepData
       ? undefined
       : rawStepData;
+
+    // Special handling for CompetitorAnalysisStep (step 2)
+    if (activeStep === 2) {
+      console.log('Wizard: Handling CompetitorAnalysisStep data...');
+      
+      // If we have data from onContinue, use it
+      if (currentStepData) {
+        console.log('Wizard: Using data from CompetitorAnalysisStep onContinue:', currentStepData);
+      } else {
+        // Fallback: try to get data from collector
+        const collector = competitorDataCollectorRef.current;
+        if (collector && typeof collector === 'function') {
+          console.log('Wizard: Collecting data from CompetitorAnalysisStep collector...');
+          currentStepData = collector();
+        } else if (collector && typeof collector === 'object') {
+          console.warn('Wizard: competitorDataCollector is an object; using it directly as step data');
+          currentStepData = collector;
+        } else {
+          console.warn('Wizard: competitorDataCollector not available; using empty data');
+          // Fallback: create minimal data structure to prevent errors
+          const currentData = stepDataRef.current;
+          currentStepData = {
+            competitors: [],
+            researchSummary: null,
+            sitemapAnalysis: null,
+            userUrl: currentData?.website || '',
+            industryContext: currentData?.industryContext,
+            analysisTimestamp: new Date().toISOString()
+          };
+        }
+      }
+    }
+
+    // Merge research data with existing step data for CompetitorAnalysisStep
+    if (activeStep === 2 && currentStepData) {
+      console.log('Wizard: Merging CompetitorAnalysisStep data with existing step data...');
+      
+      // Merge research data with existing step data
+      const currentData = stepDataRef.current || {};
+      const researchData = currentStepData || {};
+
+      // Ensure we have research data
+      if (researchData.competitors || researchData.researchSummary || researchData.sitemapAnalysis) {
+        currentStepData = {
+          ...currentData, // Preserve existing data (website, etc.)
+          ...researchData, // Add/update research data
+          // Ensure all required research fields are present
+          competitors: researchData.competitors || currentData.competitors,
+          researchSummary: researchData.researchSummary || currentData.researchSummary,
+          sitemapAnalysis: researchData.sitemapAnalysis || currentData.sitemapAnalysis,
+          // Mark this as the research step
+          stepType: 'research',
+          completedAt: new Date().toISOString()
+        };
+
+        console.log('Wizard: Merged research data:', currentStepData);
+      } else {
+        console.warn('Wizard: No research data provided, using existing step data');
+        currentStepData = currentData;
+      }
+    }
+
+    // Special handling for PersonaStep (step 3)
+    if (activeStep === 3) {
+      console.log('Wizard: Handling PersonaStep data...');
+
+      // If we have data from onContinue, use it
+      if (currentStepData && currentStepData.corePersona && currentStepData.qualityMetrics) {
+        console.log('Wizard: Using persona data from PersonaStep onContinue:', currentStepData);
+        // Data is already in currentStepData, no need to modify it
+      } else {
+        // Check if we have valid persona data in stepData
+        const currentData = stepDataRef.current || {};
+        const hasValidPersonaData = currentData.corePersona && 
+                                   currentData.platformPersonas && 
+                                   Object.keys(currentData.platformPersonas).length > 0 &&
+                                   currentData.qualityMetrics;
+        
+        console.log('Wizard: Persona data validation:', {
+          hasCorePersona: !!currentData.corePersona,
+          hasPlatformPersonas: !!currentData.platformPersonas,
+          platformPersonasCount: currentData.platformPersonas ? Object.keys(currentData.platformPersonas).length : 0,
+          hasQualityMetrics: !!currentData.qualityMetrics,
+          hasValidPersonaData
+        });
+        
+        if (hasValidPersonaData) {
+          console.log('Wizard: Using existing valid persona data from stepData');
+          currentStepData = currentData;
+        } else {
+          console.warn('Wizard: No valid persona data available for PersonaStep - cannot complete step');
+          // Don't try to complete the step if we don't have valid persona data
+          console.log('Wizard: Aborting step completion - missing valid persona data');
+          setLoading(false);
+          setShowProgressMessage(false);
+          setProgressMessage('');
+          return;
+        }
+      }
+    }
 
     // Store step data in state
     if (currentStepData) {
@@ -169,7 +400,31 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     // Complete the current step (activeStep + 1 because steps are 1-indexed)
     const currentStepNumber = activeStep + 1;
 
-    const stepWasCompleted = currentStepData && typeof currentStepData === 'object' && (currentStepData.website || currentStepData.businessData);
+    const stepWasCompleted = currentStepData && typeof currentStepData === 'object' && (
+      currentStepData.website || 
+      currentStepData.businessData || 
+      currentStepData.competitors ||
+      currentStepData.researchSummary ||
+      currentStepData.sitemapAnalysis ||
+      currentStepData.corePersona || 
+      currentStepData.platformPersonas ||
+      currentStepData.qualityMetrics
+    );
+
+    console.log('Wizard: Step completion check:', {
+      currentStepNumber,
+      hasData: !!currentStepData,
+      dataKeys: currentStepData ? Object.keys(currentStepData) : [],
+      stepWasCompleted,
+      website: !!currentStepData?.website,
+      businessData: !!currentStepData?.businessData,
+      competitors: !!currentStepData?.competitors,
+      researchSummary: !!currentStepData?.researchSummary,
+      sitemapAnalysis: !!currentStepData?.sitemapAnalysis,
+      corePersona: !!currentStepData?.corePersona,
+      platformPersonas: !!currentStepData?.platformPersonas,
+      qualityMetrics: !!currentStepData?.qualityMetrics
+    });
 
     if (!stepWasCompleted) {
       console.warn('Wizard: No serialized step data supplied; skipping backend completion for step', currentStepNumber);
@@ -204,9 +459,9 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     } else {
       console.log('Wizard: Not the final step, continuing to next step');
     }
-  };
+  }, [activeStep, onComplete]);
 
-  const handleBack = async () => {
+  const handleBack = useCallback(async () => {
     setDirection('left');
     const prevStep = activeStep - 1;
     setActiveStep(prevStep);
@@ -216,7 +471,7 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     // Update progress
     const newProgress = ((prevStep + 1) / steps.length) * 100;
     setProgressState(newProgress);
-  };
+  }, [activeStep]);
 
   const handleStepClick = (stepIndex: number) => {
     if (stepIndex <= activeStep) {
@@ -227,10 +482,15 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
   };
 
   const updateHeaderContent = useCallback((content: StepHeaderContent) => {
-    setStepHeaderContent(content);
+    setStepHeaderContent(prev => {
+      if (prev.title === content.title && prev.description === content.description) {
+        return prev;
+      }
+      return content;
+    });
   }, []);
 
-  const handleComplete = async () => {
+  const handleComplete = useCallback(async () => {
     console.log('Wizard: handleComplete called - completing onboarding');
     try {
       // Call onComplete to notify parent component
@@ -238,11 +498,24 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     } catch (error) {
       console.error('Error completing onboarding:', error);
     }
-  };
+  }, [onComplete]);
+
+  // Memoize data objects passed as props to avoid recreating them each render
+  const personaOnboardingData = useMemo(() => ({
+    websiteAnalysis: stepData?.analysis,
+    competitorResearch: stepData?.competitors,
+    sitemapAnalysis: stepData?.sitemapAnalysis,
+    businessData: stepData?.businessData
+  }), [stepData?.analysis, stepData?.competitors, stepData?.sitemapAnalysis, stepData?.businessData]);
+
+  const personaStepData = useMemo(() => ({
+    corePersona: stepData?.corePersona,
+    platformPersonas: stepData?.platformPersonas,
+    qualityMetrics: stepData?.qualityMetrics,
+    selectedPlatforms: stepData?.selectedPlatforms
+  }), [stepData?.corePersona, stepData?.platformPersonas, stepData?.qualityMetrics, stepData?.selectedPlatforms]);
 
   const renderStepContent = (step: number) => {
-    console.log('Wizard: renderStepContent called with step:', step, 'stepData:', stepData);
-    
     const stepComponents = [
       <ApiKeyStep key="api-keys" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
       <WebsiteStep key="website" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
@@ -252,14 +525,21 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         onBack={handleBack}
         userUrl={stepData?.website || ''}
         industryContext={stepData?.industryContext}
+        onDataReady={handleCompetitorDataReady}
       />,
-      <PersonalizationStep key="personalization" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
+      <PersonaStep 
+        key="personalization" 
+        onContinue={handleNext} 
+        updateHeaderContent={updateHeaderContent}
+        onboardingData={personaOnboardingData}
+        stepData={personaStepData}
+      />,
       <IntegrationsStep key="integrations" onContinue={handleNext} updateHeaderContent={updateHeaderContent} />,
       <FinalStep key="final" onContinue={handleComplete} updateHeaderContent={updateHeaderContent} />
     ];
 
     return (
-      <Slide direction={direction} in={true} mountOnEnter unmountOnExit>
+      <Slide direction={direction} in={true} mountOnEnter unmountOnExit key={`step-${step}`}>
         <Box sx={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
           {stepComponents[step]}
         </Box>
@@ -267,49 +547,9 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     );
   };
 
+  // Show loading state if loading
   if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-        sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        }}
-      >
-        <Fade in={true}>
-          <Paper
-            elevation={24}
-            sx={{
-              p: 4,
-              borderRadius: 3,
-              background: 'rgba(255, 255, 255, 0.98)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              maxWidth: 400,
-              width: '100%',
-            }}
-          >
-            <Typography variant="h5" align="center" gutterBottom sx={{ fontWeight: 600 }}>
-              Setting up your workspace...
-            </Typography>
-            <LinearProgress 
-              sx={{ 
-                mt: 3, 
-                height: 8, 
-                borderRadius: 4,
-                backgroundColor: 'rgba(0,0,0,0.08)',
-                '& .MuiLinearProgress-bar': {
-                  borderRadius: 4,
-                  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                }
-              }} 
-            />
-          </Paper>
-        </Fade>
-      </Box>
-    );
+    return <WizardLoadingState loading={loading} />;
   }
 
   return (
@@ -337,10 +577,10 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
       <Paper
         elevation={24}
         sx={{
-          maxWidth: { xs: '100%', md: '1200px' },
+          maxWidth: '100%',
           width: '100%',
           borderRadius: 4,
-          overflow: 'hidden',
+          overflow: 'visible',
           background: 'rgba(255, 255, 255, 0.98)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(255, 255, 255, 0.3)',
@@ -349,276 +589,37 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         }}
       >
         {/* Header with Stepper */}
-        <Box
-          sx={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            p: { xs: 3, md: 4 },
-            position: 'relative',
-            overflow: 'hidden',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)',
-              pointerEvents: 'none',
-            }
-          }}
-        >
-          {/* Progress Message */}
-          {showProgressMessage && (
-            <Fade in={showProgressMessage}>
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  background: 'rgba(16, 185, 129, 0.9)',
-                  color: 'white',
-                  p: 2,
-                  textAlign: 'center',
-                  zIndex: 10,
-                  backdropFilter: 'blur(10px)',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
-                }}
-              >
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  {progressMessage}
-                </Typography>
-              </Box>
-            </Fade>
-          )}
-          
-          {/* Top Row - Title and Actions */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, position: 'relative', zIndex: 1 }}>
-            <Box sx={{ flex: 1 }}>
-              <UserBadge colorMode="dark" />
-            </Box>
-            <Box sx={{ flex: 2, textAlign: 'center' }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.025em' }}>
-                {stepHeaderContent.title}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1, flex: 1, justifyContent: 'flex-end' }}>
-              <Tooltip title="Get Help" arrow>
-                <IconButton 
-                  onClick={() => setShowHelp(!showHelp)}
-                  sx={{ 
-                    color: 'white', 
-                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(10px)',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.2)',
-                    }
-                  }}
-                >
-                  <HelpOutline />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Skip for now" arrow>
-                <IconButton 
-                  sx={{ 
-                    color: 'white',
-                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(10px)',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.2)',
-                    }
-                  }}
-                >
-                  <Close />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-          
-          {/* Progress Bar */}
-          <Box sx={{ mb: 3, position: 'relative', zIndex: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 500 }}>
-                Setup Progress
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600 }}>
-                {Math.round(progress)}% Complete
-              </Typography>
-            </Box>
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                '& .MuiLinearProgress-bar': {
-                  borderRadius: 4,
-                  background: 'linear-gradient(90deg, #fff 0%, #f8fafc 100%)',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                }
-              }}
-            />
-          </Box>
-
-          {/* Stepper in Header */}
-          <Box sx={{ position: 'relative', zIndex: 1 }}>
-            <Stepper 
-              activeStep={activeStep} 
-              alternativeLabel={!isMobile}
-              sx={{
-                '& .MuiStepLabel-root': {
-                  cursor: 'pointer',
-                },
-                '& .MuiStepLabel-label': {
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: 'white',
-                },
-                '& .MuiStepLabel-labelContainer': {
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                },
-                '& .MuiStepLabel-label.Mui-completed': {
-                  color: 'rgba(255, 255, 255, 0.9)',
-                },
-                '& .MuiStepLabel-label.Mui-active': {
-                  color: 'white',
-                },
-                '& .MuiStepLabel-label.Mui-disabled': {
-                  color: 'rgba(255, 255, 255, 0.6)',
-                },
-              }}
-            >
-              {steps.map((step, index) => (
-                <Step key={step.label}>
-                  <StepLabel
-                    onClick={() => handleStepClick(index)}
-                    sx={{
-                      cursor: index <= activeStep ? 'pointer' : 'default',
-                      '& .MuiStepLabel-iconContainer': {
-                        background: index <= activeStep 
-                          ? 'rgba(255, 255, 255, 0.2)'
-                          : 'rgba(255, 255, 255, 0.1)',
-                        borderRadius: '50%',
-                        width: 40,
-                        height: 40,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: index <= activeStep ? 'white' : 'rgba(255, 255, 255, 0.6)',
-                        fontSize: '1.2rem',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: index <= activeStep 
-                          ? '0 4px 12px rgba(255, 255, 255, 0.2)'
-                          : 'none',
-                        '&:hover': {
-                          transform: index <= activeStep ? 'scale(1.05)' : 'none',
-                          boxShadow: index <= activeStep 
-                            ? '0 6px 16px rgba(255, 255, 255, 0.3)'
-                            : 'none',
-                        }
-                      },
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                      <Typography variant="h6" sx={{ mb: 0.5 }}>
-                        {step.icon}
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, textAlign: 'center' }}>
-                        {step.label}
-                      </Typography>
-                    </Box>
-                  </StepLabel>
-                </Step>
-              ))}
-            </Stepper>
-          </Box>
-        </Box>
+        <WizardHeader
+          activeStep={activeStep}
+          progress={progress}
+          stepHeaderContent={stepHeaderContent}
+          showProgressMessage={showProgressMessage}
+          progressMessage={progressMessage}
+          showHelp={showHelp}
+          isMobile={isMobile}
+          steps={steps}
+          onStepClick={handleStepClick}
+          onHelpToggle={() => setShowHelp(!showHelp)}
+        />
 
         {/* Content */}
-        <Box sx={{ p: { xs: 2, md: 3 }, pt: 2 }}>
+        <Box sx={{ p: { xs: 1, md: 2 }, pt: 1, width: '100%', overflow: 'visible' }}>
           <Fade in={true} timeout={400}>
-            <Box>
+            <Box sx={{ width: '100%', overflow: 'visible' }}>
               {renderStepContent(activeStep)}
             </Box>
           </Fade>
         </Box>
 
         {/* Navigation */}
-        <Box
-          sx={{
-            p: { xs: 2, md: 3 },
-            pt: 2,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderTop: '1px solid rgba(0,0,0,0.08)',
-            background: 'rgba(0,0,0,0.02)',
-          }}
-        >
-          <Button
-            variant="outlined"
-            onClick={handleBack}
-            disabled={activeStep === 0}
-            startIcon={<ArrowBack />}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              borderColor: 'rgba(0,0,0,0.2)',
-              color: 'text.primary',
-              '&:hover': {
-                borderColor: 'rgba(0,0,0,0.4)',
-                background: 'rgba(0,0,0,0.04)',
-              },
-              '&:disabled': {
-                borderColor: 'rgba(0,0,0,0.1)',
-                color: 'rgba(0,0,0,0.3)',
-              }
-            }}
-          >
-            Back
-          </Button>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ opacity: 0.7, fontWeight: 500 }}>
-              Step {activeStep + 1} of {steps.length}
-            </Typography>
-            {activeStep === steps.length - 1 && (
-              <CheckCircle sx={{ color: 'success.main', fontSize: 20 }} />
-            )}
-          </Box>
-
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={activeStep === steps.length - 1}
-            endIcon={activeStep === steps.length - 1 ? <CheckCircle /> : <ArrowForward />}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                transform: 'translateY(-1px)',
-                boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)',
-              },
-              '&:disabled': {
-                background: 'rgba(0,0,0,0.1)',
-                color: 'rgba(0,0,0,0.4)',
-                boxShadow: 'none',
-                transform: 'none',
-              }
-            }}
-          >
-            {activeStep === steps.length - 1 ? 'Complete Setup' : 'Continue'}
-          </Button>
-        </Box>
+        <WizardNavigation
+          activeStep={activeStep}
+          totalSteps={steps.length}
+          onBack={handleBack}
+          onNext={handleNext}
+          isLastStep={activeStep === steps.length - 1}
+          isCurrentStepValid={isCurrentStepValid}
+        />
       </Paper>
     </Box>
   );

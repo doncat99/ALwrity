@@ -9,3 +9,7 @@ export { default as EnhancedGuidelinesSection } from './EnhancedGuidelinesSectio
 export { default as KeyInsightsGrid } from './KeyInsightsGrid';
 export { default as ContentCharacteristicsSection } from './ContentCharacteristicsSection';
 export { default as TargetAudienceAnalysisSection } from './TargetAudienceAnalysisSection';
+export { default as SocialMediaPresenceSection } from './SocialMediaPresenceSection';
+export { default as CompetitorsGrid } from './CompetitorsGrid';
+export { default as SitemapAnalysisResults } from './SitemapAnalysisResults';
+export type { Competitor } from './CompetitorsGrid';

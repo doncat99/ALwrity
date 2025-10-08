@@ -22,10 +22,10 @@ def install_requirements():
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", "-r", str(requirements_file)
         ])
-        print("✅ All packages installed successfully!")
+        print("[OK] All packages installed successfully!")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error installing packages: {e}")
+        print(f"[ERROR] Error installing packages: {e}")
         return False
 
 def create_env_file():
@@ -33,7 +33,7 @@ def create_env_file():
     env_file = Path(__file__).parent / ".env"
     
     if env_file.exists():
-        print("ℹ️  .env file already exists")
+        print("[INFO]  .env file already exists")
         return True
     
     print("🔧 Creating .env file with default configuration...")
@@ -64,10 +64,10 @@ LOG_LEVEL=INFO
     try:
         with open(env_file, 'w') as f:
             f.write(env_content)
-        print("✅ .env file created successfully!")
+        print("[OK] .env file created successfully!")
         return True
     except Exception as e:
-        print(f"❌ Error creating .env file: {e}")
+        print(f"[ERROR] Error creating .env file: {e}")
         return False
 
 def setup_monitoring_tables():
@@ -80,14 +80,14 @@ def setup_monitoring_tables():
         from scripts.create_monitoring_tables import create_monitoring_tables
         
         if create_monitoring_tables():
-            print("✅ API monitoring tables created successfully!")
+            print("[OK] API monitoring tables created successfully!")
             return True
         else:
-            print("⚠️  Warning: Failed to create monitoring tables, continuing anyway...")
+            print("[WARNING]  Warning: Failed to create monitoring tables, continuing anyway...")
             return True  # Don't fail startup for monitoring issues
             
     except Exception as e:
-        print(f"⚠️  Warning: Could not set up monitoring tables: {e}")
+        print(f"[WARNING]  Warning: Could not set up monitoring tables: {e}")
         print("   Monitoring will be disabled. Continuing startup...")
         return True  # Don't fail startup for monitoring issues
 
@@ -107,18 +107,18 @@ def setup_billing_tables():
         
         # Check existing tables
         if not check_existing_tables(engine):
-            print("✅ Billing tables already exist, skipping creation")
+            print("[OK] Billing tables already exist, skipping creation")
             return True
         
         if create_billing_tables():
-            print("✅ Billing and subscription tables created successfully!")
+            print("[OK] Billing and subscription tables created successfully!")
             return True
         else:
-            print("⚠️  Warning: Failed to create billing tables, continuing anyway...")
+            print("[WARNING]  Warning: Failed to create billing tables, continuing anyway...")
             return True  # Don't fail startup for billing issues
             
     except Exception as e:
-        print(f"⚠️  Warning: Could not set up billing tables: {e}")
+        print(f"[WARNING]  Warning: Could not set up billing tables: {e}")
         print("   Billing system will be disabled. Continuing startup...")
         return True  # Don't fail startup for billing issues
 
@@ -129,7 +129,7 @@ def setup_monitoring_middleware():
     app_file = Path(__file__).parent / "app.py"
     
     if not app_file.exists():
-        print("⚠️  Warning: app.py not found, skipping middleware setup")
+        print("[WARNING]  Warning: app.py not found, skipping middleware setup")
         return True
     
     try:
@@ -138,7 +138,7 @@ def setup_monitoring_middleware():
         
         # Check if monitoring middleware is already set up
         if "monitoring_middleware" in content:
-            print("✅ Monitoring middleware already configured")
+            print("[OK] Monitoring middleware already configured")
             return True
         
         # Add monitoring middleware import and setup
@@ -179,13 +179,136 @@ def setup_monitoring_middleware():
         with open(app_file, 'w') as f:
             f.write('\n'.join(lines))
         
-        print("✅ Monitoring middleware configured successfully!")
+        print("[OK] Monitoring middleware configured successfully!")
         return True
         
     except Exception as e:
-        print(f"⚠️  Warning: Could not set up monitoring middleware: {e}")
+        print(f"[WARNING]  Warning: Could not set up monitoring middleware: {e}")
         print("   Monitoring will be disabled. Continuing startup...")
         return True  # Don't fail startup for monitoring issues
+
+def setup_spacy_model():
+    """Set up spaCy English model for linguistic analysis."""
+    print("Setting up spaCy English model...")
+    
+    try:
+        import spacy
+        
+        # Check if en_core_web_sm model is already installed
+        model_name = "en_core_web_sm"
+        
+        try:
+            # Try to load the model directly
+            nlp = spacy.load(model_name)
+            
+            # Test the model with a simple sentence
+            test_doc = nlp("This is a test sentence.")
+            if test_doc and len(test_doc) > 0:
+                print(f"SUCCESS: spaCy model '{model_name}' is already installed and working")
+                print(f"   Test: Processed {len(test_doc)} tokens successfully")
+                return True
+            else:
+                raise OSError("Model loaded but not functioning correctly")
+            
+        except OSError:
+            print(f"INFO: spaCy model '{model_name}' not found or not working, downloading...")
+            
+            # Try to download the model using subprocess
+            try:
+                print(f"   Downloading {model_name}...")
+                result = subprocess.run([
+                    sys.executable, "-m", "spacy", "download", model_name
+                ], capture_output=True, text=True, timeout=300)  # 5 minute timeout
+                
+                if result.returncode == 0:
+                    print(f"   SUCCESS: Model download completed")
+                else:
+                    print(f"   WARNING: Download warning: {result.stderr}")
+                    
+            except subprocess.TimeoutExpired:
+                print(f"   ERROR: Download timed out after 5 minutes")
+                return False
+            except subprocess.CalledProcessError as e:
+                print(f"   ERROR: Download failed: {e}")
+                return False
+            
+            # Verify the model was downloaded correctly
+            try:
+                nlp = spacy.load(model_name)
+                
+                # Test the model
+                test_doc = nlp("This is a test sentence.")
+                if test_doc and len(test_doc) > 0:
+                    print(f"SUCCESS: spaCy model '{model_name}' downloaded and verified successfully")
+                    print(f"   Test: Processed {len(test_doc)} tokens successfully")
+                    return True
+                else:
+                    print(f"ERROR: Model downloaded but not functioning correctly")
+                    return False
+                    
+            except OSError as e:
+                print(f"ERROR: Model downloaded but failed to load: {e}")
+                return False
+            
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: Error downloading spaCy model: {e}")
+        print("   Manual installation required:")
+        print("   1. Install spaCy: pip install spacy>=3.7.0")
+        print("   2. Download model: python -m spacy download en_core_web_sm")
+        print("   3. Test setup: python -c \"import spacy; nlp=spacy.load('en_core_web_sm'); print('spaCy working!')\"")
+        print("   4. Restart the backend")
+        return False
+    except ImportError as e:
+        print(f"ERROR: spaCy not installed: {e}")
+        print("   Manual installation required:")
+        print("   1. Install spaCy: pip install spacy>=3.7.0")
+        print("   2. Download model: python -m spacy download en_core_web_sm")
+        print("   3. Test setup: python -c \"import spacy; nlp=spacy.load('en_core_web_sm'); print('spaCy working!')\"")
+        print("   4. Restart the backend")
+        return False
+    except Exception as e:
+        print(f"ERROR: Error setting up spaCy model: {e}")
+        print("   Manual installation required:")
+        print("   1. Install spaCy: pip install spacy>=3.7.0")
+        print("   2. Download model: python -m spacy download en_core_web_sm")
+        print("   3. Test setup: python -c \"import spacy; nlp=spacy.load('en_core_web_sm'); print('spaCy working!')\"")
+        print("   4. Restart the backend")
+        return False
+
+def setup_nltk_data():
+    """Set up required NLTK data for linguistic analysis."""
+    print("Setting up NLTK data...")
+    
+    try:
+        import nltk
+        
+        # Required NLTK data packages
+        required_data = [
+            'punkt_tab',  # Updated for newer NLTK versions
+            'stopwords', 
+            'averaged_perceptron_tagger_eng',  # Updated for newer NLTK versions
+            'wordnet',
+            'omw-1.4'
+        ]
+        
+        for data_package in required_data:
+            try:
+                nltk.data.find(f'tokenizers/{data_package}' if data_package in ['punkt', 'punkt_tab'] 
+                              else f'corpora/{data_package}' if data_package in ['stopwords', 'wordnet', 'omw-1.4']
+                              else f'taggers/{data_package}' if data_package in ['averaged_perceptron_tagger', 'averaged_perceptron_tagger_eng']
+                              else f'corpora/{data_package}')
+                print(f"   SUCCESS: {data_package}")
+            except LookupError:
+                print(f"   INFO: Downloading {data_package}...")
+                nltk.download(data_package, quiet=True)
+                print(f"   SUCCESS: {data_package} downloaded")
+        
+        print("SUCCESS: All required NLTK data is available")
+        return True
+        
+    except Exception as e:
+        print(f"ERROR: Error setting up NLTK data: {e}")
+        return False
 
 def check_dependencies():
     """Check if required dependencies are installed."""
@@ -200,7 +323,9 @@ def check_dependencies():
         'google.generativeai',
         'anthropic',
         'mistralai',
-        'sqlalchemy'
+        'sqlalchemy',
+        'spacy',  # Added spaCy to required packages
+        'nltk'    # Added NLTK to required packages
     ]
     
     missing_packages = []
@@ -208,17 +333,17 @@ def check_dependencies():
     for package in required_packages:
         try:
             __import__(package.replace('-', '_'))
-            print(f"   ✅ {package}")
+            print(f"   [OK] {package}")
         except ImportError:
-            print(f"   ❌ {package} - MISSING")
+            print(f"   [ERROR] {package} - MISSING")
             missing_packages.append(package)
     
     if missing_packages:
-        print(f"\n❌ Missing packages: {', '.join(missing_packages)}")
+        print(f"\n[ERROR] Missing packages: {', '.join(missing_packages)}")
         print("Installing missing packages...")
         return install_requirements()
     else:
-        print("\n✅ All dependencies are available!")
+        print("\n[OK] All dependencies are available!")
         return True
 
 def setup_environment():
@@ -235,7 +360,7 @@ def setup_environment():
     
     for directory in directories:
         Path(directory).mkdir(parents=True, exist_ok=True)
-        print(f"   ✅ Created directory: {directory}")
+        print(f"   [OK] Created directory: {directory}")
     
     # Create .env file if it doesn't exist
     create_env_file()
@@ -252,9 +377,23 @@ def setup_environment():
         # Verify persona tables were created successfully
         verify_persona_tables()
     else:
-        print("⚠️  Warning: Persona tables setup failed, but continuing...")
+        print("[WARNING]  Warning: Persona tables setup failed, but continuing...")
     
-    print("✅ Environment setup complete")
+    # Set up linguistic analysis dependencies (Required for persona generation)
+    print("🧠 Setting up linguistic analysis dependencies...")
+    
+    # Set up spaCy model (REQUIRED for persona generation)
+    if not setup_spacy_model():
+        print("[ERROR] CRITICAL: spaCy model setup failed - persona generation will not work!")
+        print("   Please ensure spaCy is installed and en_core_web_sm model is available")
+        return False
+    
+    # Set up NLTK data (supplementary to spaCy)
+    if not setup_nltk_data():
+        print("[WARNING]  Warning: NLTK data setup failed, but continuing...")
+    
+    print("[OK] Environment setup complete")
+    return True
 
 def setup_persona_tables():
     """Set up persona database tables."""
@@ -265,7 +404,7 @@ def setup_persona_tables():
         
         # Create persona tables
         PersonaBase.metadata.create_all(bind=engine)
-        print("✅ Persona tables created successfully")
+        print("[OK] Persona tables created successfully")
         
         # Verify tables were created
         from sqlalchemy import inspect
@@ -280,17 +419,17 @@ def setup_persona_tables():
         ]
         
         created_tables = [table for table in persona_tables if table in tables]
-        print(f"✅ Verified persona tables created: {created_tables}")
+        print(f"[OK] Verified persona tables created: {created_tables}")
         
         if len(created_tables) != len(persona_tables):
             missing = [table for table in persona_tables if table not in created_tables]
-            print(f"⚠️  Warning: Missing persona tables: {missing}")
+            print(f"[WARNING]  Warning: Missing persona tables: {missing}")
             return False
         
         return True
         
     except Exception as e:
-        print(f"❌ Error setting up persona tables: {e}")
+        print(f"[ERROR] Error setting up persona tables: {e}")
         return False
 
 def verify_persona_tables():
@@ -308,13 +447,46 @@ def verify_persona_tables():
             session.query(PersonaAnalysisResult).first()
             session.query(PersonaValidationResult).first()
             session.close()
-            print("✅ All persona tables verified successfully")
+            print("[OK] All persona tables verified successfully")
             return True
         else:
-            print("⚠️  Warning: Could not get database session")
+            print("[WARNING]  Warning: Could not get database session")
             return False
     except Exception as e:
-        print(f"⚠️  Warning: Could not verify persona tables: {e}")
+        print(f"[WARNING]  Warning: Could not verify persona tables: {e}")
+        return False
+
+def verify_linguistic_analyzer():
+    """Verify that the linguistic analyzer is working correctly."""
+    print("Verifying linguistic analyzer setup...")
+    try:
+        from services.persona.enhanced_linguistic_analyzer import EnhancedLinguisticAnalyzer
+        
+        # Try to initialize the linguistic analyzer
+        analyzer = EnhancedLinguisticAnalyzer()
+        
+        # Test with a sample text
+        test_texts = [
+            "This is a test sentence for linguistic analysis.",
+            "ALwrity provides high-quality AI writing assistance.",
+            "The persona generation system uses advanced NLP techniques."
+        ]
+        
+        # Perform a simple analysis
+        analysis_result = analyzer.analyze_writing_style(test_texts)
+        
+        if analysis_result and 'basic_metrics' in analysis_result:
+            print("SUCCESS: Linguistic analyzer verified successfully")
+            print(f"   Analyzed {len(test_texts)} text samples")
+            print(f"   Analysis keys: {list(analysis_result.keys())}")
+            return True
+        else:
+            print("WARNING: Linguistic analyzer returned unexpected result")
+            print(f"   Result: {analysis_result}")
+            return False
+            
+    except Exception as e:
+        print(f"WARNING: Could not verify linguistic analyzer: {e}")
         return False
 
 def verify_billing_tables():
@@ -337,13 +509,13 @@ def verify_billing_tables():
             session.query(APIProviderPricing).first()
             session.query(UsageAlert).first()
             session.close()
-            print("✅ All billing and subscription tables verified successfully")
+            print("[OK] All billing and subscription tables verified successfully")
             return True
         else:
-            print("⚠️  Warning: Could not get database session")
+            print("[WARNING]  Warning: Could not get database session")
             return False
     except Exception as e:
-        print(f"⚠️  Warning: Could not verify billing tables: {e}")
+        print(f"[WARNING]  Warning: Could not verify billing tables: {e}")
         return False
 
 def start_backend(enable_reload=False):
@@ -377,12 +549,15 @@ def start_backend(enable_reload=False):
         import uvicorn
         
         # Explicitly initialize database before starting server
-        print("🗄️  Initializing database...")
+        print("[DB]  Initializing database...")
         init_database()
-        print("✅ Database initialized successfully")
+        print("[OK] Database initialized successfully")
         
         # Verify persona tables exist
         verify_persona_tables()
+        
+        # Verify linguistic analyzer is working
+        verify_linguistic_analyzer()
         
         # Verify billing tables exist
         verify_billing_tables()
@@ -394,7 +569,7 @@ def start_backend(enable_reload=False):
         print("   📈 API Monitoring: http://localhost:8000/api/content-planning/monitoring/health")
         print("   💳 Billing Dashboard: http://localhost:8000/api/subscription/plans")
         print("   📊 Usage Tracking: http://localhost:8000/api/subscription/usage/demo")
-        print("\n⏹️  Press Ctrl+C to stop the server")
+        print("\n[STOP]  Press Ctrl+C to stop the server")
         print("=" * 60)
         print("\n💡 Usage:")
         print("   Production mode (default): python start_alwrity_backend.py")
@@ -444,7 +619,7 @@ def start_backend(enable_reload=False):
     except KeyboardInterrupt:
         print("\n\n🛑 Backend stopped by user")
     except Exception as e:
-        print(f"\n❌ Error starting backend: {e}")
+        print(f"\n[ERROR] Error starting backend: {e}")
         return False
     
     return True
@@ -457,23 +632,25 @@ def main():
     parser.add_argument("--dev", action="store_true", help="Enable development mode (auto-reload)")
     args = parser.parse_args()
     
-    print("🎯 ALwrity Backend Server")
+    print("ALwrity Backend Server")
     print("=" * 40)
     
     # Check if we're in the right directory
     if not os.path.exists("app.py"):
-        print("❌ Error: app.py not found. Please run this script from the backend directory.")
+        print("[ERROR] Error: app.py not found. Please run this script from the backend directory.")
         print("   Current directory:", os.getcwd())
         print("   Expected files:", [f for f in os.listdir('.') if f.endswith('.py')])
         return False
     
     # Check and install dependencies
     if not check_dependencies():
-        print("❌ Failed to install dependencies")
+        print("[ERROR] Failed to install dependencies")
         return False
     
     # Setup environment
-    setup_environment()
+    if not setup_environment():
+        print("[ERROR] Environment setup failed")
+        return False
     
     # Start backend with reload option
     enable_reload = args.reload or args.dev

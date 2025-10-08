@@ -17,6 +17,34 @@ import {
   ArrowForward
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { ScrambleText } from '../ScrambleText';
+
+// Scrambling text component for multiple phrases
+const ScramblingText: React.FC<{ phrases: string[]; interval?: number; duration?: number; delay?: number }> = ({ 
+  phrases, 
+  interval = 4000,
+  duration = 600,
+  delay = 0
+}) => {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % phrases.length);
+    }, interval);
+    return () => clearInterval(timer);
+  }, [phrases.length, interval]);
+
+  return (
+    <ScrambleText
+      text={phrases[currentIndex]}
+      duration={duration}
+      delay={delay}
+      restartInterval={interval}
+      as="span"
+    />
+  );
+};
 
 const SolopreneurDilemma: React.FC = () => {
   const theme = useTheme();
@@ -25,16 +53,19 @@ const SolopreneurDilemma: React.FC = () => {
     {
       icon: <Psychology />,
       title: "Content Overwhelm",
+      titleVariations: ["Content Overwhelm", "Content Chaos", "Content Confusion", "Content Crisis"],
       description: "Managing 8+ social platforms with different audiences, tones, and posting schedules"
     },
     {
       icon: <TrendingUp />,
       title: "Inconsistent Brand Voice",
+      titleVariations: ["Inconsistent Brand Voice", "Voice Confusion", "Brand Inconsistency", "Tone Problems"],
       description: "Struggling to maintain your unique voice across all platforms while scaling content"
     },
     {
       icon: <Speed />,
       title: "Time Drain",
+      titleVariations: ["Time Drain", "Time Sink", "Time Waste", "Productivity Loss"],
       description: "Spending 4-6 hours daily on content creation, research, and platform management"
     }
   ];
@@ -238,7 +269,12 @@ const SolopreneurDilemma: React.FC = () => {
                                 textShadow: '0 1px 2px rgba(0, 0, 0, 0.7)'
                               }}
                             >
-                              {point.title}
+                              <ScramblingText 
+                                phrases={point.titleVariations || [point.title]}
+                                duration={500}
+                                delay={500}
+                                interval={4000}
+                              />
                             </Typography>
                             <Typography 
                               variant="body1"
@@ -375,7 +411,12 @@ const SolopreneurDilemma: React.FC = () => {
                         transition: 'all 0.3s ease',
                       }}
                     >
-                      End the Struggle Today
+                      <ScramblingText
+                        phrases={['End the Struggle Today', 'Stop the Chaos', 'Solve Content Problems', 'Transform Your Workflow']}
+                        duration={500}
+                        delay={300}
+                        interval={3500}
+                      />
                     </Button>
                   </motion.div>
                 </Stack>

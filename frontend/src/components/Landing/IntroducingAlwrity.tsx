@@ -24,6 +24,34 @@ import {
   Speed
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { ScrambleText } from '../ScrambleText';
+
+// Scrambling text component for multiple phrases
+const ScramblingText: React.FC<{ phrases: string[]; interval?: number; duration?: number; delay?: number }> = ({ 
+  phrases, 
+  interval = 4000,
+  duration = 600,
+  delay = 0
+}) => {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % phrases.length);
+    }, interval);
+    return () => clearInterval(timer);
+  }, [phrases.length, interval]);
+
+  return (
+    <ScrambleText
+      text={phrases[currentIndex]}
+      duration={duration}
+      delay={delay}
+      restartInterval={interval}
+      as="span"
+    />
+  );
+};
 
 const IntroducingAlwrity: React.FC = () => {
   const theme = useTheme();
@@ -134,7 +162,12 @@ const IntroducingAlwrity: React.FC = () => {
           <Stack spacing={6} alignItems="center" textAlign="center">
             <motion.div variants={fadeInUp}>
               <Typography variant="h3" fontWeight={700} sx={{ color: 'white' }}>
-                Introducing ALwrity
+                <ScramblingText 
+                  phrases={['Introducing ALwrity', 'Welcome to ALwrity', 'Meet ALwrity', 'Discover ALwrity']}
+                  duration={600}
+                  delay={1000}
+                  interval={5000}
+                />
               </Typography>
             </motion.div>
             <motion.div variants={fadeInUp}>
@@ -166,7 +199,12 @@ const IntroducingAlwrity: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    Start Your AI Journey
+                    <ScramblingText
+                      phrases={['Start Your AI Journey', 'Begin AI Transformation', 'Launch AI Success', 'Start AI Revolution']}
+                      duration={500}
+                      delay={300}
+                      interval={3500}
+                    />
                   </Button>
                 </SignInButton>
               </Box>

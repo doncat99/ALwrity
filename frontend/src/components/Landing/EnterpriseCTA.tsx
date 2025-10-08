@@ -13,6 +13,34 @@ import OptimizedImage from './OptimizedImage';
 import { SignInButton } from '@clerk/clerk-react';
 import { RocketLaunch } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { ScrambleText } from '../ScrambleText';
+
+// Scrambling text component for multiple phrases
+const ScramblingText: React.FC<{ phrases: string[]; interval?: number; duration?: number; delay?: number }> = ({ 
+  phrases, 
+  interval = 3500,
+  duration = 500,
+  delay = 300
+}) => {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % phrases.length);
+    }, interval);
+    return () => clearInterval(timer);
+  }, [phrases.length, interval]);
+
+  return (
+    <ScrambleText
+      text={phrases[currentIndex]}
+      duration={duration}
+      delay={delay}
+      restartInterval={interval}
+      as="span"
+    />
+  );
+};
 
 const EnterpriseCTA: React.FC = () => {
   const theme = useTheme();
@@ -111,7 +139,12 @@ const EnterpriseCTA: React.FC = () => {
                           transition: 'all 0.3s ease'
                         }}
                       >
-                        Start Creating Now
+                        <ScramblingText
+                          phrases={['Start Creating Now', 'Begin Content Creation', 'Launch Your Content', 'Start Creating Today']}
+                          duration={500}
+                          delay={300}
+                          interval={3500}
+                        />
                       </Button>
                     </SignInButton>
                     

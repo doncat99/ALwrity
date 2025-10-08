@@ -336,14 +336,49 @@ def validate_step_data(step_number: int, data: Dict[str, Any]) -> List[str]:
             errors.append("Invalid website URL format")
     
     elif step_number == 3:  # AI Research
-        if not data or 'research_providers' not in data:
-            errors.append("At least one research provider must be configured")
-        elif not data['research_providers']:
-            errors.append("At least one research provider must be configured")
+        # Validate that research data is present (competitors, research summary, or sitemap analysis)
+        if not data:
+            errors.append("Research data is required for step 3 completion")
+        else:
+            # Check for required research fields
+            has_competitors = 'competitors' in data and data['competitors']
+            has_research_summary = 'researchSummary' in data and data['researchSummary']
+            has_sitemap_analysis = 'sitemapAnalysis' in data and data['sitemapAnalysis']
+            
+            if not (has_competitors or has_research_summary or has_sitemap_analysis):
+                errors.append("At least one research data field (competitors, researchSummary, or sitemapAnalysis) must be present")
     
     elif step_number == 4:  # Personalization
-        # Optional step, no validation required
-        pass
+        # Validate that persona data is present
+        if not data:
+            errors.append("Persona data is required for step 4 completion")
+        else:
+            # Check for required persona fields
+            required_persona_fields = ['corePersona', 'platformPersonas']
+            missing_fields = []
+
+            for field in required_persona_fields:
+                if field not in data or not data[field]:
+                    missing_fields.append(field)
+
+            if missing_fields:
+                errors.append(f"Missing required persona data: {', '.join(missing_fields)}")
+
+            # Validate core persona structure if present
+            if 'corePersona' in data and data['corePersona']:
+                core_persona = data['corePersona']
+                if not isinstance(core_persona, dict):
+                    errors.append("corePersona must be a valid object")
+                elif 'identity' not in core_persona:
+                    errors.append("corePersona must contain identity information")
+
+            # Validate platform personas structure if present
+            if 'platformPersonas' in data and data['platformPersonas']:
+                platform_personas = data['platformPersonas']
+                if not isinstance(platform_personas, dict):
+                    errors.append("platformPersonas must be a valid object")
+                elif len(platform_personas) == 0:
+                    errors.append("At least one platform persona must be configured")
     
     elif step_number == 5:  # Integrations
         # Optional step, no validation required

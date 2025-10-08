@@ -7,47 +7,21 @@ import {
   Alert,
   Button,
   Grid,
-  Card,
-  CardContent,
-  CardActions,
-  Chip,
-  Avatar,
   LinearProgress,
   Dialog,
   DialogTitle,
   DialogContent
 } from '@mui/material';
 import {
-  Business as BusinessIcon,
   Assessment as AssessmentIcon,
-  OpenInNew as OpenInNewIcon,
-  Refresh as RefreshIcon,
-  Share as ShareIcon,
-  Facebook as FacebookIcon,
-  Instagram as InstagramIcon,
-  LinkedIn as LinkedInIcon,
-  YouTube as YouTubeIcon,
-  Twitter as TwitterIcon
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { aiApiClient } from '../../api/client';  // Use aiApiClient for long-running operations
 import { useOnboardingStyles } from './common/useOnboardingStyles';
+import { SocialMediaPresenceSection, CompetitorsGrid, SitemapAnalysisResults } from './WebsiteStep/components';
+import type { Competitor } from './WebsiteStep/components';
+import { ComingSoonSection } from './CompetitorAnalysisStep/ComingSoonSection';
 
-interface Competitor {
-  url: string;
-  domain: string;
-  title: string;
-  summary: string;
-  relevance_score: number;
-  highlights?: string[];
-  competitive_insights: {
-    business_model: string;
-    target_audience: string;
-  };
-  content_insights: {
-    content_focus: string;
-    content_quality: string;
-  };
-}
 
 interface ResearchSummary {
   total_competitors: number;
@@ -61,13 +35,16 @@ interface CompetitorAnalysisStepProps {
   // sessionId removed - backend uses authenticated user from Clerk token
   userUrl: string;
   industryContext?: string;
+  // Expose data collection function for global Continue button
+  onDataReady?: (getData: () => any) => void;
 }
 
 const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
   onContinue,
   onBack,
   userUrl,
-  industryContext
+  industryContext,
+  onDataReady
 }) => {
   const classes = useOnboardingStyles();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -83,6 +60,8 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
   const [selectedCompetitorHighlights, setSelectedCompetitorHighlights] = useState<string[]>([]);
   const [selectedCompetitorTitle, setSelectedCompetitorTitle] = useState<string>('');
   const [usingCachedData, setUsingCachedData] = useState(false);
+  const [sitemapAnalysis, setSitemapAnalysis] = useState<any>(null);
+  const [isAnalyzingSitemap, setIsAnalyzingSitemap] = useState(false);
 
   // Check for cached competitor analysis data
   const loadCachedAnalysis = useCallback(() => {
@@ -112,6 +91,7 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
           setSocialMediaAccounts(parsedData.social_media_accounts || {});
           setSocialMediaCitations(parsedData.social_media_citations || []);
           setResearchSummary(parsedData.research_summary || null);
+          setSitemapAnalysis(parsedData.sitemap_analysis || null);
           setUsingCachedData(true);
           
           return true; // Successfully loaded from cache
@@ -126,6 +106,22 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
       return false;
     }
   }, [userUrl]);
+
+  // Update cache with sitemap analysis
+  const updateCacheWithSitemapAnalysis = useCallback((sitemapResult: any) => {
+    try {
+      const cachedData = localStorage.getItem('competitor_analysis_data');
+      if (cachedData) {
+        const parsedData = JSON.parse(cachedData);
+        parsedData.sitemap_analysis = sitemapResult;
+        
+        localStorage.setItem('competitor_analysis_data', JSON.stringify(parsedData));
+        console.log('CompetitorAnalysisStep: Updated cache with sitemap analysis');
+      }
+    } catch (err) {
+      console.warn('Failed to update cache with sitemap analysis:', err);
+    }
+  }, []);
 
   const startCompetitorDiscovery = useCallback(async (force = false) => {
     // Check cache first unless forced
@@ -194,7 +190,8 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
           competitors: result.competitors || [],
           social_media_accounts: result.social_media_accounts || {},
           social_media_citations: result.social_media_citations || [],
-          research_summary: result.research_summary || null
+          research_summary: result.research_summary || null,
+          sitemap_analysis: null // Will be updated when sitemap analysis completes
         };
 
         setCompetitors(analysisData.competitors);
@@ -225,6 +222,46 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
     }
   }, [userUrl, industryContext, loadCachedAnalysis]);  // sessionId removed from dependencies
 
+  // Sitemap Analysis Function
+  const startSitemapAnalysis = useCallback(async () => {
+    if (isAnalyzingSitemap) return;
+    
+    setIsAnalyzingSitemap(true);
+    
+    try {
+      const finalUserUrl = userUrl || localStorage.getItem('website_url') || '';
+      const competitorDomains = competitors.map(c => c.domain).filter(Boolean);
+      
+      console.log('Starting sitemap analysis for:', finalUserUrl);
+      
+      const response = await aiApiClient.post('/api/onboarding/step3/analyze-sitemap', {
+        user_url: finalUserUrl,
+        competitors: competitorDomains,
+        industry_context: industryContext,
+        analyze_content_trends: true,
+        analyze_publishing_patterns: true
+      });
+      
+      const result = response.data;
+      
+      if (result.success) {
+        console.log('Sitemap analysis completed successfully');
+        setSitemapAnalysis(result);
+        
+        // Update cache with sitemap analysis
+        updateCacheWithSitemapAnalysis(result);
+      } else {
+        console.error('Sitemap analysis failed:', result.error);
+        setError(result.error || 'Sitemap analysis failed');
+      }
+    } catch (err) {
+      console.error('Sitemap analysis error:', err);
+      setError(err instanceof Error ? err.message : 'Sitemap analysis failed');
+    } finally {
+      setIsAnalyzingSitemap(false);
+    }
+  }, [userUrl, competitors, industryContext, isAnalyzingSitemap]);
+
   // Initialize: Check cache first, then run analysis if needed
   useEffect(() => {
     const initialize = async () => {
@@ -241,16 +278,84 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only once on mount
 
-  const handleContinue = () => {
-    const researchData = {
+  // Auto-trigger sitemap analysis when competitors are loaded (only if not cached)
+  useEffect(() => {
+    if (competitors.length > 0 && !sitemapAnalysis && !isAnalyzingSitemap) {
+      // Check if sitemap analysis is already cached
+      const cachedData = localStorage.getItem('competitor_analysis_data');
+      if (cachedData) {
+        try {
+          const parsedData = JSON.parse(cachedData);
+          if (parsedData.sitemap_analysis) {
+            console.log('CompetitorAnalysisStep: Sitemap analysis already cached, skipping auto-trigger');
+            setSitemapAnalysis(parsedData.sitemap_analysis);
+            return;
+          }
+        } catch (err) {
+          console.warn('Error checking cached sitemap analysis:', err);
+        }
+      }
+      
+      console.log('Competitors loaded, starting sitemap analysis...');
+      startSitemapAnalysis();
+    }
+  }, [competitors, sitemapAnalysis, isAnalyzingSitemap, startSitemapAnalysis]);
+
+  // Data collection function for global Continue button
+  const getResearchData = useCallback(() => {
+    return {
       competitors,
       researchSummary,
+      sitemapAnalysis,
       userUrl,
       industryContext,
       analysisTimestamp: new Date().toISOString()
     };
-    onContinue(researchData);
+  }, [competitors, researchSummary, sitemapAnalysis, userUrl, industryContext]);
+
+  const handleContinue = async () => {
+    // Save research preferences to backend before continuing
+    try {
+      const researchData = getResearchData();
+
+      // Extract research preferences for saving (use defaults if not available)
+      const researchPreferences = {
+        research_depth: 'Comprehensive',
+        content_types: ['blog_posts', 'social_media'],
+        auto_research: true,
+        factual_content: true
+      };
+
+      // Save research preferences to backend
+      await aiApiClient.post('/api/ai-research/configure-preferences', {
+        research_depth: researchPreferences.research_depth,
+        content_types: researchPreferences.content_types,
+        auto_research: researchPreferences.auto_research,
+        factual_content: researchPreferences.factual_content
+      });
+
+      console.log('Research preferences saved to backend');
+    } catch (error) {
+      console.error('Error saving research preferences:', error);
+      // Continue anyway - don't block user progress for save errors
+    }
+
+    // Continue with wizard navigation
+    onContinue(getResearchData());
   };
+
+  // Expose data collection function to parent (only when onDataReady changes)
+  useEffect(() => {
+    if (onDataReady) {
+      console.log('CompetitorAnalysisStep: Exposing data collection function to parent');
+      // Always provide a data collection function, even if data is empty
+      const safeGetData = () => {
+        console.log('CompetitorAnalysisStep: getResearchData called');
+        return getResearchData();
+      };
+      onDataReady(safeGetData);
+    }
+  }, [onDataReady, getResearchData]); // Include getResearchData in dependencies
 
   const handleShowHighlights = (competitor: Competitor) => {
     setSelectedCompetitorHighlights(competitor.highlights || []);
@@ -361,182 +466,53 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
           )}
 
           {/* Social Media Accounts Section */}
-          {Object.keys(socialMediaAccounts).length > 0 && (
+          <SocialMediaPresenceSection socialMediaAccounts={socialMediaAccounts} />
+
+          {/* Competitors Grid Section */}
+          <CompetitorsGrid 
+            competitors={competitors}
+            onShowHighlights={handleShowHighlights}
+          />
+
+          {/* Sitemap Analysis Section */}
+          {(sitemapAnalysis || isAnalyzingSitemap) && (
             <>
-              <Typography 
-                variant="h6" 
-                gutterBottom 
-                fontWeight={600} 
-                mb={3}
-                sx={{ color: '#1a202c !important' }} // Force dark text
-              >
-                <ShareIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#667eea !important' }} />
-                Social Media Presence
-              </Typography>
-              
-              <Grid container spacing={2} mb={4}>
-                {Object.entries(socialMediaAccounts).map(([platform, url]) => {
-                  if (!url) return null;
-                  
-                  const platformIcons: { [key: string]: React.ReactNode } = {
-                    facebook: <FacebookIcon />,
-                    instagram: <InstagramIcon />,
-                    linkedin: <LinkedInIcon />,
-                    youtube: <YouTubeIcon />,
-                    twitter: <TwitterIcon />,
-                    tiktok: <ShareIcon /> // Fallback icon for TikTok
-                  };
-                  
-                  return (
-                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={platform}>
-                      <Card sx={{ 
-                        height: '100%',
-                        background: 'linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%)',
-                        border: '1px solid #81d4fa',
-                        boxShadow: '0 4px 12px rgba(3, 169, 244, 0.15)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 8px 20px rgba(3, 169, 244, 0.25)'
-                        }
-                      }}>
-                        <CardContent>
-                          <Box display="flex" alignItems="center" gap={2}>
-                            <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}>
-                              {platformIcons[platform] || <ShareIcon />}
-                            </Avatar>
-                            <Box flex={1}>
-                              <Typography variant="h6" fontWeight={600} textTransform="capitalize">
-                                {platform}
-                              </Typography>
-                              <Button
-                                variant="text"
-                                size="small"
-                                href={url as string}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                sx={{ p: 0, minWidth: 'auto', textTransform: 'none' }}
-                              >
-                                View Profile
-                              </Button>
-                            </Box>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  );
-                })}
-              </Grid>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Typography 
+                  variant="h5" 
+                  fontWeight={600}
+                  sx={{ color: '#1a202c !important' }}
+                >
+                  Website Structure Analysis
+                </Typography>
+                {!isAnalyzingSitemap && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={startSitemapAnalysis}
+                    sx={{ 
+                      borderColor: '#667eea',
+                      color: '#667eea',
+                      '&:hover': {
+                        borderColor: '#5a6fd8',
+                        backgroundColor: 'rgba(102, 126, 234, 0.04)'
+                      }
+                    }}
+                  >
+                    Re-analyze Structure
+                  </Button>
+                )}
+              </Box>
+              <SitemapAnalysisResults
+                analysisData={sitemapAnalysis?.analysis_data || {}}
+                userUrl={userUrl || localStorage.getItem('website_url') || ''}
+                sitemapUrl={sitemapAnalysis?.sitemap_url || `${(userUrl || localStorage.getItem('website_url') || '').replace(/\/$/, '')}/sitemap.xml`}
+                isLoading={isAnalyzingSitemap}
+                discoveryMethod={sitemapAnalysis?.discovery_method}
+              />
             </>
           )}
 
-          <Typography 
-            variant="h6" 
-            gutterBottom 
-            fontWeight={600} 
-            mb={3}
-            sx={{ color: '#1a202c !important' }} // Force dark text
-          >
-            <BusinessIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#667eea !important' }} />
-            Discovered Competitors ({competitors.length})
-          </Typography>
-
-          <Grid container spacing={3}>
-            {competitors.map((competitor, index) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={index}>
-                <Card sx={{ 
-                  height: '100%', 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  background: 'linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%)',
-                  border: '1px solid #81d4fa',
-                  boxShadow: '0 4px 12px rgba(3, 169, 244, 0.15)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 8px 20px rgba(3, 169, 244, 0.25)'
-                  }
-                }}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box display="flex" alignItems="flex-start" gap={2} mb={2}>
-                      <Avatar sx={{ width: 40, height: 40 }}>
-                        <BusinessIcon />
-                      </Avatar>
-                      <Box flex={1}>
-                        <Typography 
-                          variant="h6" 
-                          fontWeight={600} 
-                          gutterBottom
-                          sx={{ color: '#1a202c !important' }} // Force dark text for readability
-                        >
-                          {competitor.title}
-                        </Typography>
-                        <Typography 
-                          variant="body2" 
-                          gutterBottom
-                          sx={{ color: '#4a5568 !important' }} // Force dark text for readability
-                        >
-                          {competitor.domain}
-                        </Typography>
-                        <Chip 
-                          label={`${Math.round(competitor.relevance_score * 100)}% Match`}
-                          color="primary"
-                          size="small"
-                        />
-                      </Box>
-                    </Box>
-
-                    <Typography 
-                      variant="body2" 
-                      mb={2}
-                      sx={{ color: '#2d3748 !important' }} // Force dark text for readability
-                    >
-                      {competitor.summary.length > 150 
-                        ? `${competitor.summary.substring(0, 150)}...` 
-                        : competitor.summary
-                      }
-                    </Typography>
-                  </CardContent>
-
-                  <CardActions sx={{ p: 2, pt: 0 }}>
-                    <Button
-                      size="small"
-                      startIcon={<OpenInNewIcon />}
-                      onClick={() => window.open(competitor.url, '_blank')}
-                    >
-                      Visit Website
-                    </Button>
-                    {competitor.highlights && competitor.highlights.length > 0 && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleShowHighlights(competitor)}
-                      >
-                        Highlights
-                      </Button>
-                    )}
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-
-          <Box display="flex" justifyContent="center" mt={4}>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={handleContinue}
-              sx={{
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                borderRadius: 2
-              }}
-            >
-              Continue to Next Step
-            </Button>
-          </Box>
         </Box>
       )}
 
@@ -627,6 +603,9 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Coming Soon Section */}
+      <ComingSoonSection />
     </Box>
   );
 };

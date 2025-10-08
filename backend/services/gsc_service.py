@@ -17,7 +17,16 @@ class GSCService:
     def __init__(self, db_path: str = "alwrity.db"):
         """Initialize GSC service with database connection."""
         self.db_path = db_path
-        self.credentials_file = "gsc_credentials.json"
+        # Resolve credentials file robustly: env override or project-relative default
+        env_credentials_path = os.getenv("GSC_CREDENTIALS_FILE")
+        if env_credentials_path:
+            self.credentials_file = env_credentials_path
+        else:
+            # Default to <backend>/gsc_credentials.json regardless of CWD
+            services_dir = os.path.dirname(__file__)
+            backend_dir = os.path.abspath(os.path.join(services_dir, os.pardir))
+            self.credentials_file = os.path.join(backend_dir, "gsc_credentials.json")
+        logger.info(f"GSC credentials file path set to: {self.credentials_file}")
         self.scopes = ['https://www.googleapis.com/auth/webmasters.readonly']
         self._init_gsc_tables()
         logger.info("GSC Service initialized successfully")
@@ -62,12 +71,18 @@ class GSCService:
     def save_user_credentials(self, user_id: str, credentials: Credentials) -> bool:
         """Save user's GSC credentials to database."""
         try:
+            # Read client credentials from file to ensure we have all required fields
+            with open(self.credentials_file, 'r') as f:
+                client_config = json.load(f)
+            
+            web_config = client_config.get('web', {})
+            
             credentials_json = json.dumps({
                 'token': credentials.token,
                 'refresh_token': credentials.refresh_token,
-                'token_uri': credentials.token_uri,
-                'client_id': credentials.client_id,
-                'client_secret': credentials.client_secret,
+                'token_uri': credentials.token_uri or web_config.get('token_uri'),
+                'client_id': credentials.client_id or web_config.get('client_id'),
+                'client_secret': credentials.client_secret or web_config.get('client_secret'),
                 'scopes': credentials.scopes
             })
             
@@ -99,18 +114,33 @@ class GSCService:
                 
                 result = cursor.fetchone()
                 if not result:
-                    logger.warning(f"No GSC credentials found for user: {user_id}")
                     return None
                 
                 credentials_data = json.loads(result[0])
+                
+                # Check for required fields, but allow connection without refresh token
+                required_fields = ['token_uri', 'client_id', 'client_secret']
+                missing_fields = [field for field in required_fields if not credentials_data.get(field)]
+                
+                if missing_fields:
+                    logger.warning(f"GSC credentials for user {user_id} missing required fields: {missing_fields}")
+                    return None
+                
                 credentials = Credentials.from_authorized_user_info(credentials_data, self.scopes)
                 
-                # Refresh token if needed
-                if credentials.expired and credentials.refresh_token:
-                    credentials.refresh(GoogleRequest())
-                    self.save_user_credentials(user_id, credentials)
+                # Refresh token if needed and possible
+                if credentials.expired:
+                    if credentials.refresh_token:
+                        try:
+                            credentials.refresh(GoogleRequest())
+                            self.save_user_credentials(user_id, credentials)
+                        except Exception as e:
+                            logger.error(f"Failed to refresh GSC token for user {user_id}: {e}")
+                            return None
+                    else:
+                        logger.warning(f"GSC token expired for user {user_id} but no refresh token available - user needs to re-authorize")
+                        return None
                 
-                logger.info(f"GSC credentials loaded for user: {user_id}")
                 return credentials
                 
         except Exception as e:
@@ -120,21 +150,28 @@ class GSCService:
     def get_oauth_url(self, user_id: str) -> str:
         """Get OAuth authorization URL for GSC."""
         try:
+            logger.info(f"Generating OAuth URL for user: {user_id}")
+            
             if not os.path.exists(self.credentials_file):
                 raise FileNotFoundError(f"GSC credentials file not found: {self.credentials_file}")
             
+            redirect_uri = os.getenv('GSC_REDIRECT_URI', 'http://localhost:8000/gsc/callback')
             flow = Flow.from_client_secrets_file(
                 self.credentials_file,
                 scopes=self.scopes,
-                redirect_uri=os.getenv('GSC_REDIRECT_URI', 'http://localhost:8000/gsc/callback')
+                redirect_uri=redirect_uri
             )
             
             authorization_url, state = flow.authorization_url(
                 access_type='offline',
-                include_granted_scopes='true'
+                include_granted_scopes='true',
+                prompt='consent'  # Force consent screen to get refresh token
             )
             
+            logger.info(f"OAuth URL generated for user: {user_id}")
+            
             # Store state for verification
+            
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
@@ -144,34 +181,58 @@ class GSCService:
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
+                
                 cursor.execute('''
-                    INSERT INTO gsc_oauth_states (state, user_id) 
+                    INSERT OR REPLACE INTO gsc_oauth_states (state, user_id) 
                     VALUES (?, ?)
                 ''', (state, user_id))
                 conn.commit()
             
-            logger.info(f"OAuth URL generated for user: {user_id}")
+            logger.info(f"OAuth URL generated successfully for user: {user_id}")
             return authorization_url
             
         except Exception as e:
             logger.error(f"Error generating OAuth URL for user {user_id}: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Error details: {str(e)}")
             raise
     
     def handle_oauth_callback(self, authorization_code: str, state: str) -> bool:
         """Handle OAuth callback and save credentials."""
         try:
+            logger.info(f"Handling OAuth callback with state: {state}")
+            
             # Verify state
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
+                
                 cursor.execute('''
                     SELECT user_id FROM gsc_oauth_states WHERE state = ?
                 ''', (state,))
                 
                 result = cursor.fetchone()
-                if not result:
-                    raise ValueError("Invalid OAuth state")
                 
-                user_id = result[0]
+                if not result:
+                    # Check if this is a duplicate callback by looking for recent credentials
+                    cursor.execute('SELECT user_id, credentials_json FROM gsc_credentials ORDER BY updated_at DESC LIMIT 1')
+                    recent_credentials = cursor.fetchone()
+                    
+                    if recent_credentials:
+                        logger.info("Duplicate callback detected - returning success")
+                        return True
+                    
+                    # If no recent credentials, try to find any recent state
+                    cursor.execute('SELECT state, user_id FROM gsc_oauth_states ORDER BY created_at DESC LIMIT 1')
+                    recent_state = cursor.fetchone()
+                    if recent_state:
+                        user_id = recent_state[1]
+                        # Clean up the old state
+                        cursor.execute('DELETE FROM gsc_oauth_states WHERE state = ?', (recent_state[0],))
+                        conn.commit()
+                    else:
+                        raise ValueError("Invalid OAuth state")
+                else:
+                    user_id = result[0]
                 
                 # Clean up state
                 cursor.execute('DELETE FROM gsc_oauth_states WHERE state = ?', (state,))
@@ -328,6 +389,21 @@ class GSCService:
             
         except Exception as e:
             logger.error(f"Error revoking GSC access for user {user_id}: {e}")
+            return False
+    
+    def clear_incomplete_credentials(self, user_id: str) -> bool:
+        """Clear incomplete GSC credentials that are missing required fields."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM gsc_credentials WHERE user_id = ?', (user_id,))
+                conn.commit()
+            
+            logger.info(f"Cleared incomplete GSC credentials for user: {user_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error clearing incomplete credentials for user {user_id}: {e}")
             return False
     
     def _get_cached_data(self, user_id: str, site_url: str, data_type: str, cache_key: str) -> Optional[Dict]:

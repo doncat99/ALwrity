@@ -18,6 +18,7 @@ from loguru import logger
 
 from middleware.auth_middleware import get_current_user
 from .step3_research_service import Step3ResearchService
+from services.seo_tools.sitemap_service import SitemapService
 
 router = APIRouter(prefix="/api/onboarding/step3", tags=["Onboarding Step 3 - Research"])
 
@@ -65,8 +66,30 @@ class ResearchHealthResponse(BaseModel):
     service_status: Optional[Dict[str, Any]] = None
     timestamp: Optional[str] = None
 
-# Initialize service
+class SitemapAnalysisRequest(BaseModel):
+    """Request model for sitemap analysis in onboarding context."""
+    user_url: str = Field(..., description="User's website URL")
+    sitemap_url: Optional[str] = Field(None, description="Custom sitemap URL (defaults to user_url/sitemap.xml)")
+    competitors: Optional[List[str]] = Field(None, description="List of competitor URLs for benchmarking")
+    industry_context: Optional[str] = Field(None, description="Industry context for analysis")
+    analyze_content_trends: bool = Field(True, description="Whether to analyze content trends")
+    analyze_publishing_patterns: bool = Field(True, description="Whether to analyze publishing patterns")
+
+class SitemapAnalysisResponse(BaseModel):
+    """Response model for sitemap analysis."""
+    success: bool
+    message: str
+    user_url: str
+    sitemap_url: str
+    analysis_data: Optional[Dict[str, Any]] = None
+    onboarding_insights: Optional[Dict[str, Any]] = None
+    analysis_timestamp: Optional[str] = None
+    discovery_method: Optional[str] = None
+    error: Optional[str] = None
+
+# Initialize services
 step3_research_service = Step3ResearchService()
+sitemap_service = SitemapService()
 
 @router.post("/discover-competitors", response_model=CompetitorDiscoveryResponse)
 async def discover_competitors(
@@ -307,3 +330,166 @@ async def get_cost_estimate(
             "message": "Failed to calculate cost estimate",
             "error": str(e)
         }
+
+@router.post("/discover-sitemap")
+async def discover_sitemap(
+    request: SitemapAnalysisRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Discover the sitemap URL for a given website using intelligent search.
+    
+    This endpoint attempts to find the sitemap URL by checking robots.txt
+    and common sitemap locations.
+    """
+    try:
+        logger.info(f"Discovering sitemap for user: {current_user.get('user_id', 'unknown')}")
+        logger.info(f"Sitemap discovery request: {request.user_url}")
+        
+        # Use intelligent sitemap discovery
+        discovered_sitemap = await sitemap_service.discover_sitemap_url(request.user_url)
+        
+        if discovered_sitemap:
+            return {
+                "success": True,
+                "message": "Sitemap discovered successfully",
+                "user_url": request.user_url,
+                "sitemap_url": discovered_sitemap,
+                "discovery_method": "intelligent_search"
+            }
+        else:
+            # Provide fallback URL
+            base_url = request.user_url.rstrip('/')
+            fallback_url = f"{base_url}/sitemap.xml"
+            
+            return {
+                "success": False,
+                "message": "No sitemap found using intelligent discovery",
+                "user_url": request.user_url,
+                "fallback_url": fallback_url,
+                "discovery_method": "fallback"
+            }
+        
+    except Exception as e:
+        logger.error(f"Error in sitemap discovery: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        return {
+            "success": False,
+            "message": "An unexpected error occurred during sitemap discovery",
+            "user_url": request.user_url,
+            "error": str(e)
+        }
+
+@router.post("/analyze-sitemap", response_model=SitemapAnalysisResponse)
+async def analyze_sitemap_for_onboarding(
+    request: SitemapAnalysisRequest,
+    background_tasks: BackgroundTasks,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> SitemapAnalysisResponse:
+    """
+    Analyze user's sitemap for competitive positioning and content strategy insights.
+    
+    This endpoint provides enhanced sitemap analysis specifically designed for
+    onboarding Step 3 competitive analysis, including competitive positioning
+    insights and content strategy recommendations.
+    """
+    try:
+        logger.info(f"Starting sitemap analysis for user: {current_user.get('user_id', 'unknown')}")
+        logger.info(f"Sitemap analysis request: {request.user_url}")
+        
+        # Determine sitemap URL using intelligent discovery
+        sitemap_url = request.sitemap_url
+        if not sitemap_url:
+            # Use intelligent sitemap discovery
+            discovered_sitemap = await sitemap_service.discover_sitemap_url(request.user_url)
+            if discovered_sitemap:
+                sitemap_url = discovered_sitemap
+                logger.info(f"Discovered sitemap via intelligent search: {sitemap_url}")
+            else:
+                # Fallback to standard location if discovery fails
+                base_url = request.user_url.rstrip('/')
+                sitemap_url = f"{base_url}/sitemap.xml"
+                logger.info(f"Using fallback sitemap URL: {sitemap_url}")
+        
+        logger.info(f"Analyzing sitemap: {sitemap_url}")
+        
+        # Run onboarding-specific sitemap analysis
+        analysis_result = await sitemap_service.analyze_sitemap_for_onboarding(
+            sitemap_url=sitemap_url,
+            user_url=request.user_url,
+            competitors=request.competitors,
+            industry_context=request.industry_context,
+            analyze_content_trends=request.analyze_content_trends,
+            analyze_publishing_patterns=request.analyze_publishing_patterns
+        )
+        
+        # Check if analysis was successful
+        if analysis_result.get("error"):
+            logger.error(f"Sitemap analysis failed: {analysis_result['error']}")
+            return SitemapAnalysisResponse(
+                success=False,
+                message="Sitemap analysis failed",
+                user_url=request.user_url,
+                sitemap_url=sitemap_url,
+                error=analysis_result["error"]
+            )
+        
+        # Extract onboarding insights
+        onboarding_insights = analysis_result.get("onboarding_insights", {})
+        
+        # Log successful analysis
+        logger.info(f"Sitemap analysis completed successfully for {request.user_url}")
+        logger.info(f"Found {analysis_result.get('structure_analysis', {}).get('total_urls', 0)} URLs")
+        
+        # Background task to store analysis results (if needed)
+        background_tasks.add_task(
+            _log_sitemap_analysis_result,
+            current_user.get('user_id'),
+            request.user_url,
+            analysis_result
+        )
+        
+        # Determine discovery method
+        discovery_method = "fallback"
+        if request.sitemap_url:
+            discovery_method = "user_provided"
+        elif discovered_sitemap:
+            discovery_method = "intelligent_search"
+        
+        return SitemapAnalysisResponse(
+            success=True,
+            message="Sitemap analysis completed successfully",
+            user_url=request.user_url,
+            sitemap_url=sitemap_url,
+            analysis_data=analysis_result,
+            onboarding_insights=onboarding_insights,
+            analysis_timestamp=datetime.utcnow().isoformat(),
+            discovery_method=discovery_method
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in sitemap analysis: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        return SitemapAnalysisResponse(
+            success=False,
+            message="An unexpected error occurred during sitemap analysis",
+            user_url=request.user_url,
+            sitemap_url=sitemap_url or f"{request.user_url.rstrip('/')}/sitemap.xml",
+            error=str(e)
+        )
+
+async def _log_sitemap_analysis_result(
+    user_id: str,
+    user_url: str,
+    analysis_result: Dict[str, Any]
+) -> None:
+    """Background task to log sitemap analysis results."""
+    try:
+        logger.info(f"Logging sitemap analysis result for user {user_id}")
+        # Add any logging or storage logic here if needed
+        # For now, just log the completion
+        logger.info(f"Sitemap analysis logged for {user_url}")
+    except Exception as e:
+        logger.error(f"Error logging sitemap analysis result: {e}")

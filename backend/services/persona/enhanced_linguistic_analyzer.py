@@ -13,28 +13,35 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from textstat import flesch_reading_ease, flesch_kincaid_grade
-import spacy
-
 class EnhancedLinguisticAnalyzer:
     """Advanced linguistic analysis for persona creation and improvement."""
     
     def __init__(self):
-        """Initialize the linguistic analyzer."""
+        """Initialize the linguistic analyzer with required spaCy dependency."""
         self.nlp = None
+        self.spacy_available = False
+        
+        # spaCy is REQUIRED for high-quality persona generation
         try:
-            # Try to load spaCy model
+            import spacy
             self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            logger.warning("spaCy model not found. Install with: python -m spacy download en_core_web_sm")
+            self.spacy_available = True
+            logger.info("SUCCESS: spaCy model loaded successfully - Enhanced linguistic analysis available")
+        except ImportError as e:
+            logger.error(f"ERROR: spaCy is REQUIRED for persona generation. Install with: pip install spacy && python -m spacy download en_core_web_sm")
+            raise ImportError("spaCy is required for enhanced persona generation. Install with: pip install spacy && python -m spacy download en_core_web_sm") from e
+        except OSError as e:
+            logger.error(f"ERROR: spaCy model 'en_core_web_sm' is REQUIRED. Download with: python -m spacy download en_core_web_sm")
+            raise OSError("spaCy model 'en_core_web_sm' is required. Download with: python -m spacy download en_core_web_sm") from e
         
         # Download required NLTK data
         try:
-            nltk.data.find('tokenizers/punkt')
+            nltk.data.find('tokenizers/punkt_tab')  # Updated for newer NLTK versions
             nltk.data.find('corpora/stopwords')
             nltk.data.find('taggers/averaged_perceptron_tagger')
         except LookupError:
             logger.warning("NLTK data not found. Downloading required data...")
-            nltk.download('punkt', quiet=True)
+            nltk.download('punkt_tab', quiet=True)  # Updated for newer NLTK versions
             nltk.download('stopwords', quiet=True)
             nltk.download('averaged_perceptron_tagger', quiet=True)
     
@@ -626,4 +633,3 @@ class EnhancedLinguisticAnalyzer:
             total_clauses += clauses
         
         return total_clauses / len(sentences) if sentences else 0
-a

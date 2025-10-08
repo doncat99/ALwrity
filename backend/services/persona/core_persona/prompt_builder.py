@@ -15,10 +15,34 @@ class PersonaPromptBuilder:
     def build_persona_analysis_prompt(self, onboarding_data: Dict[str, Any]) -> str:
         """Build the main persona analysis prompt with comprehensive data."""
         
-        # Get enhanced analysis data
-        enhanced_analysis = onboarding_data.get("enhanced_analysis", {})
-        website_analysis = onboarding_data.get("website_analysis", {}) or {}
-        research_prefs = onboarding_data.get("research_preferences", {}) or {}
+        # Handle both frontend-style data and backend database-style data
+        # Frontend sends: {websiteAnalysis, competitorResearch, sitemapAnalysis, businessData}
+        # Backend sends: {enhanced_analysis, website_analysis, research_preferences}
+        
+        # Normalize data structure
+        if "websiteAnalysis" in onboarding_data:
+            # Frontend-style data - adapt to expected structure
+            website_analysis = onboarding_data.get("websiteAnalysis", {}) or {}
+            competitor_research = onboarding_data.get("competitorResearch", {}) or {}
+            sitemap_analysis = onboarding_data.get("sitemapAnalysis", {}) or {}
+            business_data = onboarding_data.get("businessData", {}) or {}
+            
+            # Create enhanced_analysis from frontend data
+            enhanced_analysis = {
+                "comprehensive_style_analysis": website_analysis.get("writing_style", {}),
+                "content_insights": website_analysis.get("content_characteristics", {}),
+                "audience_intelligence": website_analysis.get("target_audience", {}),
+                "technical_writing_metrics": website_analysis.get("style_patterns", {}),
+                "competitive_analysis": competitor_research,
+                "sitemap_data": sitemap_analysis,
+                "business_context": business_data
+            }
+            research_prefs = {}
+        else:
+            # Backend database-style data
+            enhanced_analysis = onboarding_data.get("enhanced_analysis", {})
+            website_analysis = onboarding_data.get("website_analysis", {}) or {}
+            research_prefs = onboarding_data.get("research_preferences", {}) or {}
         
         prompt = f"""
 COMPREHENSIVE PERSONA GENERATION TASK: Create a highly detailed, data-driven writing persona based on extensive AI analysis of user's website and content strategy.
@@ -115,10 +139,8 @@ Style Patterns: {json.dumps(website_analysis.get('style_patterns', {}), indent=2
 - Include competitive analysis for market positioning
 - Use content strategy insights for practical application
 - Ensure the persona reflects the brand's unique elements and competitive advantages
-- Provide a confidence score (0-100) based on data richness and quality
-- Include detailed analysis notes explaining your reasoning and data sources
 
-Generate a comprehensive, data-driven persona profile that can be used to replicate this writing style across different platforms while maintaining brand authenticity and competitive positioning.
+Generate a comprehensive, data-driven persona profile that accurately captures the writing style and brand voice to replicate consistently across different platforms.
 """
         
         return prompt
@@ -256,11 +278,9 @@ Generate a platform-optimized persona adaptation that maintains brand consistenc
                             }
                         }
                     }
-                },
-                "confidence_score": {"type": "number"},
-                "analysis_notes": {"type": "string"}
+                }
             },
-            "required": ["identity", "linguistic_fingerprint", "tonal_range", "confidence_score"]
+            "required": ["identity", "linguistic_fingerprint", "tonal_range"]
         }
     
     def get_platform_schema(self) -> Dict[str, Any]:

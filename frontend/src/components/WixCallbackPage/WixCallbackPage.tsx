@@ -20,29 +20,35 @@ const WixCallbackPage: React.FC = () => {
           return;
         }
         const oauthData = JSON.parse(saved);
-        // Optionally validate state matches
-        if (oauthData?.state && oauthData.state !== state) {
-          setError('State mismatch. Please restart the connection.');
-          return;
-        }
+        // Use the originally generated state to avoid SDK "Invalid _state" errors
         const tokens = await wixClient.auth.getMemberTokens(code, state, oauthData);
         wixClient.auth.setTokens(tokens);
         // Persist tokens for subsequent API calls on this tab
         try { sessionStorage.setItem('wix_tokens', JSON.stringify(tokens)); } catch {}
-        // Persist tokens for the test page to use
-        try {
-          sessionStorage.setItem('wix_tokens', JSON.stringify(tokens));
-        } catch {}
         // optional: ping backend to mark connected
         try { await fetch('/api/wix/test/connection/status'); } catch {}
         // Cleanup saved oauth data
         sessionStorage.removeItem('wix_oauth_data');
         localStorage.removeItem('wix_oauth_data');
-        // Mark frontend session as connected for test UI
+        // Mark frontend session as connected for onboarding UI
         sessionStorage.setItem('wix_connected', 'true');
-        window.location.replace('/wix-test');
+        // Notify opener (if opened as popup) and close; otherwise fallback to redirect
+        try {
+          const payload = { type: 'WIX_OAUTH_SUCCESS', success: true, tokens } as any;
+          (window.opener || window.parent)?.postMessage(payload, '*');
+          if (window.opener) {
+            window.close();
+            return;
+          }
+        } catch {}
+        // Fallback redirect for same-tab flow and let onboarding hook mark Wix as connected
+        window.location.replace('/onboarding?step=5&wix_connected=true');
       } catch (e: any) {
         setError(e?.message || 'OAuth callback failed');
+        try {
+          (window.opener || window.parent)?.postMessage({ type: 'WIX_OAUTH_ERROR', success: false, error: e?.message || 'OAuth callback failed' }, '*');
+          if (window.opener) window.close();
+        } catch {}
       }
     };
     run();

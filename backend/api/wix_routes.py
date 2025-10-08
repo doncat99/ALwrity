@@ -118,6 +118,73 @@ async def handle_oauth_callback(request: WixAuthRequest, current_user: dict = De
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/callback")
+async def handle_oauth_callback_get(code: str, state: Optional[str] = None, request: Request = None, current_user: dict = Depends(get_current_user)):
+    """HTML callback page for Wix OAuth that exchanges code and notifies opener via postMessage."""
+    try:
+        tokens = wix_service.exchange_code_for_tokens(code)
+        site_info = wix_service.get_site_info(tokens['access_token'])
+        permissions = wix_service.check_blog_permissions(tokens['access_token'])
+
+        # Build success payload for postMessage
+        payload = {
+            "type": "WIX_OAUTH_SUCCESS",
+            "success": True,
+            "tokens": {
+                "access_token": tokens['access_token'],
+                "refresh_token": tokens.get('refresh_token'),
+                "expires_in": tokens.get('expires_in'),
+                "token_type": tokens.get('token_type', 'Bearer')
+            },
+            "site_info": site_info,
+            "permissions": permissions
+        }
+
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Wix Connected</title></head>
+        <body>
+          <script>
+            (function() {{
+              try {{
+                var payload = {payload};
+                (window.opener || window.parent).postMessage(payload, '*');
+              }} catch (e) {{}}
+              window.close();
+            }})();
+          </script>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html, headers={
+            "Cross-Origin-Opener-Policy": "unsafe-none",
+            "Cross-Origin-Embedder-Policy": "unsafe-none"
+        })
+    except Exception as e:
+        logger.error(f"Wix OAuth GET callback failed: {e}")
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Wix Connection Failed</title></head>
+        <body>
+          <script>
+            (function() {{
+              try {{
+                (window.opener || window.parent).postMessage({{ type: 'WIX_OAUTH_ERROR', success: false, error: '{str(e)}' }}, '*');
+              }} catch (e) {{}}
+              window.close();
+            }})();
+          </script>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html, headers={
+            "Cross-Origin-Opener-Policy": "unsafe-none",
+            "Cross-Origin-Embedder-Policy": "unsafe-none"
+        })
+
+
 @router.get("/connection/status")
 async def get_connection_status(current_user: dict = Depends(get_current_user)) -> WixConnectionStatus:
     """
@@ -130,10 +197,8 @@ async def get_connection_status(current_user: dict = Depends(get_current_user)) 
         Connection status and permissions
     """
     try:
-        # TODO: Retrieve stored tokens from database for current_user
-        # For now, we'll return a mock response
-        # In production, you'd check if tokens exist and are valid
-        
+        # Check if user has Wix tokens stored in sessionStorage (frontend approach)
+        # This is a simplified check - in production you'd store tokens in database
         return WixConnectionStatus(
             connected=False,
             has_permissions=False,
@@ -147,6 +212,32 @@ async def get_connection_status(current_user: dict = Depends(get_current_user)) 
             has_permissions=False,
             error=str(e)
         )
+
+
+@router.get("/status")
+async def get_wix_status(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """
+    Get Wix connection status (similar to GSC/WordPress pattern)
+    Note: Wix tokens are stored in frontend sessionStorage, so we can't directly check them here.
+    The frontend will check sessionStorage and update the UI accordingly.
+    """
+    try:
+        # Since Wix tokens are stored in frontend sessionStorage (not backend database),
+        # we return a default response. The frontend will check sessionStorage directly.
+        return {
+            "connected": False,
+            "sites": [],
+            "total_sites": 0,
+            "error": "Wix connection status managed by frontend sessionStorage"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get Wix status: {e}")
+        return {
+            "connected": False,
+            "sites": [],
+            "total_sites": 0,
+            "error": str(e)
+        }
 
 
 @router.post("/publish")

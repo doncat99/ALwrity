@@ -20,37 +20,42 @@ import {
   CloudDone,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { ScrambleText } from '../ScrambleText';
 
-// Rotating text component
-const RotatingText: React.FC<{ words: string[]; interval?: number }> = ({ 
-  words, 
-  interval = 2000 
+// Scrambling text component with multiple phrases
+const ScramblingText: React.FC<{ phrases: string[]; interval?: number; duration?: number; delay?: number }> = ({ 
+  phrases, 
+  interval = 4000,
+  duration = 800,
+  delay = 200
 }) => {
   const [currentIndex, setCurrentIndex] = React.useState(0);
 
   React.useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % words.length);
+      setCurrentIndex((prev) => (prev + 1) % phrases.length);
     }, interval);
     return () => clearInterval(timer);
-  }, [words.length, interval]);
+  }, [phrases.length, interval]);
 
   return (
-    <Box
-      component="span"
-      sx={{
+    <ScrambleText
+      text={phrases[currentIndex]}
+      duration={duration}
+      delay={delay}
+      restartInterval={interval}
+      as="span"
+      className="scramble-text"
+      style={{
         color: '#fff',
         fontWeight: 900,
-        // Strong text shadow for readability
         textShadow: `
           0 2px 10px rgba(0, 0, 0, 0.9),
           0 4px 20px rgba(0, 0, 0, 0.7),
           0 0 40px rgba(102, 126, 234, 0.4)
         `,
       }}
-    >
-      {words[currentIndex]}
-    </Box>
+    />
   );
 };
 
@@ -195,8 +200,8 @@ const HeroSection: React.FC = () => {
                   }}
                 >
                   Enterprise AI for{' '}
-                  <RotatingText 
-                    words={['Revenue Growth', 'Brand Automation', 'Content Strategy', 'Market Intelligence']}
+                  <ScramblingText 
+                    phrases={['Content Planning', 'MultiModal Generation', 'Cross Platform Publishing', 'All-Analytics One-platform', 'Content Engagement', 'Content Remarketing']}
                   />
                 </Typography>
 
@@ -299,7 +304,12 @@ const HeroSection: React.FC = () => {
                         },
                       }}
                     >
-                      ALwrity For Free - BYOK
+                      <ScramblingText
+                        phrases={['ALwrity For Free - BYOK', 'Start Free Today', 'Try ALwrity Free', 'Get Started Free']}
+                        duration={600}
+                        delay={500}
+                        interval={4000}
+                      />
                     </Button>
                   </SignInButton>
                   

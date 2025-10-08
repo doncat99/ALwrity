@@ -1,6 +1,6 @@
 """Main FastAPI application for ALwrity backend."""
 
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -48,6 +48,16 @@ from api.onboarding import (
     get_business_info,
     get_business_info_by_user,
     update_business_info,
+        # Persona generation endpoints
+        generate_writing_personas,
+        generate_writing_personas_async,
+        get_persona_task_status,
+        assess_persona_quality,
+        regenerate_persona,
+        get_persona_generation_options,
+        # New cache helpers
+        get_latest_persona,
+        save_persona_update,
     StepCompletionRequest,
     APIKeyRequest
 )
@@ -526,6 +536,85 @@ async def business_info_update(business_info_id: int, request: 'BusinessInfoRequ
         logger.error(f"Error in business_info_update: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Persona generation endpoints
+@app.post("/api/onboarding/step4/generate-personas")
+async def generate_personas(request: dict, current_user: dict = Depends(get_current_user)):
+    """Generate AI writing personas for Step 4."""
+    try:
+        return await generate_writing_personas(request, current_user)
+    except Exception as e:
+        logger.error(f"Error in generate_personas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/onboarding/step4/generate-personas-async")
+async def generate_personas_async(request: dict, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """Start async persona generation task."""
+    try:
+        return await generate_writing_personas_async(request, current_user, background_tasks)
+    except Exception as e:
+        logger.error(f"Error in generate_personas_async: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/onboarding/step4/persona-task/{task_id}")
+async def get_persona_task(task_id: str):
+    """Get persona generation task status."""
+    try:
+        return await get_persona_task_status(task_id)
+    except Exception as e:
+        logger.error(f"Error in get_persona_task: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/onboarding/step4/persona-latest")
+async def persona_latest(current_user: dict = Depends(get_current_user)):
+    """Get latest cached persona for current user."""
+    try:
+        return await get_latest_persona(current_user)
+    except HTTPException as he:
+        # Re-raise HTTP exceptions (like 404) as-is
+        raise he
+    except Exception as e:
+        logger.error(f"Error in persona_latest: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/onboarding/step4/persona-save")
+async def persona_save(request: dict, current_user: dict = Depends(get_current_user)):
+    """Save edited persona back to cache."""
+    try:
+        return await save_persona_update(request, current_user)
+    except HTTPException as he:
+        # Re-raise HTTP exceptions as-is
+        raise he
+    except Exception as e:
+        logger.error(f"Error in persona_save: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/onboarding/step4/assess-persona-quality")
+async def assess_persona_quality_endpoint(request: dict, current_user: dict = Depends(get_current_user)):
+    """Assess the quality of generated personas."""
+    try:
+        return await assess_persona_quality(request, current_user)
+    except Exception as e:
+        logger.error(f"Error in assess_persona_quality: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/onboarding/step4/regenerate-persona")
+async def regenerate_persona_endpoint(request: dict, current_user: dict = Depends(get_current_user)):
+    """Regenerate a specific persona with improvements."""
+    try:
+        return await regenerate_persona(request, current_user)
+    except Exception as e:
+        logger.error(f"Error in regenerate_persona: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/onboarding/step4/persona-options")
+async def get_persona_options(current_user: dict = Depends(get_current_user)):
+    """Get persona generation options and configurations."""
+    try:
+        return await get_persona_generation_options(current_user)
+    except Exception as e:
+        logger.error(f"Error in get_persona_options: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include component logic router
 app.include_router(component_logic_router)
 
@@ -535,6 +624,10 @@ app.include_router(subscription_router)
 # Include GSC router
 from routers.gsc_auth import router as gsc_auth_router
 app.include_router(gsc_auth_router)
+
+# Include WordPress router
+from routers.wordpress_oauth import router as wordpress_oauth_router
+app.include_router(wordpress_oauth_router)
 
 # Include SEO tools router
 app.include_router(seo_tools_router)

@@ -7,6 +7,7 @@ content distribution, and publishing patterns for SEO optimization.
 
 import aiohttp
 import asyncio
+import re
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from loguru import logger
@@ -25,6 +26,27 @@ class SitemapService:
         """Initialize the sitemap service"""
         self.service_name = "sitemap_analyzer"
         logger.info(f"Initialized {self.service_name}")
+        
+        # Common sitemap paths to check
+        self.common_sitemap_paths = [
+            "sitemap.xml",
+            "sitemap_index.xml", 
+            "sitemap/index.xml",
+            "sitemap.php",
+            "sitemap.txt",
+            "sitemap.xml.gz",
+            "sitemap1.xml",
+            # Common CMS/plugin paths
+            "wp-sitemap.xml",  # WordPress 5.5+ default
+            "post-sitemap.xml",
+            "page-sitemap.xml",
+            "product-sitemap.xml",  # WooCommerce
+            "category-sitemap.xml",
+            # Common feed paths that can act as sitemaps
+            "rss/",
+            "rss.xml",
+            "atom.xml",
+        ]
     
     async def analyze_sitemap(
         self,
@@ -305,6 +327,96 @@ class SitemapService:
             )
         }
     
+    async def analyze_sitemap_for_onboarding(
+        self,
+        sitemap_url: str,
+        user_url: str,
+        competitors: List[str] = None,
+        industry_context: str = None,
+        analyze_content_trends: bool = True,
+        analyze_publishing_patterns: bool = True
+    ) -> Dict[str, Any]:
+        """Enhanced sitemap analysis specifically for onboarding Step 3 competitive analysis"""
+        
+        try:
+            # Run standard sitemap analysis
+            analysis_result = await self.analyze_sitemap(
+                sitemap_url=sitemap_url,
+                analyze_content_trends=analyze_content_trends,
+                analyze_publishing_patterns=analyze_publishing_patterns
+            )
+            
+            # Enhance with onboarding-specific insights
+            onboarding_insights = await self._generate_onboarding_insights(
+                analysis_result,
+                user_url,
+                competitors,
+                industry_context
+            )
+            
+            # Combine results
+            analysis_result["onboarding_insights"] = onboarding_insights
+            analysis_result["user_url"] = user_url
+            analysis_result["industry_context"] = industry_context
+            analysis_result["competitors_analyzed"] = competitors or []
+            
+            return analysis_result
+            
+        except Exception as e:
+            logger.error(f"Error in onboarding sitemap analysis: {e}")
+            return {
+                "error": str(e),
+                "success": False
+            }
+
+    async def _generate_onboarding_insights(
+        self,
+        analysis_result: Dict[str, Any],
+        user_url: str,
+        competitors: List[str] = None,
+        industry_context: str = None
+    ) -> Dict[str, Any]:
+        """Generate onboarding-specific insights for competitive analysis"""
+        
+        try:
+            structure_analysis = analysis_result.get("structure_analysis", {})
+            content_trends = analysis_result.get("content_trends", {})
+            publishing_patterns = analysis_result.get("publishing_patterns", {})
+            
+            # Build onboarding-specific prompt
+            prompt = self._build_onboarding_analysis_prompt(
+                structure_analysis, content_trends, publishing_patterns, 
+                user_url, competitors, industry_context
+            )
+            
+            # Generate AI insights
+            ai_response = llm_text_gen(
+                prompt=prompt,
+                system_prompt=self._get_onboarding_system_prompt()
+            )
+            
+            # Parse and structure insights
+            insights = self._parse_onboarding_insights(ai_response)
+            
+            # Log AI analysis
+            await seo_logger.log_ai_analysis(
+                tool_name=f"{self.service_name}_onboarding",
+                prompt=prompt,
+                response=ai_response,
+                model_used="gemini-2.0-flash-001"
+            )
+            
+            return insights
+            
+        except Exception as e:
+            logger.error(f"Error generating onboarding insights: {e}")
+            return {
+                "competitive_positioning": "Analysis unavailable",
+                "content_gaps": [],
+                "growth_opportunities": [],
+                "industry_benchmarks": []
+            }
+
     async def _generate_ai_insights(
         self,
         structure_analysis: Dict[str, Any],
@@ -600,3 +712,319 @@ Focus on actionable insights for content creators and digital marketing professi
                 "error": str(e),
                 "last_check": datetime.utcnow().isoformat()
             }
+
+    def _build_onboarding_analysis_prompt(
+        self,
+        structure_analysis: Dict[str, Any],
+        content_trends: Dict[str, Any],
+        publishing_patterns: Dict[str, Any],
+        user_url: str,
+        competitors: List[str] = None,
+        industry_context: str = None
+    ) -> str:
+        """Build AI prompt for onboarding-specific sitemap analysis"""
+        
+        total_urls = structure_analysis.get("total_urls", 0)
+        url_patterns = structure_analysis.get("url_patterns", {})
+        avg_depth = structure_analysis.get("average_path_depth", 0)
+        publishing_velocity = content_trends.get("publishing_velocity", 0)
+        
+        competitor_info = ""
+        if competitors:
+            competitor_info = f"\nCompetitors to consider: {', '.join(competitors[:5])}"
+        
+        industry_info = ""
+        if industry_context:
+            industry_info = f"\nIndustry Context: {industry_context}"
+        
+        prompt = f"""
+Analyze this website's sitemap for competitive positioning and content strategy insights:
+
+USER WEBSITE: {user_url}
+Total URLs: {total_urls}
+Average Path Depth: {avg_depth}
+Publishing Velocity: {publishing_velocity:.2f} posts/day
+{industry_info}{competitor_info}
+
+URL Structure Analysis:
+{chr(10).join([f"- {category}: {count} URLs" for category, count in list(url_patterns.items())[:8]])}
+
+Content Publishing Patterns:
+- Publishing Rate: {publishing_velocity:.2f} pages per day
+- Content Categories: {len(url_patterns)} main categories identified
+
+Please provide competitive analysis insights focusing on:
+
+1. **COMPETITIVE POSITIONING**: How does this site's content structure compare to industry standards?
+2. **CONTENT GAPS**: What content categories or topics are missing based on the URL structure?
+3. **GROWTH OPPORTUNITIES**: Specific content expansion opportunities to compete better
+4. **INDUSTRY BENCHMARKS**: How does publishing frequency and content depth compare to competitors?
+5. **STRATEGIC RECOMMENDATIONS**: 3-5 actionable steps for content strategy improvement
+
+Focus on actionable insights that help content creators understand their competitive position and identify growth opportunities.
+"""
+        
+        return prompt
+
+    def _get_onboarding_system_prompt(self) -> str:
+        """Get system prompt for onboarding sitemap analysis"""
+        return """You are a competitive intelligence and content strategy expert specializing in website structure analysis for content creators and digital marketers.
+
+Your role is to analyze website sitemaps and provide strategic insights that help users understand their competitive position and identify content opportunities.
+
+Key focus areas:
+- Competitive positioning analysis
+- Content gap identification
+- Growth opportunity recommendations
+- Industry benchmarking insights
+- Actionable strategic recommendations
+
+Provide practical, data-driven insights that help content creators make informed decisions about their content strategy and competitive positioning.
+
+Format your response as structured insights that can be easily parsed and displayed in a user interface."""
+
+    def _parse_onboarding_insights(self, ai_response: str) -> Dict[str, Any]:
+        """Parse AI response for onboarding-specific insights"""
+        
+        try:
+            # Initialize structured response
+            insights = {
+                "competitive_positioning": "Analysis in progress...",
+                "content_gaps": [],
+                "growth_opportunities": [],
+                "industry_benchmarks": [],
+                "strategic_recommendations": []
+            }
+            
+            # Simple parsing logic - look for structured sections
+            lines = ai_response.split('\n')
+            current_section = None
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Detect sections
+                if any(keyword in line.lower() for keyword in ['competitive positioning', 'market position']):
+                    current_section = 'competitive_positioning'
+                    insights[current_section] = line
+                elif any(keyword in line.lower() for keyword in ['content gaps', 'missing content']):
+                    current_section = 'content_gaps'
+                elif any(keyword in line.lower() for keyword in ['growth opportunities', 'expansion']):
+                    current_section = 'growth_opportunities'
+                elif any(keyword in line.lower() for keyword in ['industry benchmarks', 'benchmarks']):
+                    current_section = 'industry_benchmarks'
+                elif any(keyword in line.lower() for keyword in ['strategic recommendations', 'recommendations']):
+                    current_section = 'strategic_recommendations'
+                elif line.startswith('-') or line.startswith('•'):
+                    # This is a list item
+                    if current_section and current_section in insights:
+                        if isinstance(insights[current_section], str):
+                            insights[current_section] = [insights[current_section]]
+                        insights[current_section].append(line[1:].strip())
+                elif current_section == 'competitive_positioning':
+                    # Append to competitive positioning text
+                    if insights[current_section] == "Analysis in progress...":
+                        insights[current_section] = line
+                    else:
+                        insights[current_section] += " " + line
+            
+            # Fallback: if no structured parsing worked, use the full response
+            if insights["competitive_positioning"] == "Analysis in progress...":
+                insights["competitive_positioning"] = ai_response[:500] + "..." if len(ai_response) > 500 else ai_response
+            
+            # Ensure lists are properly formatted
+            for key in ['content_gaps', 'growth_opportunities', 'industry_benchmarks', 'strategic_recommendations']:
+                if isinstance(insights[key], str):
+                    insights[key] = [insights[key]] if insights[key] else []
+            
+            return insights
+            
+        except Exception as e:
+            logger.error(f"Error parsing onboarding insights: {e}")
+            return {
+                "competitive_positioning": ai_response[:300] + "..." if len(ai_response) > 300 else ai_response,
+                "content_gaps": ["Analysis parsing error - see full response above"],
+                "growth_opportunities": [],
+                "industry_benchmarks": [],
+                "strategic_recommendations": []
+            }
+
+    async def discover_sitemap_url(self, website_url: str) -> Optional[str]:
+        """
+        Intelligently discover the sitemap URL for a given website.
+        
+        Args:
+            website_url: The website URL to find sitemap for
+            
+        Returns:
+            The discovered sitemap URL or None if not found
+        """
+        try:
+            # Ensure the URL has a proper scheme
+            if not urlparse(website_url).scheme:
+                base_url = f"https://{website_url}"
+            else:
+                base_url = website_url.rstrip('/')
+            
+            logger.info(f"Discovering sitemap for: {base_url}")
+            
+            # Method 1: Check robots.txt first (most reliable)
+            sitemap_url = await self._find_sitemap_in_robots_txt(base_url)
+            if sitemap_url:
+                logger.info(f"Found sitemap via robots.txt: {sitemap_url}")
+                return sitemap_url
+            
+            # Method 2: Check common paths
+            sitemap_url = await self._find_sitemap_by_common_paths(base_url)
+            if sitemap_url:
+                logger.info(f"Found sitemap via common paths: {sitemap_url}")
+                return sitemap_url
+            
+            logger.warning(f"No sitemap found for {base_url}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error discovering sitemap for {website_url}: {e}")
+            return None
+
+    async def _find_sitemap_in_robots_txt(self, base_url: str) -> Optional[str]:
+        """
+        Check robots.txt for sitemap directives.
+        
+        Args:
+            base_url: Base URL of the website
+            
+        Returns:
+            Sitemap URL if found in robots.txt, None otherwise
+        """
+        try:
+            robots_url = urljoin(base_url, "/robots.txt")
+            logger.debug(f"Checking robots.txt at: {robots_url}")
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(robots_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        content = await response.text()
+                        
+                        # Look for sitemap directives (case-insensitive)
+                        sitemap_matches = re.findall(r'^Sitemap:\s*(.+)', content, re.IGNORECASE | re.MULTILINE)
+                        
+                        if sitemap_matches:
+                            sitemap_url = sitemap_matches[0].strip()
+                            logger.debug(f"Found sitemap directive in robots.txt: {sitemap_url}")
+                            
+                            # Verify the sitemap URL is accessible
+                            if await self._verify_sitemap_url(sitemap_url):
+                                return sitemap_url
+                            else:
+                                logger.warning(f"robots.txt points to inaccessible sitemap: {sitemap_url}")
+                        
+                        logger.debug("No sitemap directive found in robots.txt")
+                    else:
+                        logger.debug(f"robots.txt returned HTTP {response.status}")
+                        
+        except Exception as e:
+            logger.debug(f"Error checking robots.txt: {e}")
+            
+        return None
+
+    async def _find_sitemap_by_common_paths(self, base_url: str) -> Optional[str]:
+        """
+        Check common sitemap paths.
+        
+        Args:
+            base_url: Base URL of the website
+            
+        Returns:
+            Sitemap URL if found at common paths, None otherwise
+        """
+        try:
+            logger.debug(f"Checking common sitemap paths for: {base_url}")
+            
+            # Check paths in parallel for better performance
+            tasks = []
+            for path in self.common_sitemap_paths:
+                full_url = urljoin(base_url, path)
+                tasks.append(self._check_sitemap_url(full_url, f"common path: /{path}"))
+            
+            # Wait for all checks to complete
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Return the first successful result
+            for result in results:
+                if isinstance(result, str) and result:
+                    return result
+            
+            logger.debug("No sitemap found at common paths")
+            
+        except Exception as e:
+            logger.debug(f"Error checking common paths: {e}")
+            
+        return None
+
+    async def _check_sitemap_url(self, url: str, method: str) -> Optional[str]:
+        """
+        Check if a URL is a valid sitemap.
+        
+        Args:
+            url: URL to check
+            method: Method description for logging
+            
+        Returns:
+            URL if valid sitemap, None otherwise
+        """
+        try:
+            headers = {
+                'User-Agent': 'ALwritySitemapBot/1.0 (https://alwrity.com)',
+                'Accept': 'application/xml, text/xml, */*'
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        content_type = response.headers.get('Content-Type', '').lower()
+                        
+                        # Check if it's a valid sitemap content type
+                        if any(xml_type in content_type for xml_type in ['xml', 'text', 'application/x-gzip']):
+                            logger.debug(f"Found valid sitemap via {method}: {url} (Content-Type: {content_type})")
+                            return url
+                        else:
+                            # Still consider it if it's 200 but not typical content type
+                            logger.debug(f"Found potential sitemap via {method}: {url} (Content-Type: {content_type})")
+                            return url
+                    elif response.status == 404:
+                        # Skip 404s silently
+                        pass
+                    else:
+                        logger.debug(f"HTTP {response.status} for {url} via {method}")
+                        
+        except Exception as e:
+            # Skip connection errors silently
+            logger.debug(f"Connection error for {url}: {e}")
+            
+        return None
+
+    async def _verify_sitemap_url(self, url: str) -> bool:
+        """
+        Verify that a sitemap URL is accessible and returns valid content.
+        
+        Args:
+            url: Sitemap URL to verify
+            
+        Returns:
+            True if accessible, False otherwise
+        """
+        try:
+            headers = {
+                'User-Agent': 'ALwritySitemapBot/1.0 (https://alwrity.com)',
+                'Accept': 'application/xml, text/xml, */*'
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.head(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    return response.status == 200
+                    
+        except Exception:
+            return False

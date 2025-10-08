@@ -1,6 +1,6 @@
 /** Google Search Console OAuth Callback Handler Component. */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -13,16 +13,14 @@ import {
   Error as ErrorIcon
 } from '@mui/icons-material';
 import { gscAPI } from '../../../api/gsc';
+import { useAuth } from '@clerk/clerk-react';
 
 const GSCAuthCallback: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState<string>('Processing authentication...');
+  const { getToken } = useAuth();
 
-  useEffect(() => {
-    handleOAuthCallback();
-  }, []);
-
-  const handleOAuthCallback = async () => {
+  const handleOAuthCallback = useCallback(async () => {
     try {
       console.log('GSC Auth Callback: Processing OAuth callback');
       
@@ -76,7 +74,19 @@ const GSCAuthCallback: React.FC = () => {
         }, '*');
       }
     }
-  };
+  }, [message]);
+
+  useEffect(() => {
+    // Ensure API client has an auth token getter in the popup context
+    gscAPI.setAuthTokenGetter(async () => {
+      try {
+        return await getToken();
+      } catch (e) {
+        return null;
+      }
+    });
+    handleOAuthCallback();
+  }, [getToken, handleOAuthCallback]);
 
   const getStatusIcon = () => {
     switch (status) {
@@ -91,16 +101,6 @@ const GSCAuthCallback: React.FC = () => {
     }
   };
 
-  const getStatusColor = () => {
-    switch (status) {
-      case 'success':
-        return 'success';
-      case 'error':
-        return 'error';
-      default:
-        return 'info';
-    }
-  };
 
   return (
     <Box

@@ -1,6 +1,7 @@
 """Google Search Console Authentication Router for ALwrity."""
 
 from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi.responses import HTMLResponse, JSONResponse
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
 from loguru import logger
@@ -39,10 +40,12 @@ async def get_gsc_auth_url(user: dict = Depends(get_current_user)):
         auth_url = gsc_service.get_oauth_url(user_id)
         
         logger.info(f"GSC OAuth URL generated successfully for user: {user_id}")
+        logger.info(f"OAuth URL: {auth_url[:100]}...")
         return {"auth_url": auth_url}
         
     except Exception as e:
         logger.error(f"Error generating GSC OAuth URL: {e}")
+        logger.error(f"Error details: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error generating OAuth URL: {str(e)}")
 
 @router.get("/callback")
@@ -50,7 +53,12 @@ async def handle_gsc_callback(
     code: str = Query(..., description="Authorization code from Google"),
     state: str = Query(..., description="State parameter for security")
 ):
-    """Handle Google Search Console OAuth callback."""
+    """Handle Google Search Console OAuth callback.
+
+    For a smoother UX when opened in a popup, this endpoint returns a tiny HTML
+    page that posts a completion message back to the opener window and closes
+    itself. The JSON payload is still included in the page for debugging.
+    """
     try:
         logger.info(f"Handling GSC OAuth callback with code: {code[:10]}...")
         
@@ -58,14 +66,52 @@ async def handle_gsc_callback(
         
         if success:
             logger.info("GSC OAuth callback handled successfully")
-            return {"success": True, "message": "GSC connected successfully"}
+            html = """
+<!doctype html>
+<html>
+  <head><meta charset=\"utf-8\"><title>GSC Connected</title></head>
+  <body style=\"font-family: sans-serif; padding: 24px;\">
+    <p>Connection Successful. You can close this window.</p>
+    <script>
+      try {{ window.opener && window.opener.postMessage({{ type: 'GSC_AUTH_SUCCESS' }}, '*'); }} catch (e) {{}}
+      try {{ window.close(); }} catch (e) {{}}
+    </script>
+  </body>
+  </html>
+"""
+            return HTMLResponse(content=html)
         else:
             logger.error("Failed to handle GSC OAuth callback")
-            raise HTTPException(status_code=400, detail="Failed to connect GSC")
+            html = """
+<!doctype html>
+<html>
+  <head><meta charset=\"utf-8\"><title>GSC Connection Failed</title></head>
+  <body style=\"font-family: sans-serif; padding: 24px;\">
+    <p>Connection Failed. Please close this window and try again.</p>
+    <script>
+      try {{ window.opener && window.opener.postMessage({{ type: 'GSC_AUTH_ERROR' }}, '*'); }} catch (e) {{}}
+    </script>
+  </body>
+  </html>
+"""
+            return HTMLResponse(status_code=400, content=html)
             
     except Exception as e:
         logger.error(f"Error handling GSC OAuth callback: {e}")
-        raise HTTPException(status_code=500, detail=f"Error handling OAuth callback: {str(e)}")
+        html = f"""
+<!doctype html>
+<html>
+  <head><meta charset=\"utf-8\"><title>GSC Connection Error</title></head>
+  <body style=\"font-family: sans-serif; padding: 24px;\">
+    <p>Connection Error. Please close this window and try again.</p>
+    <pre style=\"white-space: pre-wrap;\">{str(e)}</pre>
+    <script>
+      try {{ window.opener && window.opener.postMessage({{ type: 'GSC_AUTH_ERROR' }}, '*'); }} catch (e) {{}}
+    </script>
+  </body>
+  </html>
+"""
+        return HTMLResponse(status_code=500, content=html)
 
 @router.get("/sites")
 async def get_gsc_sites(user: dict = Depends(get_current_user)):
@@ -155,6 +201,8 @@ async def get_gsc_status(user: dict = Depends(get_current_user)):
                 sites = gsc_service.get_site_list(user_id)
             except Exception as e:
                 logger.warning(f"Could not get sites for user {user_id}: {e}")
+                # Clear incomplete credentials and mark as disconnected
+                gsc_service.clear_incomplete_credentials(user_id)
                 connected = False
         
         status_response = GSCStatusResponse(
@@ -192,6 +240,29 @@ async def disconnect_gsc(user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error disconnecting GSC: {e}")
         raise HTTPException(status_code=500, detail=f"Error disconnecting GSC: {str(e)}")
+
+@router.post("/clear-incomplete")
+async def clear_incomplete_credentials(user: dict = Depends(get_current_user)):
+    """Clear incomplete GSC credentials that are missing required fields."""
+    try:
+        user_id = user.get('id')
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID not found")
+        
+        logger.info(f"Clearing incomplete GSC credentials for user: {user_id}")
+        
+        success = gsc_service.clear_incomplete_credentials(user_id)
+        
+        if success:
+            logger.info(f"Incomplete GSC credentials cleared for user: {user_id}")
+            return {"success": True, "message": "Incomplete credentials cleared"}
+        else:
+            logger.error(f"Failed to clear incomplete credentials for user: {user_id}")
+            raise HTTPException(status_code=500, detail="Failed to clear incomplete credentials")
+            
+    except Exception as e:
+        logger.error(f"Error clearing incomplete credentials: {e}")
+        raise HTTPException(status_code=500, detail=f"Error clearing incomplete credentials: {str(e)}")
 
 @router.get("/health")
 async def gsc_health_check():

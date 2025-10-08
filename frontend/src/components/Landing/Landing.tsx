@@ -16,12 +16,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { keyframes } from '@mui/system';
-import { SignInButton } from '@clerk/clerk-react';
 import {
-  AutoAwesome,
-  Speed,
-  TrendingUp,
-  Security,
   Analytics,
   Psychology,
   AccessTime,
@@ -37,6 +32,36 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import HeroSection from './HeroSection';
+import { ScrambleText } from '../ScrambleText';
+
+// Scrambling text component for multiple phrases
+const ScramblingText: React.FC<{ phrases: string[]; interval?: number; duration?: number; delay?: number; style?: React.CSSProperties }> = ({ 
+  phrases, 
+  interval = 3000,
+  duration = 400,
+  delay = 200,
+  style = {}
+}) => {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % phrases.length);
+    }, interval);
+    return () => clearInterval(timer);
+  }, [phrases.length, interval]);
+
+  return (
+    <ScrambleText
+      text={phrases[currentIndex]}
+      duration={duration}
+      delay={delay}
+      restartInterval={interval}
+      as="span"
+      style={style}
+    />
+  );
+};
 
 // Lazy load components for better performance
 const FeatureShowcase = lazy(() => import('./FeatureShowcase'));
@@ -51,29 +76,6 @@ const Landing: React.FC = () => {
   usePerformanceMonitor('Landing');
 
   // Optimized Framer Motion variants for better performance
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 24 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { 
-        duration: 0.4, 
-        ease: "easeOut" as const,
-        // Use transform3d for hardware acceleration
-        transform: "translate3d(0,0,0)"
-      } 
-    },
-  };
-
-  const stagger = {
-    hidden: {},
-    visible: { 
-      transition: { 
-        staggerChildren: 0.08, // Reduced stagger time
-        delayChildren: 0.1 
-      } 
-    },
-  };
 
   // Cinematic lifecycle section animations
   const backgroundFade = {
@@ -206,49 +208,9 @@ const Landing: React.FC = () => {
   ];
 
 
-  const painPoints = [
-    {
-      icon: <AccessTime />,
-      title: 'Time Constraints',
-      description: 'Limited time for content creation and strategy development. Solopreneurs wear many hats and struggle to maintain consistent content output.'
-    },
-    {
-      icon: <TrendingDown />,
-      title: 'Lack of Expertise',
-      description: 'Not trained as content strategists, SEO experts, or data analysts. Missing the knowledge to create effective marketing campaigns.'
-    },
-    {
-      icon: <MonetizationOn />,
-      title: 'Resource Limitations',
-      description: 'Cannot afford full marketing teams or expensive enterprise tools. Need cost-effective solutions that deliver professional results.'
-    },
-    {
-      icon: <Analytics />,
-      title: 'Poor ROI Tracking',
-      description: 'Only 21% of marketers successfully track content ROI. Lack of data-driven insights to optimize marketing spend and strategy.'
-    },
-    {
-      icon: <Group />,
-      title: 'Manual Processes',
-      description: 'Overwhelmed by repetitive content creation tasks. Need automation to scale efforts without sacrificing quality.'
-    },
-    {
-      icon: <Psychology />,
-      title: 'Inconsistent Voice',
-      description: 'Struggle to maintain brand voice across platforms. Need personalized AI that understands your unique style and messaging.'
-    }
-  ];
 
 
 
-  // Glassmorphism styles
-  const glassPanelSx = {
-    background: `linear-gradient(135deg, ${alpha(theme.palette.common.white, 0.06)} 0%, ${alpha(theme.palette.common.white, 0.02)} 100%)`,
-    backdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: 4,
-    boxShadow: '0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)'
-  } as const;
 
   const glassCardSx = {
     background: `linear-gradient(135deg, ${alpha(theme.palette.common.white, 0.05)} 0%, ${alpha(theme.palette.common.white, 0.015)} 100%)`,
@@ -279,11 +241,6 @@ const Landing: React.FC = () => {
     }
   `;
 
-  // Slide in animation for lifecycle image
-  const slideIn = keyframes`
-    0% { opacity: 0; transform: scale(0.9) translateY(20px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
-  `;
 
   // Loading component for Suspense
   const LoadingSpinner = () => (
@@ -425,8 +382,15 @@ const Landing: React.FC = () => {
                   </Box>
                   {/* chips */}
                   <Grid container spacing={{ xs: 1, md: 2 }} justifyContent="space-between" alignItems="center">
-                    {['Plan','Generate','Publish','Analyze','Engage','Remarket'].map((label, idx) => (
-                      <Grid item key={label} xs={2} sx={{ display: 'flex', justifyContent: idx === 0 ? 'flex-start' : idx === 5 ? 'flex-end' : 'center' }}>
+                    {[
+                      { label: 'Plan', variations: ['Plan', 'Strategy', 'Research', 'Blueprint'] },
+                      { label: 'Generate', variations: ['Generate', 'Create', 'Produce', 'Craft'] },
+                      { label: 'Publish', variations: ['Publish', 'Launch', 'Deploy', 'Release'] },
+                      { label: 'Analyze', variations: ['Analyze', 'Measure', 'Track', 'Monitor'] },
+                      { label: 'Engage', variations: ['Engage', 'Interact', 'Connect', 'Respond'] },
+                      { label: 'Remarket', variations: ['Remarket', 'Repurpose', 'Recycle', 'Amplify'] }
+                    ].map((item, idx) => (
+                      <Grid item key={item.label} xs={2} sx={{ display: 'flex', justifyContent: idx === 0 ? 'flex-start' : idx === 5 ? 'flex-end' : 'center' }}>
                         <Chip 
                           label={
                             <Stack direction="row" spacing={0.5} alignItems="center">
@@ -440,16 +404,17 @@ const Landing: React.FC = () => {
                               >
                                 {idx+1}
                               </Typography>
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  fontWeight: 700, 
-                                  fontSize: { xs: '0.7rem', md: '0.8rem' },
+                              <ScramblingText
+                                phrases={item.variations}
+                                duration={400}
+                                delay={200}
+                                interval={3000}
+                                style={{
+                                  fontWeight: 700,
+                                  fontSize: '0.7rem',
                                   color: 'white'
                                 }}
-                              >
-                                {label}
-                              </Typography>
+                              />
                             </Stack>
                           }
                           size="medium"

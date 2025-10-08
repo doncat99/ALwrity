@@ -13,6 +13,7 @@ import LinkedInWriter from './components/LinkedInWriter/LinkedInWriter';
 import BlogWriter from './components/BlogWriter/BlogWriter';
 import WixTestPage from './components/WixTestPage/WixTestPage';
 import WixCallbackPage from './components/WixCallbackPage/WixCallbackPage';
+import WordPressCallbackPage from './components/WordPressCallbackPage/WordPressCallbackPage';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import GSCAuthCallback from './components/SEODashboard/components/GSCAuthCallback';
 import Landing from './components/Landing/Landing';
@@ -272,6 +273,7 @@ const App: React.FC = () => {
                 <Route path="/wix-test" element={<WixTestPage />} />
                 <Route path="/wix-test-direct" element={<WixTestPage />} />
                 <Route path="/wix/callback" element={<WixCallbackPage />} />
+                <Route path="/wp/callback" element={<WordPressCallbackPage />} />
                 <Route path="/gsc/callback" element={<GSCAuthCallback />} />
               </Routes>
             </ConditionalCopilotKit>
