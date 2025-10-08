@@ -3,64 +3,23 @@
 from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import os
-import time
-from collections import defaultdict
 from loguru import logger
 from dotenv import load_dotenv
 import asyncio
 from datetime import datetime
 from middleware.monitoring_middleware import monitoring_middleware
 
+# Import modular utilities
+from alwrity_utils import HealthChecker, RateLimiter, FrontendServing, RouterManager, OnboardingManager
+
 # Load environment variables
 load_dotenv()
 
-# Import the new enhanced functions
-from api.onboarding import (
-    health_check,
-    initialize_onboarding,  # NEW: Batch init endpoint
-    get_onboarding_status,
-    get_onboarding_progress_full,
-    get_step_data,
-    complete_step,
-    skip_step,
-    validate_step_access,
-    get_api_keys,
-    get_api_keys_for_onboarding,
-    save_api_key,
-    validate_api_keys,
-    start_onboarding,
-    complete_onboarding,
-    reset_onboarding,
-    get_resume_info,
-    get_onboarding_config,
-    get_provider_setup_info,
-    get_all_providers_info,
-    validate_provider_key,
-    get_enhanced_validation_status,
-    get_onboarding_summary,
-    get_website_analysis_data,
-    get_research_preferences_data,
-    save_business_info,
-    get_business_info,
-    get_business_info_by_user,
-    update_business_info,
-        # Persona generation endpoints
-        generate_writing_personas,
-        generate_writing_personas_async,
-        get_persona_task_status,
-        assess_persona_quality,
-        regenerate_persona,
-        get_persona_generation_options,
-        # New cache helpers
-        get_latest_persona,
-        save_persona_update,
-    StepCompletionRequest,
-    APIKeyRequest
-)
+# Import middleware
 from middleware.auth_middleware import get_current_user
 
 # Import component logic endpoints
@@ -138,554 +97,69 @@ app.add_middleware(
 # Temporarily disabled for Wix testing
 # app.middleware("http")(monitoring_middleware)
 
-# Simple rate limiting
-request_counts = defaultdict(list)
-RATE_LIMIT_WINDOW = 60  # 60 seconds
-RATE_LIMIT_MAX_REQUESTS = 200  # Increased for testing - calendar generation polling
+# Initialize modular utilities
+health_checker = HealthChecker()
+rate_limiter = RateLimiter(window_seconds=60, max_requests=200)
+frontend_serving = FrontendServing(app)
+router_manager = RouterManager(app)
+onboarding_manager = OnboardingManager(app)
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    """Simple rate limiting middleware with exemptions for streaming endpoints."""
-    try:
-        client_ip = request.client.host if request.client else "unknown"
-        current_time = time.time()
-        
-        # Exempt streaming endpoints and frequently called endpoints from rate limiting
-        path = request.url.path
-        if any(streaming_path in path for streaming_path in [
-            "/stream/strategies",
-            "/stream/strategic-intelligence", 
-            "/stream/keyword-research",
-            "/latest-strategy",  # Exempt latest strategy endpoint from rate limiting
-            "/ai-analytics",     # Exempt AI analytics endpoint from rate limiting
-            "/gap-analysis",     # Exempt gap analysis endpoint from rate limiting
-            "/calendar-events",  # Exempt calendar events endpoint from rate limiting
-            "/calendar-generation/progress",  # Exempt calendar generation progress from rate limiting
-            "/health"           # Exempt health check endpoints from rate limiting
-        ]):
-            # Allow streaming endpoints without rate limiting
-            response = await call_next(request)
-            return response
-        
-        # Clean old requests
-        request_counts[client_ip] = [req_time for req_time in request_counts[client_ip] 
-                                    if current_time - req_time < RATE_LIMIT_WINDOW]
-        
-        # Check rate limit
-        if len(request_counts[client_ip]) >= RATE_LIMIT_MAX_REQUESTS:
-            logger.warning(f"Rate limit exceeded for {client_ip}")
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "Too many requests", "retry_after": RATE_LIMIT_WINDOW},
-                headers={
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "*",
-                    "Access-Control-Allow-Headers": "*"
-                }
-            )
-        
-        # Add current request
-        request_counts[client_ip].append(current_time)
-        
-        response = await call_next(request)
-        return response
-        
-    except Exception as e:
-        logger.error(f"Error in rate limiting middleware: {e}")
-        # Continue without rate limiting if there's an error
-        response = await call_next(request)
-        return response
+    """Rate limiting middleware using modular utilities."""
+    return await rate_limiter.rate_limit_middleware(request, call_next)
 
-# Health check endpoint
+# Health check endpoints using modular utilities
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return health_check()
+    return health_checker.basic_health_check()
 
 @app.get("/health/database")
-async def database_health_check():
-    """Database health check endpoint including persona tables verification."""
-    try:
-        from services.database import get_db_session
-        from models.persona_models import WritingPersona, PlatformPersona, PersonaAnalysisResult, PersonaValidationResult
-        
-        session = get_db_session()
-        if not session:
-            return {"status": "error", "message": "Could not get database session"}
-        
-        # Test all persona tables
-        tables_status = {}
-        try:
-            session.query(WritingPersona).first()
-            tables_status["writing_personas"] = "ok"
-        except Exception as e:
-            tables_status["writing_personas"] = f"error: {str(e)}"
-        
-        try:
-            session.query(PlatformPersona).first()
-            tables_status["platform_personas"] = "ok"
-        except Exception as e:
-            tables_status["platform_personas"] = f"error: {str(e)}"
-        
-        try:
-            session.query(PersonaAnalysisResult).first()
-            tables_status["persona_analysis_results"] = "ok"
-        except Exception as e:
-            tables_status["persona_analysis_results"] = f"error: {str(e)}"
-        
-        try:
-            session.query(PersonaValidationResult).first()
-            tables_status["persona_validation_results"] = "ok"
-        except Exception as e:
-            tables_status["persona_validation_results"] = f"error: {str(e)}"
-        
-        session.close()
-        
-        # Check if all tables are ok
-        all_ok = all(status == "ok" for status in tables_status.values())
-        
-        return {
-            "status": "healthy" if all_ok else "warning",
-            "message": "Database connection successful" if all_ok else "Some persona tables may have issues",
-            "persona_tables": tables_status,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Database health check failed: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+async def database_health():
+    """Database health check endpoint."""
+    return health_checker.database_health_check()
 
-# Onboarding initialization - BATCH ENDPOINT (reduces 4 API calls to 1)
-@app.get("/api/onboarding/init")
-async def onboarding_init(current_user: dict = Depends(get_current_user)):
-    """
-    Batch initialization endpoint - combines user info, status, and progress.
-    This eliminates 3-4 separate API calls on initial load, reducing latency by 60-75%.
-    """
-    try:
-        return await initialize_onboarding(current_user)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in onboarding_init: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+@app.get("/health/comprehensive")
+async def comprehensive_health():
+    """Comprehensive health check endpoint."""
+    return health_checker.comprehensive_health_check()
 
-# Onboarding status endpoints
+# Rate limiting management endpoints
+@app.get("/api/rate-limit/status")
+async def rate_limit_status(request: Request):
+    """Get current rate limit status for the requesting client."""
+    client_ip = request.client.host if request.client else "unknown"
+    return rate_limiter.get_rate_limit_status(client_ip)
+
+@app.post("/api/rate-limit/reset")
+async def reset_rate_limit(request: Request, client_ip: Optional[str] = None):
+    """Reset rate limit for a specific client or all clients."""
+    if client_ip is None:
+        client_ip = request.client.host if request.client else "unknown"
+    return rate_limiter.reset_rate_limit(client_ip)
+
+# Frontend serving management endpoints
+@app.get("/api/frontend/status")
+async def frontend_status():
+    """Get frontend serving status."""
+    return frontend_serving.get_frontend_status()
+
+# Router management endpoints
+@app.get("/api/routers/status")
+async def router_status():
+    """Get router inclusion status."""
+    return router_manager.get_router_status()
+
+# Onboarding management endpoints
 @app.get("/api/onboarding/status")
-async def onboarding_status(current_user: dict = Depends(get_current_user)):
-    """Get the current onboarding status."""
-    try:
-        # Pass current_user explicitly to user-scoped handler
-        return await get_onboarding_status(current_user)
-    except HTTPException as he:
-        # Preserve HTTP error codes like 401 Unauthorized
-        raise he
-    except Exception as e:
-        logger.error(f"Error in onboarding_status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+async def onboarding_status():
+    """Get onboarding manager status."""
+    return onboarding_manager.get_onboarding_status()
 
-@app.get("/api/onboarding/progress")
-async def onboarding_progress(current_user: dict = Depends(get_current_user)):
-    """Get the full onboarding progress data."""
-    try:
-        return await get_onboarding_progress_full(current_user)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in onboarding_progress: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Step management endpoints
-@app.get("/api/onboarding/step/{step_number}")
-async def step_data(step_number: int, current_user: dict = Depends(get_current_user)):
-    """Get data for a specific step."""
-    try:
-        return await get_step_data(step_number, current_user)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in step_data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/step/{step_number}/complete")
-async def step_complete(step_number: int, request: StepCompletionRequest, current_user: dict = Depends(get_current_user)):
-    """Mark a step as completed."""
-    try:
-        return await complete_step(step_number, request, current_user)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in step_complete: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/step/{step_number}/skip")
-async def step_skip(step_number: int, current_user: dict = Depends(get_current_user)):
-    """Skip a step (for optional steps)."""
-    try:
-        return await skip_step(step_number, current_user)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in step_skip: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/step/{step_number}/validate")
-async def step_validate(step_number: int, current_user: dict = Depends(get_current_user)):
-    """Validate if user can access a specific step."""
-    try:
-        return await validate_step_access(step_number, current_user)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in step_validate: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# API key management endpoints
-@app.get("/api/onboarding/api-keys")
-async def api_keys():
-    """Get all configured API keys (masked)."""
-    try:
-        return await get_api_keys()
-    except Exception as e:
-        logger.error(f"Error in api_keys: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/api-keys/onboarding")
-async def api_keys_for_onboarding():
-    """Get all configured API keys for onboarding (unmasked)."""
-    try:
-        return await get_api_keys_for_onboarding()
-    except Exception as e:
-        logger.error(f"Error in api_keys_for_onboarding: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/api-keys")
-async def api_key_save(request: APIKeyRequest):
-    """Save an API key for a provider."""
-    try:
-        return await save_api_key(request)
-    except Exception as e:
-        logger.error(f"Error in api_key_save: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/api-keys/validate")
-async def api_key_validate():
-    """Validate all configured API keys."""
-    try:
-        return await validate_api_keys()
-    except Exception as e:
-        logger.error(f"Error in api_key_validate: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Onboarding control endpoints
-@app.post("/api/onboarding/start")
-async def onboarding_start(current_user: dict = Depends(get_current_user)):
-    """Start a new onboarding session."""
-    try:
-        return await start_onboarding(current_user)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in onboarding_start: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/complete")
-async def onboarding_complete(current_user: dict = Depends(get_current_user)):
-    """Complete the onboarding process."""
-    try:
-        return await complete_onboarding(current_user)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logger.error(f"Error in onboarding_complete: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/reset")
-async def onboarding_reset():
-    """Reset the onboarding progress."""
-    try:
-        return await reset_onboarding()
-    except Exception as e:
-        logger.error(f"Error in onboarding_reset: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Resume functionality
-@app.get("/api/onboarding/resume")
-async def onboarding_resume():
-    """Get information for resuming onboarding."""
-    try:
-        return await get_resume_info()
-    except Exception as e:
-        logger.error(f"Error in onboarding_resume: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Configuration endpoints
-@app.get("/api/onboarding/config")
-async def onboarding_config():
-    """Get onboarding configuration and requirements."""
-    try:
-        return get_onboarding_config()
-    except Exception as e:
-        logger.error(f"Error in onboarding_config: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Enhanced provider endpoints
-@app.get("/api/onboarding/providers/{provider}/setup")
-async def provider_setup_info(provider: str):
-    """Get setup information for a specific provider."""
-    try:
-        return await get_provider_setup_info(provider)
-    except Exception as e:
-        logger.error(f"Error in provider_setup_info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/providers")
-async def all_providers_info():
-    """Get setup information for all providers."""
-    try:
-        return await get_all_providers_info()
-    except Exception as e:
-        logger.error(f"Error in all_providers_info: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/providers/{provider}/validate")
-async def validate_provider_key_endpoint(provider: str, request: APIKeyRequest):
-    """Validate a specific provider's API key."""
-    try:
-        return await validate_provider_key(provider, request)
-    except Exception as e:
-        logger.error(f"Error in validate_provider_key: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/validation/enhanced")
-async def enhanced_validation_status():
-    """Get enhanced validation status for all configured services."""
-    try:
-        return await get_enhanced_validation_status()
-    except Exception as e:
-        logger.error(f"Error in enhanced_validation_status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# New endpoints for FinalStep data loading
-@app.get("/api/onboarding/summary")
-async def onboarding_summary(current_user: dict = Depends(get_current_user)):
-    """Get comprehensive onboarding summary for FinalStep."""
-    try:
-        return await get_onboarding_summary(current_user)
-    except Exception as e:
-        logger.error(f"Error in onboarding_summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/website-analysis")
-async def website_analysis_data(current_user: dict = Depends(get_current_user)):
-    """Get website analysis data for FinalStep."""
-    try:
-        return await get_website_analysis_data(current_user)
-    except Exception as e:
-        logger.error(f"Error in website_analysis_data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/research-preferences")
-async def research_preferences_data(current_user: dict = Depends(get_current_user)):
-    """Get research preferences data for FinalStep."""
-    try:
-        return await get_research_preferences_data(current_user)
-    except Exception as e:
-        logger.error(f"Error in research_preferences_data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Business Information endpoints
-@app.post("/api/onboarding/business-info")
-async def business_info_save(request: 'BusinessInfoRequest'):
-    """Save business information for users without websites."""
-    try:
-        from models.business_info_request import BusinessInfoRequest
-        return await save_business_info(request)
-    except Exception as e:
-        logger.error(f"Error in business_info_save: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/business-info/{business_info_id}")
-async def business_info_get(business_info_id: int):
-    """Get business information by ID."""
-    try:
-        return await get_business_info(business_info_id)
-    except Exception as e:
-        logger.error(f"Error in business_info_get: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/business-info/user/{user_id}")
-async def business_info_get_by_user(user_id: int):
-    """Get business information by user ID."""
-    try:
-        return await get_business_info_by_user(user_id)
-    except Exception as e:
-        logger.error(f"Error in business_info_get_by_user: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/onboarding/business-info/{business_info_id}")
-async def business_info_update(business_info_id: int, request: 'BusinessInfoRequest'):
-    """Update business information."""
-    try:
-        from models.business_info_request import BusinessInfoRequest
-        return await update_business_info(business_info_id, request)
-    except Exception as e:
-        logger.error(f"Error in business_info_update: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Persona generation endpoints
-@app.post("/api/onboarding/step4/generate-personas")
-async def generate_personas(request: dict, current_user: dict = Depends(get_current_user)):
-    """Generate AI writing personas for Step 4."""
-    try:
-        return await generate_writing_personas(request, current_user)
-    except Exception as e:
-        logger.error(f"Error in generate_personas: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/step4/generate-personas-async")
-async def generate_personas_async(request: dict, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
-    """Start async persona generation task."""
-    try:
-        return await generate_writing_personas_async(request, current_user, background_tasks)
-    except Exception as e:
-        logger.error(f"Error in generate_personas_async: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/step4/persona-task/{task_id}")
-async def get_persona_task(task_id: str):
-    """Get persona generation task status."""
-    try:
-        return await get_persona_task_status(task_id)
-    except Exception as e:
-        logger.error(f"Error in get_persona_task: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/step4/persona-latest")
-async def persona_latest(current_user: dict = Depends(get_current_user)):
-    """Get latest cached persona for current user."""
-    try:
-        return await get_latest_persona(current_user)
-    except HTTPException as he:
-        # Re-raise HTTP exceptions (like 404) as-is
-        raise he
-    except Exception as e:
-        logger.error(f"Error in persona_latest: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/step4/persona-save")
-async def persona_save(request: dict, current_user: dict = Depends(get_current_user)):
-    """Save edited persona back to cache."""
-    try:
-        return await save_persona_update(request, current_user)
-    except HTTPException as he:
-        # Re-raise HTTP exceptions as-is
-        raise he
-    except Exception as e:
-        logger.error(f"Error in persona_save: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/step4/assess-persona-quality")
-async def assess_persona_quality_endpoint(request: dict, current_user: dict = Depends(get_current_user)):
-    """Assess the quality of generated personas."""
-    try:
-        return await assess_persona_quality(request, current_user)
-    except Exception as e:
-        logger.error(f"Error in assess_persona_quality: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/onboarding/step4/regenerate-persona")
-async def regenerate_persona_endpoint(request: dict, current_user: dict = Depends(get_current_user)):
-    """Regenerate a specific persona with improvements."""
-    try:
-        return await regenerate_persona(request, current_user)
-    except Exception as e:
-        logger.error(f"Error in regenerate_persona: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/onboarding/step4/persona-options")
-async def get_persona_options(current_user: dict = Depends(get_current_user)):
-    """Get persona generation options and configurations."""
-    try:
-        return await get_persona_generation_options(current_user)
-    except Exception as e:
-        logger.error(f"Error in get_persona_options: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Include component logic router
-app.include_router(component_logic_router)
-
-# Include subscription and usage tracking router
-app.include_router(subscription_router)
-
-# Include GSC router
-from routers.gsc_auth import router as gsc_auth_router
-app.include_router(gsc_auth_router)
-
-# Include WordPress router
-from routers.wordpress_oauth import router as wordpress_oauth_router
-app.include_router(wordpress_oauth_router)
-
-# Include SEO tools router
-app.include_router(seo_tools_router)
-# Include Facebook Writer router
-app.include_router(facebook_router)
-# Include LinkedIn content generation router
-app.include_router(linkedin_router)
-# Include LinkedIn image generation router
-app.include_router(linkedin_image_router)
-app.include_router(brainstorm_router)
-
-# Include hallucination detector router
-app.include_router(hallucination_detector_router)
-app.include_router(writing_assistant_router)
-
-# Include user data router
-# Include content planning router
-app.include_router(content_planning_router)
-app.include_router(user_data_router)
-app.include_router(strategy_copilot_router)
-app.include_router(user_environment_router)
-
-# Include AI Blog Writer router
-try:
-    from api.blog_writer.router import router as blog_writer_router
-    app.include_router(blog_writer_router)
-except Exception as e:
-    logger.warning(f"AI Blog Writer router not mounted: {e}")
-
-# Include Wix Integration router
-try:
-    from api.wix_routes import router as wix_router
-    app.include_router(wix_router)
-except Exception as e:
-    logger.warning(f"Wix Integration router not mounted: {e}")
-
-# Include Blog Writer SEO Analysis router (comprehensive SEO analysis)
-try:
-    from api.blog_writer.seo_analysis import router as blog_seo_analysis_router
-    app.include_router(blog_seo_analysis_router)
-except Exception as e:
-    logger.warning(f"Blog Writer SEO Analysis router not mounted: {e}")
-
-# Include persona router
-from api.persona_routes import router as persona_router
-app.include_router(persona_router)
-
-# Include Stability AI routers
-from routers.stability import router as stability_router
-from routers.stability_advanced import router as stability_advanced_router
-from routers.stability_admin import router as stability_admin_router
-app.include_router(stability_router)
-app.include_router(stability_advanced_router)
-app.include_router(stability_admin_router)
-
-# Step 3 Research router
-from api.onboarding_utils.step3_routes import router as step3_research_router
-app.include_router(step3_research_router)
+# Include routers using modular utilities
+router_manager.include_core_routers()
+router_manager.include_optional_routers()
 
 # SEO Dashboard endpoints
 @app.get("/api/seo-dashboard/data")
@@ -744,33 +218,14 @@ async def batch_analyze_urls_endpoint(urls: list[str]):
     """Analyze multiple URLs in batch."""
     return await batch_analyze_urls(urls)
 
+# Setup frontend serving using modular utilities
+frontend_serving.setup_frontend_serving()
+
 # Serve React frontend (for production)
 @app.get("/")
 async def serve_frontend():
     """Serve the React frontend."""
-    # Check if frontend build exists
-    frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
-    index_html = os.path.join(frontend_path, "index.html")
-    
-    if os.path.exists(index_html):
-        return FileResponse(index_html)
-    else:
-        return {
-            "message": "Frontend not built. Please run 'npm run build' in the frontend directory.",
-            "api_docs": "/api/docs"
-        }
-
-# Mount static files for React app (only if directory exists)
-try:
-    frontend_build_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "build")
-    static_path = os.path.join(frontend_build_path, "static")
-    if os.path.exists(static_path):
-        app.mount("/static", StaticFiles(directory=static_path), name="static")
-        logger.info("Frontend static files mounted successfully")
-    else:
-        logger.info("Frontend build directory not found. Static files not mounted.")
-except Exception as e:
-    logger.info(f"Could not mount static files: {e}")
+    return frontend_serving.serve_frontend()
 
 # Startup event
 @app.on_event("startup")

@@ -33,7 +33,7 @@ from middleware.logging_middleware import log_api_call, save_to_file
 router = APIRouter(prefix="/api/seo", tags=["AI SEO Tools"])
 
 # Configuration for intelligent logging
-LOG_DIR = "/workspace/backend/logs/seo_tools"
+LOG_DIR = "logs/seo_tools"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Request/Response Models

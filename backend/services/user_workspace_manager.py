@@ -18,13 +18,31 @@ class UserWorkspaceManager:
     
     def __init__(self, db_session: Session):
         self.db = db_session
-        self.base_workspace_dir = Path("lib/workspace")
-        self.user_workspaces_dir = self.base_workspace_dir / "users"
+        # Use environment-safe paths for production
+        if os.getenv("RENDER") or os.getenv("RAILWAY") or os.getenv("HEROKU"):
+            # In production, use temp directories or skip file operations
+            self.base_workspace_dir = Path("/tmp/alwrity_workspace")
+            self.user_workspaces_dir = self.base_workspace_dir / "users"
+        else:
+            # In development, use local directories
+            self.base_workspace_dir = Path("lib/workspace")
+            self.user_workspaces_dir = self.base_workspace_dir / "users"
         
     def create_user_workspace(self, user_id: str) -> Dict[str, Any]:
         """Create a complete user workspace with progressive setup."""
         try:
             logger.info(f"Creating workspace for user {user_id}")
+            
+            # Check if we're in production and skip file operations if needed
+            if os.getenv("RENDER") or os.getenv("RAILWAY") or os.getenv("HEROKU"):
+                logger.info("Production environment detected - skipping file workspace creation")
+                return {
+                    "user_id": user_id,
+                    "workspace_path": "/tmp/alwrity_workspace/users/user_" + user_id,
+                    "config": self._create_user_config(user_id),
+                    "created_at": datetime.utcnow().isoformat(),
+                    "production_mode": True
+                }
             
             # Create user-specific directories
             user_dir = self.user_workspaces_dir / f"user_{user_id}"

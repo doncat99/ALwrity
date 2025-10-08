@@ -17,7 +17,7 @@ import os
 import time
 
 # Logging configuration
-LOG_BASE_DIR = "/workspace/backend/logs"
+LOG_BASE_DIR = "logs"
 os.makedirs(LOG_BASE_DIR, exist_ok=True)
 
 # Ensure subdirectories exist

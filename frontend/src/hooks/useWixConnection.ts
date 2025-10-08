@@ -42,53 +42,18 @@ export const useWixConnection = () => {
       if (connectedFlag && tokensRaw) {
         const tokens = JSON.parse(tokensRaw);
         
-        // Try to get actual site information from Wix API
-        try {
-          const { createClient, OAuthStrategy } = await import('@wix/sdk');
-          const wixClient = createClient({ 
-            auth: OAuthStrategy({ clientId: '75d88e36-1c76-4009-b769-15f4654556df' }) 
-          });
-          wixClient.auth.setTokens(tokens);
-          
-          // Get member info to extract site URL
-          const memberInfo = await wixClient.auth.getMemberInfo();
-          console.log('Wix member info:', memberInfo);
-          
-          // Try to extract site URL from member info or use a default
-          let siteUrl = 'Connected Wix Site';
-          if (memberInfo?.member?.email) {
-            // Extract domain from email or use email as identifier
-            const email = memberInfo.member.email;
-            const domain = email.split('@')[1];
-            siteUrl = `https://${domain}`;
-          }
-          
-          setStatus({
-            connected: true,
-            sites: [{ 
-              id: 'wix-site-1', 
-              blog_url: siteUrl, 
-              blog_id: 'wix-blog', 
-              created_at: new Date().toISOString(), 
-              scope: 'BLOG.CREATE-DRAFT,BLOG.PUBLISH,MEDIA.MANAGE' 
-            }],
-            total_sites: 1
-          });
-        } catch (apiError) {
-          console.log('Wix API error, using fallback:', apiError);
-          // Fallback if API call fails
-          setStatus({
-            connected: true,
-            sites: [{ 
-              id: 'wix-site-1', 
-              blog_url: 'Connected Wix Site', 
-              blog_id: 'wix-blog', 
-              created_at: new Date().toISOString(), 
-              scope: 'BLOG.CREATE-DRAFT,BLOG.PUBLISH,MEDIA.MANAGE' 
-            }],
-            total_sites: 1
-          });
-        }
+        // Set connected status with site information from tokens
+        setStatus({
+          connected: true,
+          sites: [{ 
+            id: 'wix-site-1', 
+            blog_url: 'Connected Wix Site', 
+            blog_id: 'wix-blog', 
+            created_at: new Date().toISOString(), 
+            scope: 'BLOG.CREATE-DRAFT,BLOG.PUBLISH,MEDIA.MANAGE' 
+          }],
+          total_sites: 1
+        });
         
         console.log('Wix status checked: connected via sessionStorage');
       } else {
