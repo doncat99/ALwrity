@@ -86,6 +86,7 @@ app.add_middleware(
         "http://localhost:3000",  # React dev server
         "http://localhost:8000",  # Backend dev server
         "http://localhost:3001",  # Alternative React port
+        "https://alwrity-ai.vercel.app",
         "https://littery-sonny-unscrutinisingly.ngrok-free.dev",  # ngrok frontend
     ],
     allow_credentials=True,
