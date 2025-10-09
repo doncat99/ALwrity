@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/clerk-react';
 import { getApiKeysForOnboarding, getStep1ApiKeysFromProgress, saveApiKey } from '../../../../api/onboarding';
 import { getKeyStatus, formatErrorMessage } from '../../common/onboardingUtils';
 import { Provider } from './ProviderCard';
+import { apiClient } from '../../../../api/client';
 
 export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
   const { getToken } = useAuth();
@@ -20,6 +21,8 @@ export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
   const [benefitsModalOpen, setBenefitsModalOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [keysLoaded, setKeysLoaded] = useState(false);
+  const [currentProviderIndex, setCurrentProviderIndex] = useState(0);
+  const [showCompletionToast, setShowCompletionToast] = useState(false);
 
   const loadExistingKeys = useCallback(async () => {
     try {
@@ -131,34 +134,22 @@ export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
 
       // Complete step 1 with the API keys data
       console.log('ApiKeyStep: Attempting to complete step 1 with data:', stepData);
-      let response;
       try {
-        response = await fetch('/api/onboarding/step/1/complete', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await getToken()}`
-          },
-          body: JSON.stringify({ data: stepData })
-        });
-        console.log('ApiKeyStep: Step completion response status:', response.status);
+        const response = await apiClient.post('/api/onboarding/step/1/complete', { data: stepData });
+        console.log('ApiKeyStep: Step completion response:', response.data);
       } catch (fetchError: any) {
-        console.error('Network error completing step:', fetchError);
-        setError('Network error. Please check your connection and try again.');
-        setLoading(false);
-        return;
-      }
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to complete step';
-        try {
-          const errorData = await response.json();
-          console.log('ApiKeyStep: Error response data:', errorData);
-          errorMessage = errorData.detail || errorMessage;
-        } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
-          errorMessage = `Server error (${response.status}). Please try again.`;
+        console.error('Error completing step:', fetchError);
+        let errorMessage = 'Failed to complete step. Please try again.';
+        
+        if (fetchError.response) {
+          // Server responded with an error
+          console.log('ApiKeyStep: Error response data:', fetchError.response.data);
+          errorMessage = fetchError.response.data?.detail || errorMessage;
+        } else if (fetchError.request) {
+          // Request made but no response
+          errorMessage = 'Network error. Please check your connection and try again.';
         }
+        
         console.log('ApiKeyStep: Setting error message:', errorMessage);
         setError(errorMessage);
         setLoading(false);
@@ -228,6 +219,31 @@ export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
   // All three keys are required
   const isValid = geminiKey.trim() && exaKey.trim() && copilotkitKey.trim();
 
+  // Auto-scroll to next provider when current one is valid
+  useEffect(() => {
+    if (currentProviderIndex < 2) {
+      const currentKey = currentProviderIndex === 0 ? geminiKey : 
+                       currentProviderIndex === 1 ? exaKey : copilotkitKey;
+      
+      if (currentKey.trim() && getKeyStatus(currentKey, currentProviderIndex === 0 ? 'gemini' : 
+                                          currentProviderIndex === 1 ? 'exa' : 'copilotkit') === 'valid') {
+        // Auto-scroll to next provider after a short delay
+        setTimeout(() => {
+          setCurrentProviderIndex(prev => prev + 1);
+        }, 1000);
+      }
+    }
+  }, [geminiKey, exaKey, copilotkitKey, currentProviderIndex]);
+
+  // Show completion toast when all keys are valid
+  useEffect(() => {
+    if (isValid && keysLoaded) {
+      setShowCompletionToast(true);
+      // Auto-hide toast after 5 seconds
+      setTimeout(() => setShowCompletionToast(false), 5000);
+    }
+  }, [isValid, keysLoaded]);
+
   const handleBenefitsClick = (provider: Provider) => {
     setSelectedProvider(provider);
     setBenefitsModalOpen(true);
@@ -260,6 +276,10 @@ export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
     keysLoaded,
     providers,
     isValid,
+    currentProviderIndex,
+    setCurrentProviderIndex,
+    showCompletionToast,
+    setShowCompletionToast,
 
     // Actions
     setShowHelp,

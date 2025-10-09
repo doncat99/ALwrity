@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCopilotAction } from '@copilotkit/react-core';
 import DiffPreview from './DiffPreview';
+import { apiClient } from '../../api/client';
 
 interface HallucinationCheckerProps {
   buildFullMarkdown: () => string;
@@ -27,12 +28,8 @@ export const HallucinationChecker: React.FC<HallucinationCheckerProps> = ({
     parameters: [],
     handler: async () => {
       const content = buildFullMarkdown();
-      const res = await fetch('/api/blog/quality/hallucination-check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content })
-      });
-      const data = await res.json();
+      const res = await apiClient.post('/api/blog/quality/hallucination-check', { text: content });
+      const data = res.data;
       setHallucinationResult(data);
       return { success: true, total_claims: data?.total_claims };
     },

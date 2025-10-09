@@ -6,6 +6,7 @@ import {
   Fade,
   Container,
   Grid,
+  Snackbar,
 } from '@mui/material';
 import { Lock } from '@mui/icons-material';
 import OnboardingButton from './common/OnboardingButton';
@@ -23,7 +24,6 @@ interface ApiKeyStepProps {
 }
 
 const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent }) => {
-  const [currentProvider, setCurrentProvider] = useState(0);
   const [focusedProvider, setFocusedProvider] = useState<any>(null);
   
   const {
@@ -36,6 +36,10 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
     selectedProvider,
     providers,
     isValid,
+    currentProviderIndex,
+    setCurrentProviderIndex,
+    showCompletionToast,
+    setShowCompletionToast,
     setShowHelp,
     handleContinue,
     handleBenefitsClick,
@@ -55,13 +59,14 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
     
     // Set initial focused provider
     if (providers.length > 0) {
-      setFocusedProvider(providers[currentProvider] ?? providers[0]);
+      setFocusedProvider(providers[currentProviderIndex] ?? providers[0]);
     }
-  }, [updateHeaderContent, providers, currentProvider]);
+  }, [updateHeaderContent, providers, currentProviderIndex]);
 
   return (
-    <Fade in={true} timeout={500}>
-      <Container maxWidth="lg" sx={{ py: 2 }}>
+    <>
+      <Fade in={true} timeout={500}>
+        <Container maxWidth="lg" sx={{ py: 2 }}>
         <form onSubmit={(e) => { e.preventDefault(); handleContinue(); }}>
           {/* Main Content Layout */}
           <Grid container spacing={4} sx={{ mb: 4 }}>
@@ -69,8 +74,8 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
             <Grid item xs={12} lg={8}>
               <ApiKeyCarousel
                 providers={providers}
-                currentProvider={currentProvider}
-                setCurrentProvider={setCurrentProvider}
+                currentProvider={currentProviderIndex}
+                setCurrentProvider={setCurrentProviderIndex}
                 onProviderFocus={handleProviderFocus}
               />
             </Grid>
@@ -80,7 +85,7 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
               <ApiKeySidebar
                 currentProvider={focusedProvider}
                 allProviders={providers}
-                currentStep={currentProvider + 1}
+                currentStep={currentProviderIndex + 1}
                 totalSteps={providers.length}
               />
               </Grid>
@@ -169,7 +174,7 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
                 }
               }}
             >
-              {isValid ? 'Continue to Website Analysis' : 'Complete All Required API Keys'}
+              {isValid ? 'Continue' : 'Complete All Required API Keys'}
             </OnboardingButton>
         </Box>
 
@@ -197,8 +202,42 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
           </Typography>
         </Box>
         </form>
-      </Container>
-    </Fade>
+        </Container>
+      </Fade>
+
+      {/* Completion Toast */}
+      <Snackbar
+        open={showCompletionToast}
+        autoHideDuration={5000}
+        onClose={() => setShowCompletionToast(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            color: 'white',
+            fontWeight: 600,
+            fontSize: '1rem',
+            borderRadius: '12px',
+            boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)',
+          },
+        }}
+      >
+        <Alert 
+          onClose={() => setShowCompletionToast(false)} 
+          severity="success"
+          sx={{ 
+            width: '100%',
+            background: 'transparent',
+            color: 'white',
+            '& .MuiAlert-icon': {
+              color: 'white',
+            },
+          }}
+        >
+          🎉 All API keys configured! Click Continue to proceed to Website Analysis.
+        </Alert>
+      </Snackbar>
+    </>
   );
 };
 

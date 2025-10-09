@@ -25,6 +25,7 @@ import {
   CardHeader,
   Avatar
 } from '@mui/material';
+import { apiClient } from '../../../api/client';
 import {
   CheckCircle as HealthyIcon,
   Warning as WarningIcon,
@@ -104,12 +105,8 @@ const SystemStatusIndicator: React.FC<SystemStatusIndicatorProps> = ({ className
     setError(null);
     
     try {
-      const response = await fetch('/api/content-planning/monitoring/lightweight-stats');
-      if (!response.ok) {
-        throw new Error('Failed to fetch system status');
-      }
-      
-      const result = await response.json();
+      const response = await apiClient.get('/api/content-planning/monitoring/lightweight-stats');
+      const result = response.data;
       if (result.status === 'success') {
         setStatusData(result.data);
       } else {
@@ -132,25 +129,23 @@ const SystemStatusIndicator: React.FC<SystemStatusIndicatorProps> = ({ className
 
   const fetchDetailedStats = async () => {
     try {
-      const response = await fetch('/api/content-planning/monitoring/api-stats');
-      if (response.ok) {
-        const result = await response.json();
-        if (result.status === 'success') {
-          setDetailedStats(result.data);
-          if (result.data?.cache_performance) {
-            setCachePerf(result.data.cache_performance);
-          }
-          
-          // Generate chart data
-          const chartData = result.data.top_endpoints.slice(0, 5).map((endpoint: any, index: number) => ({
-            name: endpoint.endpoint.split(' ')[1].split('/').pop() || 'API',
-            requests: endpoint.count,
-            avgTime: endpoint.avg_time,
-            errors: endpoint.errors,
-            hitRate: endpoint.cache_hit_rate
-          }));
-          setChartData(chartData);
+      const response = await apiClient.get('/api/content-planning/monitoring/api-stats');
+      const result = response.data;
+      if (result.status === 'success') {
+        setDetailedStats(result.data);
+        if (result.data?.cache_performance) {
+          setCachePerf(result.data.cache_performance);
         }
+        
+        // Generate chart data
+        const chartData = result.data.top_endpoints.slice(0, 5).map((endpoint: any, index: number) => ({
+          name: endpoint.endpoint.split(' ')[1].split('/').pop() || 'API',
+          requests: endpoint.count,
+          avgTime: endpoint.avg_time,
+          errors: endpoint.errors,
+          hitRate: endpoint.cache_hit_rate
+        }));
+        setChartData(chartData);
       }
     } catch (err) {
       console.error('Error fetching detailed stats:', err);

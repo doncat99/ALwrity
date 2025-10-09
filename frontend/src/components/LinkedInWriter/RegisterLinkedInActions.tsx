@@ -9,6 +9,7 @@ import {
   readPrefs
 } from './utils/linkedInWriterUtils';
 import { PostHITL, ArticleHITL, CarouselHITL, VideoScriptHITL, CommentResponseHITL } from './components';
+import { apiClient } from '../../api/client';
 
 const useCopilotActionTyped = useCopilotAction as any;
 
@@ -25,22 +26,14 @@ const RegisterLinkedInActions: React.FC = () => {
     ],
     handler: async (args: any) => {
       try {
-        const response = await fetch('/api/linkedin/generate-image-prompts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content_type: args.content_type,
-            topic: args.topic,
-            industry: args.industry,
-            content: args.content
-          })
+        const response = await apiClient.post('/api/linkedin/generate-image-prompts', {
+          content_type: args.content_type,
+          topic: args.topic,
+          industry: args.industry,
+          content: args.content
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to generate image prompts: ${response.status}`);
-        }
-
-        const result = await response.json();
+        const result = response.data;
         return { 
           success: true, 
           prompts: result,
@@ -66,21 +59,13 @@ const RegisterLinkedInActions: React.FC = () => {
     ],
     handler: async (args: any) => {
       try {
-        const response = await fetch('/api/linkedin/generate-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: args.prompt,
-            content_context: args.content_context,
-            aspect_ratio: args.aspect_ratio || '1:1'
-          })
+        const response = await apiClient.post('/api/linkedin/generate-image', {
+          prompt: args.prompt,
+          content_context: args.content_context,
+          aspect_ratio: args.aspect_ratio || '1:1'
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to generate image: ${response.status}`);
-        }
-
-        const result = await response.json();
+        const result = response.data;
         if (result.success) {
           return { 
             success: true, 

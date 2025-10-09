@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, CircularProgress, Typography, Alert } from '@mui/material';
 import { createClient, OAuthStrategy } from '@wix/sdk';
+import { apiClient } from '../../api/client';
 
 const WixCallbackPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
@@ -14,22 +15,37 @@ const WixCallbackPage: React.FC = () => {
           setError(`${error}: ${errorDescription || ''}`);
           return;
         }
+        // Recover oauthData via multiple fallbacks
+        let oauthData: any | null = null;
         const saved = sessionStorage.getItem('wix_oauth_data') || localStorage.getItem('wix_oauth_data');
-        if (!saved) {
+        if (saved) {
+          try { oauthData = JSON.parse(saved); } catch {}
+        }
+        if (!oauthData && state) {
+          const byState = sessionStorage.getItem(`wix_oauth_data_${state}`);
+          if (byState) {
+            try { oauthData = JSON.parse(byState); } catch {}
+          }
+        }
+        if (!oauthData && typeof window.name === 'string' && window.name.startsWith('WIX_OAUTH::')) {
+          try { oauthData = JSON.parse(atob(window.name.replace('WIX_OAUTH::',''))); } catch {}
+        }
+        if (!oauthData) {
           setError('Missing OAuth state. Please start the connection again.');
           return;
         }
-        const oauthData = JSON.parse(saved);
         // Use the originally generated state to avoid SDK "Invalid _state" errors
         const tokens = await wixClient.auth.getMemberTokens(code, state, oauthData);
         wixClient.auth.setTokens(tokens);
         // Persist tokens for subsequent API calls on this tab
         try { sessionStorage.setItem('wix_tokens', JSON.stringify(tokens)); } catch {}
         // optional: ping backend to mark connected
-        try { await fetch('/api/wix/test/connection/status'); } catch {}
+        try { await apiClient.get('/api/wix/test/connection/status'); } catch {}
         // Cleanup saved oauth data
         sessionStorage.removeItem('wix_oauth_data');
+        sessionStorage.removeItem(`wix_oauth_data_${state}`);
         localStorage.removeItem('wix_oauth_data');
+        try { (window as any).name = ''; } catch {}
         // Mark frontend session as connected for onboarding UI
         sessionStorage.setItem('wix_connected', 'true');
         // Notify opener (if opened as popup) and close; otherwise fallback to redirect

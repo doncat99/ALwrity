@@ -5,6 +5,8 @@
  * Integrates with external services like Sentry, LogRocket, etc.
  */
 
+import { apiClient } from '../api/client';
+
 export interface ErrorReport {
   error: Error | string;
   context?: string;
@@ -67,22 +69,16 @@ const sendToBackend = async (report: ErrorReport): Promise<void> => {
   try {
     // Only send in production or if explicitly enabled
     if (process.env.NODE_ENV === 'production' || process.env.REACT_APP_ENABLE_ERROR_REPORTING === 'true') {
-      await fetch('/api/log-error', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          error_message: report.error instanceof Error ? report.error.message : report.error,
-          error_stack: report.error instanceof Error ? report.error.stack : undefined,
-          context: report.context,
-          user_id: report.userId,
-          metadata: report.metadata,
-          severity: report.severity,
-          timestamp: report.timestamp,
-          user_agent: navigator.userAgent,
-          url: window.location.href,
-        }),
+      await apiClient.post('/api/log-error', {
+        error_message: report.error instanceof Error ? report.error.message : report.error,
+        error_stack: report.error instanceof Error ? report.error.stack : undefined,
+        context: report.context,
+        user_id: report.userId,
+        metadata: report.metadata,
+        severity: report.severity,
+        timestamp: report.timestamp,
+        user_agent: navigator.userAgent,
+        url: window.location.href,
       });
     }
   } catch (e) {

@@ -27,6 +27,7 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material';
+import { apiClient } from '../../api/client';
 import { 
   CheckCircle, 
   Cancel, 
@@ -187,23 +188,13 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
       }
 
       // Make API call to analyze blog content
-      const response = await fetch('/api/blog-writer/seo/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          blog_content: blogContent,
-          blog_title: blogTitle,
-          research_data: researchData
-        })
+      const response = await apiClient.post('/api/blog-writer/seo/analyze', {
+        blog_content: blogContent,
+        blog_title: blogTitle,
+        research_data: researchData
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to analyze blog content');
-      }
-
-      const result = await response.json();
+      const result = response.data;
       console.log('🔍 Backend SEO Analysis Response:', result);
       
       // Convert API response to frontend format - fail fast if data is missing

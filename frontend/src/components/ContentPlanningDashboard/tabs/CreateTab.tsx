@@ -16,6 +16,7 @@ import { useLocation } from 'react-router-dom';
 import ContentStrategyBuilder from '../components/ContentStrategyBuilder';
 import CalendarGenerationWizard from '../components/CalendarGenerationWizard';
 import { CalendarGenerationModal } from '../components/CalendarGenerationModal';
+import { apiClient } from '../../../api/client';
 
 // Import hooks and services
 import { useStrategyCalendarContext } from '../../../contexts/StrategyCalendarContext';
@@ -130,39 +131,26 @@ const CreateTab: React.FC = () => {
       
       while (retryCount < maxRetries) {
         try {
-          startResponse = await fetch('/api/content-planning/calendar-generation/start', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData),
-          });
-          
-          if (startResponse.ok) {
-            break; // Success, exit retry loop
-          } else {
-            console.warn(`⚠️ Attempt ${retryCount + 1} failed with status: ${startResponse.status}`);
-            retryCount++;
-            if (retryCount < maxRetries) {
-              // Wait before retry (exponential backoff)
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-            }
-          }
-        } catch (error) {
+          const response = await apiClient.post('/api/content-planning/calendar-generation/start', requestData);
+          startResponse = { ok: true, data: response.data };
+          break; // Success, exit retry loop
+        } catch (error: any) {
           console.warn(`⚠️ Attempt ${retryCount + 1} failed with error:`, error);
           retryCount++;
           if (retryCount < maxRetries) {
             // Wait before retry (exponential backoff)
             await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          } else {
+            startResponse = { ok: false, data: null };
           }
         }
       }
       
       if (!startResponse || !startResponse.ok) {
-        throw new Error(`Failed to start calendar generation after ${maxRetries} attempts: ${startResponse?.statusText || 'Network error'}`);
+        throw new Error(`Failed to start calendar generation after ${maxRetries} attempts`);
       }
       
-      const startData = await startResponse.json();
+      const startData = startResponse.data;
       const sessionId = startData.session_id;
       
       console.log('🎯 Backend response received, session ID:', sessionId);

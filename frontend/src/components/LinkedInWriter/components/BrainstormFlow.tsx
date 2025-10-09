@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { usePlatformPersonaContext } from '../../shared/PersonaContext/PlatformPersonaProvider';
+import { apiClient } from '../../../api/client';
 
 // Define the cache data type
 interface BrainstormCacheData {
@@ -201,33 +202,22 @@ const BrainstormFlow: React.FC<BrainstormFlowProps> = ({
         // First: run grounded search for the seed prompt
         let results: any[] = [];
         try {
-          const sr = await fetch('/api/brainstorm/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: finalSeed })
-          });
-          if (sr.ok) {
-            const data = await sr.json();
-            results = data?.results || [];
-          }
+          const sr = await apiClient.post('/api/brainstorm/search', { prompt: finalSeed });
+          results = sr.data?.results || [];
         } catch {}
         setSearchResults(results);
 
         // Then: request persona-aware brainstorm ideas using the search results
         try {
-          const ir = await fetch('/api/brainstorm/ideas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              seed: finalSeed,
-              persona: corePersona || null,
-              platformPersona: platformPersona || null,
-              results,
-              count: 5
-            })
+          const ir = await apiClient.post('/api/brainstorm/ideas', {
+            seed: finalSeed,
+            persona: corePersona || null,
+            platformPersona: platformPersona || null,
+            results,
+            count: 5
           });
-          if (ir.ok) {
-            const data = await ir.json();
+          if (ir.data) {
+            const data = ir.data;
             const list = Array.isArray(data?.ideas) ? data.ideas : [];
             setIdeas(list);
             setAiSearchPrompts(list.map((x: any) => x.prompt));
@@ -477,19 +467,9 @@ const BrainstormFlow: React.FC<BrainstormFlowProps> = ({
                       onClick={async () => {
                         // Use existing Google grounding flow via backend LinkedInService
                         try {
-                          const resp = await fetch('/api/brainstorm/search', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ prompt: selectedPrompt })
-                          });
-                          if (resp.ok) {
-                            const data = await resp.json();
-                            setSearchResults(data?.results || []);
-                            setBrainstormStage('results');
-                          } else {
-                            setSearchResults([]);
-                            setBrainstormStage('results');
-                          }
+                          const resp = await apiClient.post('/api/brainstorm/search', { prompt: selectedPrompt });
+                          setSearchResults(resp.data?.results || []);
+                          setBrainstormStage('results');
                         } catch {
                           setSearchResults([]);
                           setBrainstormStage('results');

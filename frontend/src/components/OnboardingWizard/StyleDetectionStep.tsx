@@ -17,6 +17,7 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material';
+import { apiClient } from '../../api/client';
 import {
   ExpandMore as ExpandMoreIcon,
   ContentCopy as CopyIcon,
@@ -93,21 +94,13 @@ const StyleDetectionStep: React.FC<StyleDetectionStepProps> = ({ onContinue }) =
         include_guidelines: true
       };
 
-      const response = await fetch('/api/onboarding/style-detection/complete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      });
+      const response = await apiClient.post('/api/onboarding/style-detection/complete', requestData);
 
-      const result = await response.json();
-
-      if (result.success) {
-        setAnalysis(result.style_analysis);
+      if (response.data.success) {
+        setAnalysis(response.data.style_analysis);
         setSuccess('Style analysis completed successfully!');
       } else {
-        setError(result.error || 'Analysis failed');
+        setError(response.data.error || 'Analysis failed');
       }
     } catch (err) {
       setError('Failed to analyze content. Please try again.');

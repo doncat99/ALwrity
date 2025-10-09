@@ -10,7 +10,8 @@ export const setAuthTokenGetter = (getter: () => Promise<string | null>) => {
 // Get API URL from environment variables
 const getApiUrl = () => {
   if (process.env.NODE_ENV === 'production') {
-    return process.env.REACT_APP_API_URL || 'https://your-backend-url.railway.app';
+    // In production, use the environment variable or fallback
+    return process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL;
   }
   return ''; // Use proxy in development
 };

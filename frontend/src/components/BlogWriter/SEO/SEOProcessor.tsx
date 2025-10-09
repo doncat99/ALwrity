@@ -1,6 +1,7 @@
 import React from 'react';
 import { useCopilotAction } from '@copilotkit/react-core';
 import { blogWriterApi, BlogSEOMetadataResponse } from '../../../services/blogWriterApi';
+import { apiClient } from '../../../api/client';
 
 interface SEOProcessorProps {
   buildFullMarkdown: () => string;
@@ -50,22 +51,12 @@ export const SEOProcessor: React.FC<SEOProcessorProps> = ({
       if (!current) return { success: false, message: 'No content yet for this section' };
       
       // Use comprehensive SEO analysis endpoint
-      const response = await fetch('/api/blog-writer/seo/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: current,
-          keywords: []
-        })
+      const response = await apiClient.post('/api/blog-writer/seo/analyze', {
+        content: current,
+        keywords: []
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to analyze blog content');
-      }
-      
-      const res = await response.json();
+      const res = response.data;
       onSEOAnalysis(res);
       return { success: true, message: 'Analysis ready' };
     },

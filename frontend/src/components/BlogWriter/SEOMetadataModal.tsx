@@ -44,6 +44,7 @@ import {
   Tag as TagIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
+import { apiClient } from '../../api/client';
 
 // Import metadata display components
 import { CoreMetadataTab } from './SEO/MetadataDisplay/CoreMetadataTab';
@@ -113,23 +114,13 @@ export const SEOMetadataModal: React.FC<SEOMetadataModalProps> = ({
       console.log('🚀 Starting SEO metadata generation...');
 
       // Make API call to generate metadata
-      const response = await fetch('/api/blog/seo/metadata', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: blogContent,
-          title: blogTitle,
-          research_data: researchData
-        })
+      const response = await apiClient.post('/api/blog/seo/metadata', {
+        content: blogContent,
+        title: blogTitle,
+        research_data: researchData
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
       console.log('✅ SEO metadata generation response:', result);
 
       if (!result.success) {

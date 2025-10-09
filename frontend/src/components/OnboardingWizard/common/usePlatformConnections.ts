@@ -63,8 +63,13 @@ export const usePlatformConnections = () => {
       const redirectUri = `${redirectOrigin}/wix/callback`;
       const oauthData = await wixClient.auth.generateOAuthData(redirectUri);
       
-      // Use sessionStorage to ensure data is scoped to this tab/session (like WixTestPage)
-      sessionStorage.setItem('wix_oauth_data', JSON.stringify(oauthData));
+      // Persist OAuth data robustly so callback can always recover it
+      // 1) SessionStorage for same-origin same-tab flows
+      try { sessionStorage.setItem('wix_oauth_data', JSON.stringify(oauthData)); } catch {}
+      // 2) Key by state so callback can look up by state value
+      try { sessionStorage.setItem(`wix_oauth_data_${oauthData.state}`, JSON.stringify(oauthData)); } catch {}
+      // 3) window.name persists across top-level redirects even when origin changes
+      try { (window as any).name = `WIX_OAUTH::${btoa(JSON.stringify(oauthData))}`; } catch {}
       const { authUrl } = await wixClient.auth.getAuthUrl(oauthData);
       window.location.href = authUrl;
     } catch (error) {
