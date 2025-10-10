@@ -3,13 +3,9 @@ import {
   Box,
   Container,
   Grid,
-  Card,
-  CardContent,
   Typography,
   Alert,
   CircularProgress,
-  useTheme,
-  useMediaQuery,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -18,14 +14,6 @@ import {
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  DollarSign, 
-  TrendingUp, 
-  AlertTriangle, 
-  Activity,
-  Zap,
-  BarChart3,
-  PieChart,
-  Clock,
   Grid3X3,
   List,
   Info,
@@ -61,11 +49,7 @@ const EnhancedBillingDashboard: React.FC<EnhancedBillingDashboardProps> = ({ use
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
-  
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const fetchDashboardData = async () => {
     try {
@@ -75,7 +59,6 @@ const EnhancedBillingDashboard: React.FC<EnhancedBillingDashboardProps> = ({ use
       ]);
       setDashboardData(billingData);
       setSystemHealth(healthData);
-      setLastUpdated(new Date());
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to fetch dashboard data');
     } finally {
@@ -95,7 +78,6 @@ const EnhancedBillingDashboard: React.FC<EnhancedBillingDashboardProps> = ({ use
         .then(([billingData, health]) => {
           setDashboardData(billingData);
           setSystemHealth(health);
-          setLastUpdated(new Date());
         })
         .catch(() => {/* ignore */});
     });

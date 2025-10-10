@@ -80,8 +80,6 @@ const CitationHoverHandler: React.FC<CitationHoverHandlerProps> = ({ researchSou
             modal.style.padding = '18px 20px';
             
             const title = (src.title || 'Untitled').replace(/</g, '&lt;');
-            const url = (src.url || '').replace(/</g, '&lt;');
-            const sourceType = src.source_type ? String(src.source_type).replace('_', ' ') : '';
             
             modal.innerHTML = 
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
@@ -163,8 +161,6 @@ const CitationHoverHandler: React.FC<CitationHoverHandlerProps> = ({ researchSou
               tip.style.backdropFilter = 'blur(5px)';
               
               const title = (src.title || 'Untitled').replace(/</g, '&lt;');
-              const url = (src.url || '').replace(/</g, '&lt;');
-              const sourceType = src.source_type ? String(src.source_type).replace('_', ' ') : '';
               
               tip.innerHTML = 
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +

@@ -36,7 +36,6 @@ const MainContentPreviewHeader: React.FC<MainContentPreviewHeaderProps> = ({
   onAssistantToggle,
   topic
 }) => {
-  const formatPercent = (v?: number) => typeof v === 'number' ? `${Math.round(v * 100)}%` : '—';
   const getChipColor = (v?: number) => {
     if (typeof v !== 'number') return '#6b7280';
     if (v >= 0.8) return '#10b981';

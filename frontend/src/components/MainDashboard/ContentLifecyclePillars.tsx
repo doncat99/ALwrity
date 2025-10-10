@@ -3,29 +3,12 @@ import {
   Box,
   Container,
   Typography,
-  Card,
   CardContent,
-  useTheme,
-  useMediaQuery,
   Chip,
   Tooltip,
-  Paper,
-  Modal,
-  Button,
-  IconButton,
-  Divider,
-  LinearProgress,
-  Avatar,
-  Stack
+  Paper
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Close as CloseIcon,
-  Settings as SettingsIcon,
-  CheckCircle as CheckIcon,
-  RadioButtonUnchecked as UncheckedIcon,
-  TrendingUp as TrendingUpIcon
-} from '@mui/icons-material';
 import GeneratePillarChips from './components/GeneratePillarChips';
 import PublishPillarChips from './components/PublishPillarChips';
 import AnalyzePillarChips from './components/AnalyzePillarChips';
@@ -484,14 +467,11 @@ const PillarCard: React.FC<{
 
 // Main Content Lifecycle Pillars Component
 const ContentLifecyclePillars: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
 
   // Workflow store hooks
   const {
     currentWorkflow,
-    workflowProgress,
     isLoading: workflowLoading,
     startWorkflow,
   } = useWorkflowStore();

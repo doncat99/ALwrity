@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, Box, Button, Menu, MenuItem, Typography, Tooltip } from '@mui/material';
+import { Avatar, Box, Menu, MenuItem, Typography, Tooltip } from '@mui/material';
 import { useUser, useClerk } from '@clerk/clerk-react';
 
 interface UserBadgeProps {

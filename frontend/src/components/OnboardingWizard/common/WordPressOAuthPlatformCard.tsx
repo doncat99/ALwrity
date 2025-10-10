@@ -15,7 +15,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
   CircularProgress,
   IconButton,
   Tooltip,
@@ -27,12 +26,10 @@ import {
 } from '@mui/material';
 import {
   Web as WordPressIcon,
-  Add as AddIcon,
   Delete as DeleteIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
-  Refresh as RefreshIcon,
-  Launch as LaunchIcon
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useWordPressOAuth } from '../../../hooks/useWordPressOAuth';
 

@@ -1,4 +1,4 @@
-  import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -6,60 +6,19 @@ import {
   Typography,
   Button,
   LinearProgress,
-  Alert,
-  Chip,
-  IconButton,
-  Tooltip as MuiTooltip,
-  Card,
-  CardContent,
   Grid,
-  Divider,
-  CircularProgress,
-  Badge,
-  Collapse,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions
 } from '@mui/material';
 import {
-  Business as BusinessIcon,
-  People as PeopleIcon,
-  TrendingUp as TrendingUpIcon,
-  ContentPaste as ContentIcon,
-  Analytics as AnalyticsIcon,
-  Help as HelpIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
   AutoAwesome as AutoAwesomeIcon,
-  Refresh as RefreshIcon,
-  Save as SaveIcon,
-  ArrowForward as ArrowForwardIcon,
-  ArrowBack as ArrowBackIcon,
-  Assessment as AssessmentIcon,
-  ExpandMore as ExpandMoreIcon,
-  Info as InfoIcon,
-  Visibility as VisibilityIcon,
-  School as SchoolIcon,
-  Lightbulb as LightbulbIcon,
-  Psychology as PsychologyIcon,
-  Timeline as TimelineIcon,
-  FiberManualRecord as FiberManualRecordIcon,
-  Schedule as ScheduleIcon
+  Info as InfoIcon
 } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useStrategyBuilderStore, STRATEGIC_INPUT_FIELDS } from '../../../stores/strategyBuilderStore';
 import { useEnhancedStrategyStore } from '../../../stores/enhancedStrategyStore';
-import StrategicInputField from './ContentStrategyBuilder/StrategicInputField';
 import EnhancedTooltip from './ContentStrategyBuilder/EnhancedTooltip';
-import AIRecommendationsPanel from './AIRecommendationsPanel';
 import DataSourceTransparency from './DataSourceTransparency';
 import StrategyAutofillTransparencyModal from './StrategyAutofillTransparencyModal';
 import EnterpriseDatapointsModal from './EnterpriseDatapointsModal';
@@ -79,7 +38,7 @@ import { useStrategyCreation } from './ContentStrategyBuilder/hooks/useStrategyC
 import { useCopilotReadable, useCopilotAdditionalInstructions } from "@copilotkit/react-core";
 
 // Import extracted utilities
-import { getCategoryIcon, getCategoryColor, getCategoryName, getCategoryStatus } from './ContentStrategyBuilder/utils/categoryHelpers';
+import { getCategoryIcon, getCategoryColor } from './ContentStrategyBuilder/utils/categoryHelpers';
 import { getEducationalContent } from './ContentStrategyBuilder/utils/educationalContent';
 import { setupCSSAnimations, cleanupCSSAnimations } from './ContentStrategyBuilder/utils/cssAnimations';
 
@@ -115,7 +74,6 @@ const ContentStrategyBuilder: React.FC = () => {
     updateFormField,
     validateFormField,
     validateAllFields,
-    resetForm,
     autoPopulateFromOnboarding,
     createStrategy: createEnhancedStrategy,
     calculateCompletionPercentage,
@@ -128,9 +86,6 @@ const ContentStrategyBuilder: React.FC = () => {
   // Enhanced Strategy Store (for AI analysis, progressive disclosure, transparency)
   const {
     aiGenerating,
-    currentStep,
-    completedSteps,
-    disclosureSteps,
     transparencyModalOpen,
     transparencyGenerationProgress: storeGenerationProgress,
     currentPhase,
@@ -144,11 +99,6 @@ const ContentStrategyBuilder: React.FC = () => {
     addTransparencyMessage,
     clearTransparencyMessages,
     setTransparencyGenerating: setIsGenerating,
-    completeStep,
-    getNextStep,
-    getPreviousStep,
-    setCurrentStep,
-    canProceedToDisclosureStep: canProceedToStep,
     generateAIRecommendations,
     setAIGenerating
   } = useEnhancedStrategyStore();
@@ -157,7 +107,7 @@ const ContentStrategyBuilder: React.FC = () => {
   useCopilotActions();
 
   // Check if this component is currently visible (active tab)
-  const [isVisible, setIsVisible] = useState(false);
+  const [, setIsVisible] = useState(false);
   
   useEffect(() => {
     // Use a small delay to ensure the component is actually rendered
@@ -171,10 +121,8 @@ const ContentStrategyBuilder: React.FC = () => {
     };
   }, []);
 
-  const [showAIRecommendations, setShowAIRecommendations] = useState(false);
+  const [, setShowAIRecommendations] = useState(false);
   const [showDataSourceTransparency, setShowDataSourceTransparency] = useState(false);
-  const [localEducationalContent, setLocalEducationalContent] = useState<any>(null);
-  const [localGenerationProgress, setLocalGenerationProgress] = useState<number>(0);
   const [showAIRecModal, setShowAIRecModal] = useState(false);
 
   // Ref to track if we've already set the default category
@@ -355,13 +303,9 @@ const ContentStrategyBuilder: React.FC = () => {
 
   const {
     refreshMessage,
-    setRefreshMessage,
     refreshProgress,
-    setRefreshProgress,
     isRefreshing,
-    setIsRefreshing,
     refreshError,
-    setRefreshError,
     handleAIRefresh
   } = useAIRefresh({
     setTransparencyModalOpen,
@@ -374,18 +318,16 @@ const ContentStrategyBuilder: React.FC = () => {
     setError
   });
 
+  // getCompletionStats depends on formData, so we include it to recalculate when data changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const completionStats = useMemo(() => getCompletionStats(), [formData]);
-  const completionPercentage = useMemo(() => calculateCompletionPercentage(), [formData]);
 
   // Use extracted hooks
   const {
     reviewedCategories,
     isMarkingReviewed,
     categoryCompletionMessage,
-    handleConfirmCategoryReview,
-    isCategoryReviewed,
-    getNextUnreviewedCategory,
-    setReviewedCategories
+    handleConfirmCategoryReview
   } = useCategoryReview({ completionStats, setError, setActiveCategory });
 
   const {

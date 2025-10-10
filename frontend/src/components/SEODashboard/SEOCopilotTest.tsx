@@ -1,7 +1,7 @@
 // SEO CopilotKit Test Component
 // Simple test to verify CopilotKit sidebar functionality
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Button, Typography, Paper, Alert } from '@mui/material';
 import { useCopilotAction } from '@copilotkit/react-core';
 

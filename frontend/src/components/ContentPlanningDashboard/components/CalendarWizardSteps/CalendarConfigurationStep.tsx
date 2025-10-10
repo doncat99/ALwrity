@@ -181,8 +181,6 @@ const CalendarConfigurationStep: React.FC<CalendarConfigurationStepProps> = ({
   const [userGuidance, setUserGuidance] = useState<UserGuidance | null>(null);
   const [transparencyIndicators, setTransparencyIndicators] = useState<TransparencyIndicators | null>(null);
   const [showSmartDefaults, setShowSmartDefaults] = useState(true);
-  const [showUserGuidance, setShowUserGuidance] = useState(true);
-  const [showTransparency, setShowTransparency] = useState(true);
 
   // Generate smart defaults and guidance when strategy context changes
   useEffect(() => {
@@ -245,6 +243,8 @@ const CalendarConfigurationStep: React.FC<CalendarConfigurationStepProps> = ({
       // Fix invalid timezone
       onConfigUpdate({ timeZone: 'America/New_York' });
     }
+  // timeZones is a const defined later in this component, safe to exclude
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calendarConfig.timeZone, onConfigUpdate]);
 
   // Apply smart defaults to configuration

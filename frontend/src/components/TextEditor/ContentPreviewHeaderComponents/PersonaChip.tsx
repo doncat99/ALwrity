@@ -97,6 +97,7 @@ const PersonaChip: React.FC<PersonaChipProps> = ({
 
   useEffect(() => {
     fetchPersonaData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [platform, userId]);
 
   const handleSavePersona = async (data: PersonaData, saveToDatabase: boolean) => {

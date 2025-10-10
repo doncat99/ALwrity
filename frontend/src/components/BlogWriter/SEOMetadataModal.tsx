@@ -20,22 +20,13 @@ import {
   Typography,
   Tabs,
   Tab,
-  Paper,
   CircularProgress,
   Alert,
   IconButton,
-  Tooltip,
-  Chip,
-  Grid,
-  Card,
-  CardContent,
-  Divider,
-  TextField,
-  InputAdornment
+  Chip
 } from '@mui/material';
 import {
   Close as CloseIcon,
-  ContentCopy as CopyIcon,
   Check as CheckIcon,
   Preview as PreviewIcon,
   Search as SearchIcon,

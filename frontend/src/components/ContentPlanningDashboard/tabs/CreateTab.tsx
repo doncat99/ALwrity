@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
   Tabs,
-  Tab,
-  Button
+  Tab
 } from '@mui/material';
 import {
   AutoAwesome as AutoAwesomeIcon,
@@ -20,7 +19,6 @@ import { apiClient } from '../../../api/client';
 
 // Import hooks and services
 import { useStrategyCalendarContext } from '../../../contexts/StrategyCalendarContext';
-import { contentPlanningApi } from '../../../services/contentPlanningApi';
 
 // Import types
 import { type CalendarConfig } from '../components/CalendarWizardSteps/types';
@@ -51,11 +49,10 @@ const CreateTab: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCalendarConfig, setCurrentCalendarConfig] = useState<CalendarConfig | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
-  const [isStartingGeneration, setIsStartingGeneration] = useState(false);
 
   const location = useLocation();
   const { state: { strategyContext }, isFromStrategyActivation } = useStrategyCalendarContext();
-  const [userData, setUserData] = useState<any>({});
+  const [userData] = useState<any>({});
 
   // Handle navigation from strategy activation
   useEffect(() => {
@@ -74,7 +71,7 @@ const CreateTab: React.FC = () => {
       console.log('🎯 CreateTab: Switching to Calendar Wizard tab (index 1)');
       setTabValue(1); // Switch to Calendar Wizard tab
     }
-  }, [isFromStrategyActivation, strategyContext?.activationStatus]);
+  }, [isFromStrategyActivation, strategyContext?.activationStatus, location.state]);
 
   // Also check on mount for immediate navigation state
   useEffect(() => {
@@ -109,9 +106,6 @@ const CreateTab: React.FC = () => {
       setCurrentCalendarConfig(calendarConfig);
       setIsModalOpen(true);
       
-      // Set loading state to prevent multiple clicks
-      setIsStartingGeneration(true);
-      
       // Transform calendarConfig to match backend CalendarGenerationRequest format
       const requestData = {
         user_id: 1, // Default user ID
@@ -126,20 +120,19 @@ const CreateTab: React.FC = () => {
       
       // Call the new start endpoint to get session ID with retry logic
       let startResponse;
-      let retryCount = 0;
       const maxRetries = 3;
       
-      while (retryCount < maxRetries) {
+      for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
         try {
           const response = await apiClient.post('/api/content-planning/calendar-generation/start', requestData);
           startResponse = { ok: true, data: response.data };
           break; // Success, exit retry loop
         } catch (error: any) {
           console.warn(`⚠️ Attempt ${retryCount + 1} failed with error:`, error);
-          retryCount++;
-          if (retryCount < maxRetries) {
+          if (retryCount < maxRetries - 1) {
             // Wait before retry (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            const delay = 1000 * (retryCount + 1);
+            await new Promise(resolve => setTimeout(resolve, delay));
           } else {
             startResponse = { ok: false, data: null };
           }
@@ -175,8 +168,7 @@ const CreateTab: React.FC = () => {
       setCurrentCalendarConfig(null);
       setSessionId('');
     } finally {
-      // Clear loading state
-      setIsStartingGeneration(false);
+      // Cleanup complete
     }
   }, [userData, strategyContext]);
 

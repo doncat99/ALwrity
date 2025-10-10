@@ -57,7 +57,6 @@ const RegisterLinkedInEditActions: React.FC = () => {
     ],
     handler: async (args: any) => {
       const content = args?.content || '';
-      const industry = args?.industry || 'Technology';
       
       // Placeholder for hashtag addition
       const hashtags = '#ProfessionalDevelopment #Networking #IndustryInsights #CareerGrowth';

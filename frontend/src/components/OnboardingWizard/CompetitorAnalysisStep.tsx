@@ -52,7 +52,7 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
   const [analysisStep, setAnalysisStep] = useState('');
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [socialMediaAccounts, setSocialMediaAccounts] = useState<any>({});
-  const [socialMediaCitations, setSocialMediaCitations] = useState<any[]>([]);
+  const [, setSocialMediaCitations] = useState<any[]>([]);
   const [researchSummary, setResearchSummary] = useState<ResearchSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -260,6 +260,7 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
     } finally {
       setIsAnalyzingSitemap(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userUrl, competitors, industryContext, isAnalyzingSitemap]);
 
   // Initialize: Check cache first, then run analysis if needed
@@ -313,36 +314,6 @@ const CompetitorAnalysisStep: React.FC<CompetitorAnalysisStepProps> = ({
     };
   }, [competitors, researchSummary, sitemapAnalysis, userUrl, industryContext]);
 
-  const handleContinue = async () => {
-    // Save research preferences to backend before continuing
-    try {
-      const researchData = getResearchData();
-
-      // Extract research preferences for saving (use defaults if not available)
-      const researchPreferences = {
-        research_depth: 'Comprehensive',
-        content_types: ['blog_posts', 'social_media'],
-        auto_research: true,
-        factual_content: true
-      };
-
-      // Save research preferences to backend
-      await aiApiClient.post('/api/ai-research/configure-preferences', {
-        research_depth: researchPreferences.research_depth,
-        content_types: researchPreferences.content_types,
-        auto_research: researchPreferences.auto_research,
-        factual_content: researchPreferences.factual_content
-      });
-
-      console.log('Research preferences saved to backend');
-    } catch (error) {
-      console.error('Error saving research preferences:', error);
-      // Continue anyway - don't block user progress for save errors
-    }
-
-    // Continue with wizard navigation
-    onContinue(getResearchData());
-  };
 
   // Expose data collection function to parent (only when onDataReady changes)
   useEffect(() => {

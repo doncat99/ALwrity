@@ -13,8 +13,6 @@ export const useCopilotActions = () => {
     updateFormField,
     validateFormField,
     setError,
-    autoPopulatedFields,
-    dataSources,
     calculateCompletionPercentage,
     getCompletionStats
   } = useStrategyBuilderStore();
@@ -93,7 +91,7 @@ export const useCopilotActions = () => {
       console.log(`📝 Populating field ${fieldId} with value: ${value}`);
       
       // Call backend API for intelligent field population
-      const response = await contentPlanningApi.generateCategoryData(
+      await contentPlanningApi.generateCategoryData(
         'individual_field', 
         `Populate ${fieldId} with: ${value}. Reasoning: ${reasoning || 'User request'}`,
         formData
@@ -188,7 +186,7 @@ export const useCopilotActions = () => {
       setTransparencyGenerating(false);
       return { success: false, message: error.message || 'Unknown error' };
     }
-  }, [formData, updateFormField, setError, calculateCompletionPercentage, setTransparencyModalOpen, setTransparencyGenerating, setTransparencyGenerationProgress, setCurrentPhase, clearTransparencyMessages, addTransparencyMessage, setAIGenerating]);
+  }, [formData, updateFormField, setError, calculateCompletionPercentage, setTransparencyModalOpen, setTransparencyGenerating, setTransparencyGenerationProgress, setCurrentPhase, clearTransparencyMessages, addTransparencyMessage, setAIGenerating, triggerTransparencyFlow]);
 
   // Action 4: Validate field
   const validateStrategyField = useCallback(async ({ fieldId }: any) => {
@@ -301,11 +299,7 @@ export const useCopilotActions = () => {
       // Start transparency flow (same as Refresh & Autofill button)
       const { transparencyInterval } = await triggerTransparencyFlow('autofill', 'Auto-population from onboarding data');
       
-      // Get current form data to see what's already filled
-      const currentFilledFields = Object.keys(formData).filter(key => {
-        const value = formData[key];
-        return value && typeof value === 'string' && value.trim() !== '';
-      });
+      // Get empty fields that need to be filled
       const emptyFields = Object.keys(formData).filter(key => {
         const value = formData[key];
         return !value || typeof value !== 'string' || value.trim() === '';
@@ -429,7 +423,7 @@ export const useCopilotActions = () => {
       setTransparencyGenerating(false);
       return { success: false, message: error.message || 'Unknown error' };
     }
-  }, [formData, updateFormField, calculateCompletionPercentage, setError, setTransparencyModalOpen, setTransparencyGenerating, setTransparencyGenerationProgress, setCurrentPhase, clearTransparencyMessages, addTransparencyMessage, setAIGenerating]);
+  }, [formData, updateFormField, calculateCompletionPercentage, setError, setTransparencyModalOpen, setTransparencyGenerating, setTransparencyGenerationProgress, setCurrentPhase, clearTransparencyMessages, addTransparencyMessage, setAIGenerating, triggerTransparencyFlow]);
 
   // Call useCopilotAction hooks unconditionally - they will handle context availability internally
   // This is the only way to comply with React hooks rules

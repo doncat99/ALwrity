@@ -15,22 +15,13 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Alert,
-  LinearProgress
+  Alert
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Analytics as AnalyticsIcon,
-  TrendingUp as TrendingIcon,
-  Speed as SpeedIcon,
-  Security as SecurityIcon,
   CheckCircle as CheckIcon,
-  Schedule as ScheduleIcon,
-  Rocket as RocketIcon,
-  DataUsage as DataIcon,
-  Compare as CompareIcon,
-  Insights as InsightsIcon,
-  Assessment as AssessmentIcon
+  Insights as InsightsIcon
 } from '@mui/icons-material';
 
 export const ComingSoonSection: React.FC = () => {

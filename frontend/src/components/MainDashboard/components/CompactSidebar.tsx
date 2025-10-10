@@ -3,7 +3,6 @@ import {
   Box,
   Paper,
   Typography,
-  Chip,
   IconButton,
   Tooltip,
   Divider,
@@ -14,8 +13,6 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  Activity,
-  Zap,
   Star
 } from 'lucide-react';
 
@@ -78,25 +75,15 @@ const CompactSidebar: React.FC<CompactSidebarProps> = ({
   // State for search expansion on hover
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   // State for sidebar hover expansion
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [, setIsSidebarHovered] = useState(false);
   // State for favorites expansion on hover
   const [isFavoritesExpanded, setIsFavoritesExpanded] = useState(false);
   // Track original collapsed state for hover behavior
   const [wasOriginallyCollapsed, setWasOriginallyCollapsed] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [rippleIndex, setRippleIndex] = useState(-1);
+  const [, setRippleIndex] = useState(-1);
   const [shouldAutoExpand, setShouldAutoExpand] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
-
-  // Calculate total tools count
-  const totalTools = Object.values(toolCategories).reduce((sum, category) => {
-    if ('tools' in category) {
-      return sum + category.tools.length;
-    } else if ('subCategories' in category) {
-      return sum + Object.values(category.subCategories).reduce((subSum, subCat) => subSum + subCat.tools.length, 0);
-    }
-    return sum;
-  }, 0);
 
   // Ripple effect for chips
   const startRippleEffect = useCallback(() => {

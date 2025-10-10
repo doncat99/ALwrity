@@ -49,6 +49,7 @@ const RefineAnalysisTab: React.FC = () => {
 
   useEffect(() => {
     loadGapAnalysisData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadGapAnalysisData = async () => {

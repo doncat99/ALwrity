@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -26,9 +26,6 @@ import { billingService } from '../../services/billingService';
 import { monitoringService } from '../../services/monitoringService';
 import { onApiEvent } from '../../utils/apiEvents';
 
-// Components
-import ComprehensiveAPIBreakdown from './ComprehensiveAPIBreakdown';
-
 interface CompactBillingDashboardProps {
   userId?: string;
 }
@@ -38,7 +35,6 @@ const CompactBillingDashboard: React.FC<CompactBillingDashboardProps> = ({ userI
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchData = async () => {
     try {
@@ -52,7 +48,6 @@ const CompactBillingDashboard: React.FC<CompactBillingDashboardProps> = ({ userI
       
       setDashboardData(billingData);
       setSystemHealth(healthData);
-      setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
     } finally {
@@ -62,6 +57,7 @@ const CompactBillingDashboard: React.FC<CompactBillingDashboardProps> = ({ userI
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   // Event-driven refresh
@@ -77,11 +73,11 @@ const CompactBillingDashboard: React.FC<CompactBillingDashboardProps> = ({ userI
       fetchData();
     });
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const formatCurrency = (amount: number) => `$${amount.toFixed(4)}`;
   const formatNumber = (num: number) => num.toLocaleString();
-  const formatPercentage = (num: number) => `${num.toFixed(1)}%`;
 
   if (loading && !dashboardData) {
     return (
@@ -118,9 +114,7 @@ const CompactBillingDashboard: React.FC<CompactBillingDashboardProps> = ({ userI
 
   if (!dashboardData) return null;
 
-  const { current_usage, trends, limits, alerts } = dashboardData;
-  const activeProviders = Object.entries(current_usage.provider_breakdown)
-    .filter(([_, data]) => data.cost > 0);
+  const { current_usage, limits, alerts } = dashboardData;
 
   return (
     <motion.div

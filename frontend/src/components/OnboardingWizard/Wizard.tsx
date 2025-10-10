@@ -110,7 +110,6 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
   // Use refs to avoid dependency cycles
   const stepDataRef = useRef(stepData);
   const competitorDataCollectorRef = useRef(competitorDataCollector);
-  const personaStepRef = useRef<{ handleContinue: () => void } | null>(null);
   
   // Keep refs in sync with state
   useEffect(() => {

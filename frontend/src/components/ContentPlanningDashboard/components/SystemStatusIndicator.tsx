@@ -5,21 +5,16 @@ import {
   Typography, 
   Chip,
   CircularProgress,
-  Alert,
   IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  Grid,
-  Paper,
-  LinearProgress,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider,
   Card,
   CardContent,
   CardHeader,
@@ -33,14 +28,8 @@ import {
   Help as UnknownIcon,
   Refresh as RefreshIcon,
   Close as CloseIcon,
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Speed as SpeedIcon,
   BugReport as BugReportIcon,
-  Storage as StorageIcon,
-  Timeline as TimelineIcon,
-  Analytics as AnalyticsIcon,
-  NetworkCheck as NetworkCheckIcon
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import MonitoringCharts from './MonitoringCharts';
@@ -95,10 +84,10 @@ const SystemStatusIndicator: React.FC<SystemStatusIndicatorProps> = ({ className
   const [statusData, setStatusData] = useState<SystemStatusData | null>(null);
   const [detailedStats, setDetailedStats] = useState<DetailedStatsData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [chartData, setChartData] = useState<any[]>([]);
-  const [cachePerf, setCachePerf] = useState<{ hits: number; misses: number; hit_rate: number } | null>(null);
+  const [, setCachePerf] = useState<{ hits: number; misses: number; hit_rate: number } | null>(null);
 
   const fetchStatus = async () => {
     setLoading(true);
@@ -242,10 +231,6 @@ const SystemStatusIndicator: React.FC<SystemStatusIndicatorProps> = ({ className
       </Box>
     );
   }
-
-  const total = statusData?.recent_requests ?? 0;
-  const failed = statusData?.recent_errors ?? 0;
-  const passed = Math.max(0, total - failed);
 
   return (
     <>

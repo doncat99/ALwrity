@@ -29,10 +29,7 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Divider,
-  LinearProgress,
-  Tooltip,
-  Badge
+  LinearProgress
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -42,27 +39,17 @@ import {
   Event as EventIcon,
   Refresh as RefreshIcon,
   TrendingUp as TrendingIcon,
-  ContentCopy as RepurposeIcon,
   Analytics as AnalyticsIcon,
   ExpandMore as ExpandMoreIcon,
   Schedule as ScheduleIcon,
   Psychology as PsychologyIcon,
   Business as BusinessIcon,
-  Group as GroupIcon,
   Timeline as TimelineIcon,
   Lightbulb as LightbulbIcon,
   CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
-  Info as InfoIcon,
-  DataUsage as DataUsageIcon,
-  Insights as InsightsIcon,
-  Assessment as AssessmentIcon,
-  Campaign as CampaignIcon,
-  Speed as SpeedIcon,
   AutoAwesome as AutoAwesomeIcon
 } from '@mui/icons-material';
 import { useContentPlanningStore } from '../../../stores/contentPlanningStore';
-import { contentPlanningApi } from '../../../services/contentPlanningApi';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -92,15 +79,10 @@ const CalendarTab: React.FC = () => {
     createEvent, 
     updateEvent, 
     deleteEvent, 
-    loading, 
     error,
     loadCalendarEvents,
-    updateCalendarEvents,
     // New calendar generation state
     generatedCalendar,
-    performancePrediction,
-    contentRepurposing,
-    aiInsights,
     calendarGenerationError,
     dataLoading,
     calendarGenerationLoading
@@ -118,28 +100,15 @@ const CalendarTab: React.FC = () => {
     status: 'draft' as 'draft' | 'scheduled' | 'published'
   });
 
-  // Enhanced state for data transparency
-  const [userData, setUserData] = useState<any>({
-    onboardingData: {},
-    gapAnalysis: {},
-    strategyData: {},
-    recommendationsData: [],
-    performanceData: {},
-    aiAnalysisResults: []
-  });
-
   const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
 
   useEffect(() => {
     loadCalendarData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadCalendarData = async () => {
     try {
-      // Load comprehensive user data for calendar generation
-      const comprehensiveData = await contentPlanningApi.getComprehensiveUserData(1); // Pass user ID
-      setUserData(comprehensiveData.data); // Extract the data from the response
-      
       // Load existing calendar events
       await loadCalendarEvents();
     } catch (error) {
@@ -209,45 +178,6 @@ const CalendarTab: React.FC = () => {
 
   const handleRefreshData = async () => {
     await loadCalendarData();
-  };
-
-  const handleDataUpdate = (updatedData: any) => {
-    setUserData((prev: any) => ({ ...prev, ...updatedData }));
-  };
-
-  const handleGenerateCalendar = async (calendarConfig: any) => {
-    try {
-      await contentPlanningApi.generateComprehensiveCalendar({
-        ...calendarConfig,
-        userData
-      });
-    } catch (error) {
-      console.error('Error generating calendar:', error);
-    }
-  };
-
-  const handleOptimizeContent = async (contentData: any) => {
-    try {
-      await contentPlanningApi.optimizeContent(contentData);
-    } catch (error) {
-      console.error('Error optimizing content:', error);
-    }
-  };
-
-  const handlePredictPerformance = async (contentData: any) => {
-    try {
-      await contentPlanningApi.predictPerformance(contentData);
-    } catch (error) {
-      console.error('Error predicting performance:', error);
-    }
-  };
-
-  const handleGetTrendingTopics = async () => {
-    try {
-      await contentPlanningApi.getTrendingTopics({ user_id: 1, industry: 'technology' });
-    } catch (error) {
-      console.error('Error getting trending topics:', error);
-    }
   };
 
   const getStatusColor = (status: string) => {

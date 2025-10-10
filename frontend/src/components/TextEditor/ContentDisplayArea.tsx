@@ -85,7 +85,7 @@ const ContentDisplayArea: React.FC<ContentDisplayAreaProps> = ({
     if (draft !== localDraft) {
       setLocalDraft(draft);
     }
-  }, [draft]);
+  }, [draft, localDraft]);
 
   // Cleanup debounced saver
   useEffect(() => {

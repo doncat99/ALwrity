@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
-  Paper,
   Typography,
   Card,
   CardContent,
@@ -16,10 +15,6 @@ import {
   TableRow,
   Button
 } from '@mui/material';
-import {
-  Search as SearchIcon
-} from '@mui/icons-material';
-import { useContentPlanningStore } from '../../../stores/contentPlanningStore';
 import { contentPlanningApi } from '../../../services/contentPlanningApi';
 
 const KeywordResearchTab: React.FC = () => {

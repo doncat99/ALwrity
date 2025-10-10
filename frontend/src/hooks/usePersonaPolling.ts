@@ -40,7 +40,6 @@ export interface UsePersonaPollingReturn {
 export function usePersonaPolling(options: UsePersonaPollingOptions = {}): UsePersonaPollingReturn {
   const {
     interval = 2000, // 2 seconds default
-    maxAttempts = 0, // No timeout - poll until backend says done
     onProgress,
     onComplete,
     onError

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Chip, useTheme } from '@mui/material';
+import { Box, Chip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 

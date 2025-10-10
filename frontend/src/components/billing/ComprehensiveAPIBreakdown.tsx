@@ -10,26 +10,15 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
 } from '@mui/material';
 import { ExpandMore } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { 
   Info,
-  DollarSign,
-  Activity,
-  Zap,
   Search,
   Image,
   Code,
   Database,
-  Globe,
   FileText,
   BarChart3
 } from 'lucide-react';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,15 +12,10 @@ import {
   LinearProgress,
   Chip,
   IconButton,
-  Alert,
-  CircularProgress,
-  Card
+  CircularProgress
 } from '@mui/material';
 import {
   Close as CloseIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  Refresh as RefreshIcon,
   Schedule as ScheduleIcon,
   TrendingUp as TrendingUpIcon,
   School as SchoolIcon,
@@ -31,8 +26,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Import existing components for reuse
-import DataSourceTransparency from '../DataSourceTransparency';
-import ProgressIndicator from '../ProgressIndicator';
+// Note: DataSourceTransparency and ProgressIndicator are imported but may be used by child components
 
 // Import panel components
 import {
@@ -42,57 +36,28 @@ import {
   StepResultsPanel,
   EducationalPanel,
   useCalendarGenerationPolling,
-  type CalendarGenerationProgress,
   type QualityScores
 } from './calendarGenerationModalPanels';
 
 // Import new StepProgressTracker component
 import StepProgressTracker from './calendarGenerationModalPanels/StepProgressTracker';
 
-// Import styles
+// Import styles (only used ones)
 import {
   dialogStyles,
-  contentContainerStyles,
   progressBarContainerStyles,
   progressBarStyles,
-  stepProgressBarStyles,
   getStepIndicatorStyles,
-  getStepCardStyles,
-  stepCircleBaseStyles,
-  getStepCircleColor,
   tabButtonStyles,
-  activityIndicatorStyles,
-  qualityScoreContainerStyles,
-  getQualityScoreBackground,
-  qualityScoreInnerStyles,
-  dataSourceCardStyles,
-  dataSourceIconStyles,
-  getDataSourceIconColor,
-  qualityMetricsContainerStyles,
-  getMetricColor,
-  stepResultsCardStyles,
-  stepResultsHeaderStyles,
-  stepResultsContentStyles,
   loadingContainerStyles,
   loadingContentStyles,
   animationDurations,
   animationEasing,
-  springConfig,
-  staggerDelay,
-  cardStaggerDelay,
-  fadeInUp,
   fadeInLeft,
-  scaleIn,
-  slideInStaggered,
-  hoverLift,
   hoverScale,
   tapScale,
   pulseAnimation,
-  smallPulseAnimation,
-  colorPulseAnimation,
-  progressFillAnimation,
-  progressOverlayStyles,
-  stepProgressOverlayStyles
+  progressOverlayStyles
 } from './CalendarGenerationModal.styles';
 
 // Types
@@ -262,19 +227,11 @@ const CalendarGenerationModal: React.FC<CalendarGenerationModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [educationalPanelExpanded, setEducationalPanelExpanded] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
-    dataSources: true,
-    progress: true,
-    educational: false,
-    messages: true,
-    stepResults: true
-  });
 
   // Use polling hook for real backend data only
   const { 
     progress, 
     isPolling, 
-    error, 
     startPolling, 
     stopPolling,
     getStepStatus,
@@ -309,11 +266,7 @@ const CalendarGenerationModal: React.FC<CalendarGenerationModalProps> = ({
       console.log('❌ Calendar generation error:', currentProgress.errors);
       onError(currentProgress.errors[0]?.message || 'Unknown error');
     }
-  }, [currentProgress?.status, currentProgress?.errors, onError]);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
+  }, [currentProgress, onError]);
 
   const getQualityColor = (score: number) => {
     if (score >= 0.9) return 'success';

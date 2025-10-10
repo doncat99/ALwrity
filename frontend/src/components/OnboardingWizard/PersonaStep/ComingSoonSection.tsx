@@ -15,22 +15,12 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider,
-  Alert,
-  LinearProgress
+  Alert
 } from '@mui/material';
 import {
-  AutoAwesome as AutoAwesomeIcon,
-  ContentPaste as ContentIcon,
   Psychology as PsychologyIcon,
-  TrendingUp as TrendingIcon,
-  Security as SecurityIcon,
-  Speed as SpeedIcon,
   CheckCircle as CheckIcon,
-  Schedule as ScheduleIcon,
-  Rocket as RocketIcon,
   DataUsage as DataIcon,
-  Tune as TuneIcon,
   SmartToy as SmartToyIcon
 } from '@mui/icons-material';
 

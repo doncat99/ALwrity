@@ -10,10 +10,9 @@ import {
   Tooltip
 } from '@mui/material';
 import {
-  Google as GoogleIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { gscAPI, type GSCSite } from '../../../api/gsc';
+import { type GSCSite } from '../../../api/gsc';
 
 interface GSCPlatformCardProps {
   platform: {

@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@clerk/clerk-react';
 import { getApiKeysForOnboarding, getStep1ApiKeysFromProgress, saveApiKey } from '../../../../api/onboarding';
 import { getKeyStatus, formatErrorMessage } from '../../common/onboardingUtils';
 import { Provider } from './ProviderCard';
 import { apiClient } from '../../../../api/client';
 
 export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
-  const { getToken } = useAuth();
   const [geminiKey, setGeminiKey] = useState('');
   const [exaKey, setExaKey] = useState('');
   const [copilotkitKey, setCopilotkitKey] = useState('');

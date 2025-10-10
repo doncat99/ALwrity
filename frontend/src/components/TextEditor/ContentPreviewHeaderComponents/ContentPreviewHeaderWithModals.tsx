@@ -356,6 +356,7 @@ const ContentPreviewHeaderWithModals: React.FC<ContentPreviewHeaderProps> = (pro
       window.removeEventListener('showCitationsModal', handleShowCitationsModal as EventListener);
       window.removeEventListener('showSearchQueriesModal', handleShowSearchQueriesModal as EventListener);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

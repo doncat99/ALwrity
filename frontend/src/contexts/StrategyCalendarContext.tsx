@@ -121,7 +121,7 @@ function validateContextIntegrity(state: StrategyCalendarState): boolean {
 
     // Check if calendar context is valid when it exists
     if (state.calendarContext) {
-      const { strategyContext, autoPopulatedData } = state.calendarContext;
+      const { strategyContext } = state.calendarContext;
       if (strategyContext && !validateContextIntegrity({ ...state, strategyContext })) {
         return false;
       }

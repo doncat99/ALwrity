@@ -13,9 +13,6 @@ import { motion } from 'framer-motion';
 import { 
   Activity, 
   RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
   Clock,
   Zap
 } from 'lucide-react';
@@ -27,7 +24,6 @@ import { SystemHealth } from '../../types/monitoring';
 import { 
   getHealthStatusColor,
   getHealthStatusIcon,
-  formatResponseTime,
   formatErrorRate,
   getPerformanceStatus
 } from '../../services/monitoringService';

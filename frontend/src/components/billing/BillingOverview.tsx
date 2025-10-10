@@ -12,11 +12,7 @@ import {
 import { motion } from 'framer-motion';
 import { 
   DollarSign, 
-  TrendingUp, 
   RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
   Info
 } from 'lucide-react';
 
@@ -28,7 +24,6 @@ import {
   formatCurrency, 
   formatNumber, 
   formatPercentage,
-  getUsageStatusColor,
   getUsageStatusIcon,
   calculateUsagePercentage
 } from '../../services/billingService';
@@ -53,7 +48,6 @@ const BillingOverview: React.FC<BillingOverviewProps> = ({
 
   const getStatusChip = () => {
     const status = usageStats.usage_status;
-    const color = getUsageStatusColor(status);
     const icon = getUsageStatusIcon(status);
     
     let chipColor: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' = 'default';

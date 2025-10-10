@@ -5,11 +5,10 @@
  * Integrates with CopilotKit for real-time progress updates and user interactions.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
   Button,
   Chip,
   LinearProgress,
@@ -23,7 +22,6 @@ import {
   Alert,
   Grid,
   Paper,
-  Divider,
   IconButton,
   Tooltip
 } from '@mui/material';
@@ -33,11 +31,8 @@ import {
   Cancel, 
   Warning, 
   TrendingUp, 
-  GpsFixed,
-  MenuBook,
   Search,
   BarChart,
-  Lightbulb,
   Refresh,
   Close
 } from '@mui/icons-material';
@@ -165,7 +160,7 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
   // Debug logging
   console.log('SEOAnalysisModal render:', { isOpen, blogContent: blogContent?.length, researchData: !!researchData });
 
-  const runSEOAnalysis = async () => {
+  const runSEOAnalysis = useCallback(async () => {
     try {
       setIsAnalyzing(true);
       setError(null);
@@ -267,7 +262,7 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
       setError(err instanceof Error ? err.message : 'Analysis failed');
       setIsAnalyzing(false);
     }
-  };
+  }, [blogContent, blogTitle, researchData]);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'success.main';
@@ -281,23 +276,6 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
     return 'error';
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'High': return 'error.main';
-      case 'Medium': return 'warning.main';
-      case 'Low': return 'success.main';
-      default: return 'text.secondary';
-    }
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'High': return <Cancel sx={{ fontSize: 16 }} />;
-      case 'Medium': return <Warning sx={{ fontSize: 16 }} />;
-      case 'Low': return <CheckCircle sx={{ fontSize: 16 }} />;
-      default: return <Warning sx={{ fontSize: 16 }} />;
-    }
-  };
 
   // Tooltip content for each metric
   const getMetricTooltip = (category: string) => {
@@ -352,7 +330,7 @@ export const SEOAnalysisModal: React.FC<SEOAnalysisModalProps> = ({
     if (isOpen && !analysisResult) {
       runSEOAnalysis();
     }
-  }, [isOpen]);
+  }, [isOpen, analysisResult, runSEOAnalysis]);
 
   return (
     <Dialog 

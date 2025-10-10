@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@clerk/clerk-react';
 import {
   Box,
   Fade,
@@ -17,19 +16,7 @@ import {
   // Platform Icons
   Web as WordPressIcon,
   Web as WixIcon,
-  Google as GoogleIcon,
-  // Status Icons
-  CheckCircle as CheckIcon,
-  Error as ErrorIcon,
-  Info as InfoIcon,
-  Launch as LaunchIcon,
-  Security as SecurityIcon,
-  Verified as VerifiedIcon,
-  Schedule as ScheduleIcon,
-  TrendingUp as TrendingUpIcon,
-  Email as EmailIcon,
-  Business as BusinessIcon,
-  Notifications as NotificationsIcon
+  Google as GoogleIcon
 } from '@mui/icons-material';
 
 // Import refactored components
@@ -59,12 +46,11 @@ interface IntegrationPlatform {
 }
 
 const IntegrationsStep: React.FC<IntegrationsStepProps> = ({ onContinue, updateHeaderContent }) => {
-  const { getToken } = useAuth();
   const [email, setEmail] = useState<string>('');
   
   // Use custom hooks
-  const { gscSites, connectedPlatforms, setConnectedPlatforms, setGscSites, handleGSCConnect } = useGSCConnection();
-  const { isLoading, showToast, setShowToast, toastMessage, setToastMessage, handleConnect } = usePlatformConnections();
+  const { gscSites, connectedPlatforms, setConnectedPlatforms, handleGSCConnect } = useGSCConnection();
+  const { isLoading, showToast, setShowToast, toastMessage, handleConnect } = usePlatformConnections();
 
   // Initialize integrations data
   const [integrations] = useState<IntegrationPlatform[]>([
@@ -211,6 +197,7 @@ const IntegrationsStep: React.FC<IntegrationsStepProps> = ({ onContinue, updateH
       // Remove query parameters from URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Get user email from Clerk
@@ -255,6 +242,7 @@ const IntegrationsStep: React.FC<IntegrationsStepProps> = ({ onContinue, updateH
     
     const userEmail = getUserEmail();
     setEmail(userEmail);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePlatformConnect = async (platformId: string) => {

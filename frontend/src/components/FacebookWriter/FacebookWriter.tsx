@@ -87,16 +87,16 @@ function diffMarkup(oldText: string, newText: string): string {
       out += a[i];
       i++; j++;
     } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      out += `<s class=\"fbw-del\">${escapeHtml(a[i])}</s>`;
+      out += `<s class="fbw-del">${escapeHtml(a[i])}</s>`;
       i++;
     } else {
-      out += `<em class=\"fbw-add\">${escapeHtml(b[j])}</em>`;
+      out += `<em class="fbw-add">${escapeHtml(b[j])}</em>`;
       j++;
     }
   }
-  while (i < n) { out += `<s class=\"fbw-del\">${escapeHtml(a[i++])}</s>`; }
-  while (j < m) { out += `<em class=\"fbw-add\">${escapeHtml(b[j++])}</em>`; }
-  if (oldText.length > MAX || newText.length > MAX) out += '<span class=\"fbw-more\"> …</span>';
+  while (i < n) { out += `<s class="fbw-del">${escapeHtml(a[i++])}</s>`; }
+  while (j < m) { out += `<em class="fbw-add">${escapeHtml(b[j++])}</em>`; }
+  if (oldText.length > MAX || newText.length > MAX) out += '<span class="fbw-more"> …</span>';
   return out;
 }
 
@@ -148,7 +148,7 @@ const FacebookWriterContent: React.FC<FacebookWriterProps> = ({ className = '' }
   const [livePreviewHtml, setLivePreviewHtml] = React.useState<string>('');
   const [isPreviewing, setIsPreviewing] = React.useState<boolean>(false);
   const [pendingEdit, setPendingEdit] = React.useState<{ src: string; target: string } | null>(null);
-  const [historyVersion, setHistoryVersion] = React.useState<number>(0);
+  const [, setHistoryVersion] = React.useState<number>(0);
   const [adVariations, setAdVariations] = React.useState<{
     headline_variations: string[];
     primary_text_variations: string[];

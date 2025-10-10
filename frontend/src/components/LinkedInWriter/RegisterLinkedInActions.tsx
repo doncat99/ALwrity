@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCopilotAction } from '@copilotkit/react-core';
-import { linkedInWriterApi, LinkedInPostRequest, GroundingLevel } from '../../services/linkedInWriterApi';
+import { linkedInWriterApi, GroundingLevel } from '../../services/linkedInWriterApi';
 import {
   mapPostType,
   mapTone,
@@ -8,7 +8,6 @@ import {
   mapSearchEngine,
   readPrefs
 } from './utils/linkedInWriterUtils';
-import { PostHITL, ArticleHITL, CarouselHITL, VideoScriptHITL, CommentResponseHITL } from './components';
 import { apiClient } from '../../api/client';
 
 const useCopilotActionTyped = useCopilotAction as any;
@@ -124,17 +123,6 @@ const RegisterLinkedInActions: React.FC = () => {
           { id: 'finalize', label: 'Finalizing & optimizing' }
         ]
       }}));
-      
-      // If refining existing content, use the current draft as context
-      let existingContent = '';
-      if (args?.refine_existing) {
-        // Get current draft from the page context
-        const textarea = document.querySelector('textarea') as HTMLTextAreaElement;
-        const currentDraft = textarea?.value || '';
-        if (currentDraft) {
-          existingContent = `\n\nREFINE THIS EXISTING CONTENT:\n${currentDraft}`;
-        }
-      }
       
       // Start detailed progress tracking
       window.dispatchEvent(new CustomEvent('linkedinwriter:progressStep', { 
@@ -750,7 +738,7 @@ const RegisterLinkedInActions: React.FC = () => {
       { name: 'improvement_type', type: 'string', required: false }
     ],
     handler: async (args: any) => {
-      const { recommendation, current_content, improvement_type } = args;
+      const { recommendation } = args;
       
       // Analyze the recommendation and provide specific improvement guidance
       let improvementGuidance = '';

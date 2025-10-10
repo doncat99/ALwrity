@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -25,25 +25,13 @@ const ContentStrategyTab: React.FC = () => {
   const strategies = useContentPlanningStore(state => state.strategies);
   const currentStrategy = useContentPlanningStore(state => state.currentStrategy);
   const latestGeneratedStrategy = useContentPlanningStore(state => state.latestGeneratedStrategy);
-  const aiInsights = useContentPlanningStore(state => state.aiInsights);
-  const aiRecommendations = useContentPlanningStore(state => state.aiRecommendations);
-  const loading = useContentPlanningStore(state => state.loading);
   const error = useContentPlanningStore(state => state.error);
   const loadStrategies = useContentPlanningStore(state => state.loadStrategies);
   const loadAIInsights = useContentPlanningStore(state => state.loadAIInsights);
   const loadAIRecommendations = useContentPlanningStore(state => state.loadAIRecommendations);
   const setLatestGeneratedStrategy = useContentPlanningStore(state => state.setLatestGeneratedStrategy);
-  
-  const [strategyForm, setStrategyForm] = useState({
-    name: '',
-    description: '',
-    industry: '',
-    target_audience: '',
-    content_pillars: []
-  });
 
   // Real data states
-  const [strategicIntelligence, setStrategicIntelligence] = useState<any>(null);
   const [strategyData, setStrategyData] = useState<StrategyData | null>(null);
   const [strategyDataLoading, setStrategyDataLoading] = useState(false);
   const [strategyDataError, setStrategyDataError] = useState<string | null>(null);
@@ -65,6 +53,7 @@ const ContentStrategyTab: React.FC = () => {
   // Load data on component mount
   useEffect(() => {
     loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Check if coming from strategy builder
@@ -92,7 +81,7 @@ const ContentStrategyTab: React.FC = () => {
       console.log('🧹 Clearing latest generated strategy cache (navigating away from strategy builder)');
       // Note: We don't clear the cache here as it might be needed for the current session
     }
-  }, [location.state]);
+  }, [location.state, latestGeneratedStrategy]);
 
   // Track strategy status changes for debugging (with debounce)
   useEffect(() => {
@@ -136,6 +125,7 @@ const ContentStrategyTab: React.FC = () => {
       setShowOnboarding(true);
     }
     // If strategiesArray.length === 0 and !hasCheckedStrategy, do nothing (wait for data to load)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strategies, loadStrategies, isFromStrategyBuilder]);
 
   const loadStrategyData = async () => {
@@ -390,9 +380,6 @@ const ContentStrategyTab: React.FC = () => {
     }
     
     if (strategiesArray.length > 0) {
-      // Find the most recent strategy
-      const latestStrategy = strategiesArray[0]; // Assuming strategies are sorted by date
-      
       // For now, we'll assume strategies are active if they exist
       // In a real implementation, you would check a status field from the database
       setStrategyStatus('active');

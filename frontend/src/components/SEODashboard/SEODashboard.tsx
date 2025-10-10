@@ -6,7 +6,6 @@ import {
   Typography,
   Alert,
   Skeleton,
-  useTheme,
   Chip,
   Button
 } from '@mui/material';
@@ -31,8 +30,6 @@ import { userDataAPI } from '../../api/userData';
 
 // SEO Dashboard component
 const SEODashboard: React.FC = () => {
-  const theme = useTheme();
-  
   // Clerk authentication hooks
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();

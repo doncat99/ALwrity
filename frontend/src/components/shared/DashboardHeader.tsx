@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Chip, Button, CircularProgress, Tooltip } from '@mui/material';
-import { PlayArrow, Pause, Stop } from '@mui/icons-material';
+import { Box, Typography, Chip, Button, Tooltip } from '@mui/material';
+import { PlayArrow } from '@mui/icons-material';
 import { ShimmerHeader } from './styled';
 import UserBadge from './UserBadge';
 import { DashboardHeaderProps } from './types';

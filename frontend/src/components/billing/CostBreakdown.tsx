@@ -8,11 +8,8 @@ import {
   Chip,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { 
-  DollarSign, 
-  TrendingUp,
-  BarChart3,
   PieChart as PieChartIcon
 } from 'lucide-react';
 

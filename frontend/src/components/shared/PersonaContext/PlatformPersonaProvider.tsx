@@ -9,8 +9,7 @@ import { useCopilotReadable } from '@copilotkit/react-core';
 import { 
   WritingPersona, 
   PlatformAdaptation, 
-  PlatformType,
-  UserPersonasResponse
+  PlatformType
 } from '../../../types/PlatformPersonaTypes';
 import { 
   getUserPersonas, 
@@ -37,6 +36,9 @@ interface PlatformPersonaProviderProps {
   userId?: number; // Default to 1 for now, can be enhanced with auth context later
 }
 
+// Cache duration: 5 minutes (constant outside component to avoid dependency issues)
+const CACHE_DURATION = 5 * 60 * 1000;
+
 // Provider component
 export const PlatformPersonaProvider: React.FC<PlatformPersonaProviderProps> = ({ 
   children, 
@@ -53,9 +55,6 @@ export const PlatformPersonaProvider: React.FC<PlatformPersonaProviderProps> = (
   const lastRequestTime = useRef<number>(0);
   const requestInProgress = useRef<boolean>(false);
   const dataCacheTime = useRef<number>(0);
-  
-  // Cache duration: 5 minutes
-  const CACHE_DURATION = 5 * 60 * 1000;
 
   // Fetch persona data function
   const fetchPersonas = useCallback(async () => {
@@ -253,7 +252,7 @@ export const PlatformPersonaProvider: React.FC<PlatformPersonaProviderProps> = (
       dataCacheTime.current = Date.now();
       requestInProgress.current = false;
     }
-  }, [userId, platform, corePersona]);
+  }, [userId, platform, corePersona, platformPersona]);
 
   // Initial data fetch
   useEffect(() => {

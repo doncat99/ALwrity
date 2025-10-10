@@ -5,10 +5,8 @@
 
 import React from 'react';
 import {
-  Box,
   Typography,
   Card,
-  CardContent,
   LinearProgress,
   Stepper,
   Step,

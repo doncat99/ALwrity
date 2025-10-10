@@ -52,14 +52,14 @@ export const ResearchPollingHandler: React.FC<ResearchPollingHandlerProps> = ({
     } else {
       polling.stopPolling();
     }
-  }, [taskId]);
+  }, [taskId, polling]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       polling.stopPolling();
     };
-  }, []);
+  }, [polling]);
 
   console.log('ResearchPollingHandler render:', {
     taskId,

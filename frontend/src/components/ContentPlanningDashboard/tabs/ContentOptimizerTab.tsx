@@ -7,8 +7,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
-  Chip
+  ListItemIcon
 } from '@mui/material';
 import {
   Analytics as AnalyticsIcon,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Container, Alert, Button } from '@mui/material';
+import { Container, Alert, Button } from '@mui/material';
 import { DashboardContainer } from './styled';
 import { ErrorDisplayProps } from './types';
 

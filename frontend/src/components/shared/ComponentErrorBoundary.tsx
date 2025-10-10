@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Box, Typography, Button, Alert, Stack } from '@mui/material';
+import { Typography, Button, Alert, Stack } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 
 interface ComponentErrorBoundaryProps {

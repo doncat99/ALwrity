@@ -24,7 +24,7 @@ const QuickEditToolbar: React.FC<QuickEditToolbarProps> = ({ draft, isPreviewing
           const lines = draft.split('\n');
           if (lines.length > 0) {
             const first = lines[0].trim();
-            lines[0] = first.replace(/^(.*?)([\.!?])?$/, '👉 $1$2');
+            lines[0] = first.replace(/^(.*?)([.!?])?$/, '👉 $1$2');
           }
           const target = lines.join('\n');
           window.dispatchEvent(new CustomEvent('linkedinwriter:applyEdit', { detail: { target } }));
@@ -62,7 +62,7 @@ const QuickEditToolbar: React.FC<QuickEditToolbarProps> = ({ draft, isPreviewing
       </button>
       <button
         onClick={() => {
-          const target = `[Professionalized]` + '\n\n' + draft;
+          const target = '[Professionalized]\n\n' + draft;
           window.dispatchEvent(new CustomEvent('linkedinwriter:applyEdit', { detail: { target } }));
         }}
         style={{ padding: '6px 10px', border: '1px solid #ddd', borderRadius: 6, background: '#fff', cursor: 'pointer' }}

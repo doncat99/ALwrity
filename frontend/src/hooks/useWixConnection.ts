@@ -40,8 +40,6 @@ export const useWixConnection = () => {
       const tokensRaw = sessionStorage.getItem('wix_tokens');
       
       if (connectedFlag && tokensRaw) {
-        const tokens = JSON.parse(tokensRaw);
-        
         // Set connected status with site information from tokens
         setStatus({
           connected: true,

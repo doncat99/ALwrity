@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Card,
@@ -7,10 +7,6 @@ import {
   IconButton,
   Button,
   Typography,
-  Stepper,
-  Step,
-  StepLabel,
-  StepConnector,
   Fade,
   LinearProgress,
 } from '@mui/material';
@@ -25,7 +21,6 @@ import {
   Key,
   ContentPasteRounded,
 } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
 
 interface ApiKeyCarouselProps {
   providers: Array<{
@@ -40,32 +35,12 @@ interface ApiKeyCarouselProps {
     link: string;
     free: boolean;
     recommended: boolean;
-    benefits: string[];
-  }>;
+  benefits: string[];
+}>;
   currentProvider: number;
   setCurrentProvider: (index: number) => void;
   onProviderFocus: (provider: any) => void;
 }
-
-const CustomStepConnector = styled(StepConnector)(({ theme }) => ({
-  '&.MuiStepConnector-alternativeLabel': {
-    top: 10,
-    left: 'calc(-50% + 16px)',
-    right: 'calc(50% + 16px)',
-  },
-  '& .MuiStepConnector-line': {
-    height: 3,
-    border: 0,
-    background: 'linear-gradient(90deg, #E2E8F0 0%, #CBD5E1 100%)',
-    borderRadius: 2,
-  },
-  '&.MuiStepConnector-active .MuiStepConnector-line': {
-    background: 'linear-gradient(90deg, #3B82F6 0%, #1D4ED8 100%)',
-  },
-  '&.MuiStepConnector-completed .MuiStepConnector-line': {
-    background: 'linear-gradient(90deg, #10B981 0%, #059669 100%)',
-  },
-}));
 
 const ApiKeyCarousel: React.FC<ApiKeyCarouselProps> = ({
   providers,
@@ -73,7 +48,6 @@ const ApiKeyCarousel: React.FC<ApiKeyCarouselProps> = ({
   setCurrentProvider,
   onProviderFocus,
 }) => {
-  const [autoProgress, setAutoProgress] = useState(false);
   const provider = providers[currentProvider];
 
   const getAccentColor = (name: string) => {
@@ -115,14 +89,6 @@ const ApiKeyCarousel: React.FC<ApiKeyCarouselProps> = ({
       // proactively sync sidebar
       onProviderFocus(providers[prev]);
     }
-  };
-
-  const getStepIcon = (index: number) => {
-    const stepProvider = providers[index];
-    if (stepProvider.status === 'valid') {
-      return <CheckCircle sx={{ color: 'success.main' }} />;
-    }
-    return <Key sx={{ color: stepProvider === provider ? 'primary.main' : 'text.disabled' }} />;
   };
 
   return (

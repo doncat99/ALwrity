@@ -10,10 +10,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  TextField,
   Slider,
   FormControlLabel,
-  Checkbox,
   Alert,
   IconButton,
   Tooltip,
@@ -23,12 +21,10 @@ import {
 } from '@mui/material';
 import {
   AutoAwesome as AIIcon,
-  Speed as SpeedIcon,
   Analytics as AnalyticsIcon,
   TrendingUp as TrendingIcon,
   Psychology as PsychologyIcon,
   Info as InfoIcon,
-  Settings as SettingsIcon,
   Assessment as AssessmentIcon
 } from '@mui/icons-material';
 

@@ -3,8 +3,7 @@ import {
   Box,
   Tabs,
   Tab,
-  Typography,
-  Alert
+  Typography
 } from '@mui/material';
 import {
   Analytics as AnalyticsIcon,

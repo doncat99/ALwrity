@@ -10,8 +10,6 @@ import {
   Tooltip,
   Alert,
   AlertTitle,
-  CircularProgress,
-  LinearProgress,
   Divider,
   Button,
   Dialog,
@@ -24,13 +22,7 @@ import {
   ListItemIcon
 } from '@mui/material';
 import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
   Assessment as AssessmentIcon,
-  Speed as SpeedIcon,
-  Visibility as VisibilityIcon,
-  People as EngagementIcon,
-  MonetizationOn as MonetizationOnIcon,
   Refresh as RefreshIcon,
   AutoAwesome as AutoAwesomeIcon,
   CheckCircle as CheckCircleIcon,
@@ -38,11 +30,10 @@ import {
   Error as ErrorIcon,
   Analytics as AnalyticsIcon,
   Lightbulb as LightbulbIcon,
-  Timeline as TimelineIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
-import { safeRenderText, safeRenderArray, hasValidData, getFallbackValue } from '../utils/defensiveRendering';
+import { motion } from 'framer-motion';
+import { safeRenderText } from '../utils/defensiveRendering';
 
 // Import our advanced chart components
 import {
@@ -55,9 +46,6 @@ import {
 
 // Import real-time data hook
 import { useMockRealTimeData } from '../../../../../hooks/useRealTimeData';
-
-// Import API services
-import { strategyMonitoringApi } from '../../../../../services/strategyMonitoringApi';
 
 interface EnhancedPerformanceVisualizationProps {
   strategyId: number;
@@ -88,7 +76,7 @@ const EnhancedPerformanceVisualization: React.FC<EnhancedPerformanceVisualizatio
   const [error, setError] = useState<string | null>(null);
 
   // Use real-time data hook
-  const { data: realTimeData, isConnected, error: realTimeError } = useMockRealTimeData(strategyId);
+  const { data: realTimeData, isConnected } = useMockRealTimeData(strategyId);
 
   useEffect(() => {
     loadQualityAnalysis();

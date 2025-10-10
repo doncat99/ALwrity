@@ -16,21 +16,13 @@ import {
   Card,
   CardContent,
   Chip,
-  Divider,
-  Alert,
-  IconButton,
-  Tooltip,
-  Button
+  Alert
 } from '@mui/material';
 import {
-  ContentCopy as CopyIcon,
-  Check as CheckIcon,
   Search as SearchIcon,
-  Share as ShareIcon,
   Code as CodeIcon,
   Facebook as FacebookIcon,
   Twitter as TwitterIcon,
-  LinkedIn as LinkedInIcon,
   Google as GoogleIcon
 } from '@mui/icons-material';
 
@@ -43,27 +35,11 @@ export const PreviewCard: React.FC<PreviewCardProps> = ({
   metadata,
   blogTitle
 }) => {
-  const copyToClipboard = async (text: string, itemId: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      // You could add a state to show "Copied!" feedback here
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
-    }
-  };
-
   const getCurrentDate = () => {
     return new Date().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
-    });
-  };
-
-  const getCurrentTime = () => {
-    return new Date().toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
     });
   };
 

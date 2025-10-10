@@ -17,26 +17,18 @@ import {
   Alert,
   Button,
   Slide,
-  Zoom,
-  Divider
+  Zoom
 } from '@mui/material';
 import { useTheme, alpha } from '@mui/material/styles';
 import {
   ExpandMore as ExpandMoreIcon,
   CheckCircle as CheckIcon,
-  Info as InfoIcon,
   Psychology as PsychologyIcon,
-  TrendingUp as TrendingUpIcon,
   Analytics as AnalyticsIcon,
   Business as BusinessIcon,
   AutoAwesome as AutoAwesomeIcon,
   Star as StarIcon,
-  Warning as WarningIcon,
-  Language as LanguageIcon,
-  Web as WebIcon,
-  Palette as PaletteIcon,
-  Speed as SpeedIcon,
-  Group as GroupIcon
+  Warning as WarningIcon
 } from '@mui/icons-material';
 
 /**

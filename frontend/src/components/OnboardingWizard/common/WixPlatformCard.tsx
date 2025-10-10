@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import {
   Web as WixIcon,
-  Add as AddIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
   Refresh as RefreshIcon

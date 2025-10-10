@@ -23,7 +23,7 @@ import CompactSidebar from './components/CompactSidebar';
 
 // Shared types and utilities
 import { Tool } from '../shared/types';
-import { getFilteredCategories, getToolsForCategory } from '../shared/utils';
+import { getToolsForCategory } from '../shared/utils';
 
 // Zustand stores
 import { useDashboardStore } from '../../stores/dashboardStore';

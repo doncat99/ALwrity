@@ -29,8 +29,6 @@ interface ContentEditorProps {
   topic?: string;
 }
 
-export { ContentEditor };
-
 const ContentEditor: React.FC<ContentEditorProps> = ({
   isPreviewing,
   pendingEdit,
@@ -62,6 +60,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
   const ctaCooldownRef = useRef<number | null>(null); // 15s cooldown after dismissing CTA
   useEffect(() => {
     if (DEBUG_WA) console.log('🎯 [ContentEditor] waSuggestion changed:', waSuggestion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waSuggestion]);
   const waTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasTriggeredOnceRef = useRef<boolean>(false);
@@ -228,8 +227,6 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
         lastWords: words.slice(-5).join(' ')
       });
 
-      const now = Date.now();
-      const last = lastSuggestMetaRef.current;
       const textHash = getStableContextHash(uptoCaret);
 
       // After first auto-trigger, stop auto-calling API. Show CTA instead.
@@ -271,7 +268,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
             let userError = "Failed to get writing suggestion";
             if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
               userError = "API quota exceeded. Please try again later or upgrade your plan.";
-              const match = msg.match(/\"retryDelay\"\s*:\s*\"(\d+)s\"/);
+              const match = msg.match(/"retryDelay"\s*:\s*"(\d+)s"/);
               const retryMs = match ? parseInt(match[1], 10) * 1000 : 40000;
               coolDownUntilRef.current = Date.now() + retryMs;
               console.warn('✍️ [ContentEditor] Entering suggestion cooldown for ms:', retryMs);
@@ -316,7 +313,7 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
       let userError = "Failed to get writing suggestion";
       if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
         userError = "API quota exceeded. Please try again later or upgrade your plan.";
-        const match = msg.match(/\"retryDelay\"\s*:\s*\"(\d+)s\"/);
+        const match = msg.match(/"retryDelay"\s*:\s*"(\d+)s"/);
         const retryMs = match ? parseInt(match[1], 10) * 1000 : 40000;
         coolDownUntilRef.current = Date.now() + retryMs;
         console.warn('✍️ [ContentEditor] Entering suggestion cooldown for ms:', retryMs);
@@ -422,3 +419,5 @@ const ContentEditor: React.FC<ContentEditorProps> = ({
     </div>
   );
 };
+
+export { ContentEditor };

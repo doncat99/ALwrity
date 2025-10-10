@@ -2,10 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { hallucinationDetectorService, HallucinationDetectionResponse } from '../../services/hallucinationDetectorService';
 import FactCheckResults from '../LinkedInWriter/components/FactCheckResults';
 
-interface TextSelectionHandlerProps {
-  contentRef: React.RefObject<HTMLDivElement>;
-}
-
 const useTextSelectionHandler = (contentRef: React.RefObject<HTMLDivElement>) => {
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const [factCheckResults, setFactCheckResults] = useState<HallucinationDetectionResponse | null>(null);
@@ -112,7 +108,7 @@ const useTextSelectionHandler = (contentRef: React.RefObject<HTMLDivElement>) =>
     switch (editType) {
       case 'tighten':
         // Add hook emoji to the beginning
-        editedText = selectedText.replace(/^(.*?)([\.!?])?$/, '👉 $1$2');
+        editedText = selectedText.replace(/^(.*?)([.!?])?$/, '👉 $1$2');
         break;
       case 'add-cta':
         // Add call-to-action

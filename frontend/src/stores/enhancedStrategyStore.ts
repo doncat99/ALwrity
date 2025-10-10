@@ -319,7 +319,7 @@ export const useEnhancedStrategyStore = create<EnhancedStrategyStore>((set, get)
   
   loadOnboardingIntegration: async (strategyId) => {
     try {
-      const integration = await contentPlanningApi.getOnboardingIntegration(strategyId);
+      await contentPlanningApi.getOnboardingIntegration(strategyId);
       // Handle onboarding integration data
     } catch (error: any) {
       console.error('Failed to load onboarding integration:', error);

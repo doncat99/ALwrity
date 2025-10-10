@@ -9,9 +9,6 @@ import {
   Button,
   CircularProgress
 } from '@mui/material';
-import {
-  PieChart as PieChartIcon
-} from '@mui/icons-material';
 import { useContentPlanningStore } from '../../../stores/contentPlanningStore';
 
 const ContentPillarsTab: React.FC = () => {
@@ -21,6 +18,7 @@ const ContentPillarsTab: React.FC = () => {
 
   useEffect(() => {
     loadContentPillars();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStrategy]);
 
   const loadContentPillars = async () => {

@@ -31,7 +31,6 @@ import {
 } from './seoUtils';
 
 // Components
-import CategoryCard from './CategoryCard';
 import CriticalIssueCard from './CriticalIssueCard';
 import AnalysisTabs from './AnalysisTabs';
 import IssueDetailsDialog from './IssueDetailsDialog';

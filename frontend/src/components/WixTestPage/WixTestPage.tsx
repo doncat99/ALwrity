@@ -13,12 +13,11 @@ import {
   Select,
   MenuItem,
   Chip,
-  Divider,
-  Link
+  Divider
 } from '@mui/material';
 import { apiClient } from '../../api/client';
 import { createClient, OAuthStrategy } from '@wix/sdk';
-import { categories as blogCategoriesModule, tags as blogTagsModule, posts as blogPostsModule, draftPosts as blogDraftPostsModule } from '@wix/blog';
+import { categories as blogCategoriesModule, tags as blogTagsModule } from '@wix/blog';
 
 interface WixConnectionStatus {
   connected: boolean;
@@ -49,7 +48,6 @@ const WixTestPage: React.FC = () => {
   const [publishing, setPublishing] = useState(false);
   const [categories, setCategories] = useState<BlogCategories | null>(null);
   const [tags, setTags] = useState<BlogTags | null>(null);
-  const [authUrl, setAuthUrl] = useState<string>('');
   
   // Blog post form state
   const [blogTitle, setBlogTitle] = useState('Test Blog Post from ALwrity');
@@ -120,7 +118,6 @@ This integration opens up new possibilities for content creators who want to lev
       // Use sessionStorage to ensure data is scoped to this tab/session
       sessionStorage.setItem('wix_oauth_data', JSON.stringify(oauthData));
       const { authUrl } = await wixClient.auth.getAuthUrl(oauthData);
-      setAuthUrl(authUrl);
       window.location.href = authUrl;
     } catch (error) {
       console.error('Failed to start Wix OAuth flow:', error);

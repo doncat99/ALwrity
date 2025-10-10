@@ -10,13 +10,10 @@ import {
   ListItemText,
   Chip,
   Divider,
-  Alert,
 } from '@mui/material';
 import {
   CheckCircle,
   Star,
-  Security,
-  Speed,
   TrendingUp,
   Insights,
   Search,

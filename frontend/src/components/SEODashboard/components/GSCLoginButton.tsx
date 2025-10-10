@@ -60,6 +60,7 @@ const GSCLoginButton: React.FC<GSCLoginButtonProps> = ({ onStatusChange }) => {
   // Check GSC connection status on component mount
   useEffect(() => {
     checkGSCStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkGSCStatus = async () => {

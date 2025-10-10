@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
@@ -10,7 +10,6 @@ import {
   IconButton,
   Avatar,
   Stack,
-  LinearProgress,
   CircularProgress,
   Card,
   CardContent
@@ -57,12 +56,9 @@ const EnhancedTodayModal: React.FC<EnhancedTodayModalProps> = ({
     navigationState,
     completeTask,
     skipTask,
-    moveToNextTask,
     isLoading,
     isWorkflowComplete
   } = useWorkflowStore();
-
-  const [selectedTask, setSelectedTask] = useState<TodayTask | null>(null);
 
   // Prefer live workflow tasks (to reflect updated statuses), fallback to props
   const liveTasks = currentWorkflow?.tasks && Array.isArray(currentWorkflow.tasks) && currentWorkflow.tasks.length > 0
@@ -97,12 +93,6 @@ const EnhancedTodayModal: React.FC<EnhancedTodayModalProps> = ({
   const handleSkipTask = async (task: TodayTask) => {
     if (currentWorkflow) {
       await skipTask(task.id);
-    }
-  };
-
-  const handleStartWorkflow = async () => {
-    if (currentWorkflow) {
-      await moveToNextTask();
     }
   };
 
@@ -158,9 +148,6 @@ const EnhancedTodayModal: React.FC<EnhancedTodayModalProps> = ({
     task.status === 'completed' || task.status === 'skipped'
   );
 
-  // Check if this is the Plan pillar
-  const isPlanPillar = pillarId === 'plan';
-  
   // Define pillar order for navigation
   const pillarOrder = ['plan', 'generate', 'publish', 'analyze', 'engage', 'remarket'];
   const currentPillarIndex = pillarOrder.indexOf(pillarId);

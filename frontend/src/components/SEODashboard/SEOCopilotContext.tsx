@@ -14,8 +14,7 @@ const SEOCopilotContext: React.FC<{ children: React.ReactNode }> = ({ children }
     isLoading,
     isAnalyzing,
     isGenerating,
-    error,
-    loadPersonalizationData
+    error
   } = useSEOCopilotStore();
 
   const hasLoadedPersonalization = useRef(false);

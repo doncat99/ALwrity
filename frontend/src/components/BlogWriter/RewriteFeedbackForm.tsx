@@ -213,7 +213,7 @@ export const RewriteFeedbackForm: React.FC<RewriteFeedbackFormProps> = ({
   onRewriteStarted,
   onRewriteTriggered
 }) => {
-  const [isCollectingFeedback, setIsCollectingFeedback] = useState(false);
+  // Note: isCollectingFeedback state removed as it was unused
 
   // Rewrite Blog Action with HITL
   useCopilotActionTyped({
@@ -303,7 +303,6 @@ export const RewriteFeedbackForm: React.FC<RewriteFeedbackFormProps> = ({
 
         if (result.success && result.taskId) {
           onRewriteStarted?.(result.taskId);
-          setIsCollectingFeedback(false);
 
           return {
             success: true,
