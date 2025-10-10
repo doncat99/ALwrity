@@ -91,6 +91,10 @@ class RouterManager:
             from api.content_planning.strategy_copilot import router as strategy_copilot_router
             self.include_router_safely(strategy_copilot_router, "strategy_copilot")
             
+            # Error logging router
+            from routers.error_logging import router as error_logging_router
+            self.include_router_safely(error_logging_router, "error_logging")
+            
             logger.info("✅ Core routers included successfully")
             return True
             

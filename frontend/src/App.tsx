@@ -228,28 +228,13 @@ const App: React.FC = () => {
     );
   }
 
-  return (
-    <ErrorBoundary 
-      context="Application Root"
-      showDetails={process.env.NODE_ENV === 'development'}
-      onError={(error, errorInfo) => {
-        // Custom error handler - send to analytics/monitoring
-        console.error('Global error caught:', { error, errorInfo });
-        // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
-      }}
-    >
-      <ClerkProvider publishableKey={clerkPublishableKey}>
-        <OnboardingProvider>
-          <CopilotKit 
-            publicApiKey={copilotApiKey}
-            showDevConsole={false}
-            onError={(e) => console.error("CopilotKit Error:", e)}
-            
-          >
-            <Router>
-              <ConditionalCopilotKit>
-                <TokenInstaller />
-                <Routes>
+  // Render app with or without CopilotKit based on whether we have a key
+  const renderApp = () => {
+    const appContent = (
+      <Router>
+        <ConditionalCopilotKit>
+          <TokenInstaller />
+          <Routes>
                 <Route path="/" element={<RootRoute />} />
                 <Route 
                   path="/onboarding" 
@@ -275,10 +260,41 @@ const App: React.FC = () => {
                 <Route path="/wix/callback" element={<WixCallbackPage />} />
                 <Route path="/wp/callback" element={<WordPressCallbackPage />} />
                 <Route path="/gsc/callback" element={<GSCAuthCallback />} />
-              </Routes>
-            </ConditionalCopilotKit>
-          </Router>
+          </Routes>
+        </ConditionalCopilotKit>
+      </Router>
+    );
+
+    // Only wrap with CopilotKit if we have a valid key
+    if (copilotApiKey && copilotApiKey.trim()) {
+      return (
+        <CopilotKit 
+          publicApiKey={copilotApiKey}
+          showDevConsole={false}
+          onError={(e) => console.error("CopilotKit Error:", e)}
+        >
+          {appContent}
         </CopilotKit>
+      );
+    }
+
+    // Return app without CopilotKit if no key available
+    return appContent;
+  };
+
+  return (
+    <ErrorBoundary 
+      context="Application Root"
+      showDetails={process.env.NODE_ENV === 'development'}
+      onError={(error, errorInfo) => {
+        // Custom error handler - send to analytics/monitoring
+        console.error('Global error caught:', { error, errorInfo });
+        // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
+      }}
+    >
+      <ClerkProvider publishableKey={clerkPublishableKey}>
+        <OnboardingProvider>
+          {renderApp()}
         </OnboardingProvider>
       </ClerkProvider>
     </ErrorBoundary>
