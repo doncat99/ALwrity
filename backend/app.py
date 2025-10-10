@@ -110,6 +110,16 @@ async def rate_limit_middleware(request: Request, call_next):
     """Rate limiting middleware using modular utilities."""
     return await rate_limiter.rate_limit_middleware(request, call_next)
 
+# API key injection middleware for production (user-specific keys)
+@app.middleware("http")
+async def inject_user_api_keys(request: Request, call_next):
+    """
+    Inject user-specific API keys into environment for the request duration.
+    This allows existing code using os.getenv() to work in production.
+    """
+    from middleware.api_key_injection_middleware import api_key_injection_middleware
+    return await api_key_injection_middleware(request, call_next)
+
 # Health check endpoints using modular utilities
 @app.get("/health")
 async def health():

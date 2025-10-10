@@ -22,3 +22,6 @@ WORDPRESS_REDIRECT_URI=
 
 # Development Settings
 DISABLE_AUTH=false
+
+# local development
+DEPLOY_ENV=local

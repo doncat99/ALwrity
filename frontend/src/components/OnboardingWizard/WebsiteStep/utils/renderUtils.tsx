@@ -66,7 +66,7 @@ const KeyInsightCard: React.FC<KeyInsightProps> = ({
         mb: 0, 
         borderRadius: 2.5,
         // Force high-contrast base color so nested text never inherits a light color
-        color: isDark ? '#ffffff' : '#1a202c',
+        color: isDark ? '#ffffff !important' : '#1a202c !important',
         background: isDark
           ? `linear-gradient(135deg, ${alpha(paletteColor.main, 0.08)} 0%, ${alpha(paletteColor.main, 0.04)} 100%)`
           : `linear-gradient(135deg, ${alpha(paletteColor.main, 0.06)} 0%, ${alpha(paletteColor.light, 0.08)} 100%)`,
@@ -76,6 +76,10 @@ const KeyInsightCard: React.FC<KeyInsightProps> = ({
           : alpha(paletteColor.main, 0.15),
         borderLeftWidth: '5px',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        // Ensure all child elements inherit proper text color
+        '& *': {
+          color: 'inherit !important'
+        },
         '&:hover': {
           background: isDark
             ? `linear-gradient(135deg, ${alpha(paletteColor.main, 0.12)} 0%, ${alpha(paletteColor.main, 0.08)} 100%)`
@@ -114,10 +118,13 @@ const KeyInsightCard: React.FC<KeyInsightProps> = ({
               fontSize: '0.78rem',
               letterSpacing: '0.6px',
               textTransform: 'uppercase',
-              color: isDark ? '#ffffff !important' : '#0f172a !important',
+              color: isDark ? '#ffffff !important' : '#1a202c !important',
               textShadow: isDark ? 'none' : '0 1px 0 rgba(255,255,255,0.6)',
               mb: 0.5,
-              display: 'block'
+              display: 'block',
+              // Force high contrast for readability
+              WebkitTextFillColor: isDark ? '#ffffff' : '#1a202c',
+              WebkitTextStroke: '0px transparent'
             }}
           >
             {title}
@@ -127,8 +134,11 @@ const KeyInsightCard: React.FC<KeyInsightProps> = ({
             sx={{ 
               fontWeight: 700,
               fontSize: '1.1rem',
-              color: isDark ? '#ffffff !important' : '#0b1220 !important',
-              lineHeight: 1.35
+              color: isDark ? '#ffffff !important' : '#1a202c !important',
+              lineHeight: 1.35,
+              // Force high contrast for readability
+              WebkitTextFillColor: isDark ? '#ffffff' : '#1a202c',
+              WebkitTextStroke: '0px transparent'
             }}
           >
             {Array.isArray(value) ? value.join(', ') : value}

@@ -95,6 +95,10 @@ class RouterManager:
             from routers.error_logging import router as error_logging_router
             self.include_router_safely(error_logging_router, "error_logging")
             
+            # Frontend environment manager router
+            from routers.frontend_env_manager import router as frontend_env_router
+            self.include_router_safely(frontend_env_router, "frontend_env_manager")
+            
             logger.info("✅ Core routers included successfully")
             return True
             

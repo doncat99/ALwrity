@@ -36,6 +36,7 @@ import {
 interface WebsiteStepProps {
   onContinue: (stepData?: any) => void;
   updateHeaderContent: (content: { title: string; description: string }) => void;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 interface StyleAnalysis {
@@ -148,7 +149,7 @@ interface ExistingAnalysis {
 // MAIN COMPONENT
 // =============================================================================
 
-const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderContent }) => {
+const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderContent, onValidationChange }) => {
   const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -177,6 +178,16 @@ const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderConte
       description: 'Let Alwrity analyze your website to understand your brand voice, writing style, and content characteristics. This helps us generate content that matches your existing tone and resonates with your audience.'
     });
   }, [updateHeaderContent]);
+
+  // Notify parent when validation state changes
+  useEffect(() => {
+    const isValid = !!(website.trim() && analysis);
+    console.log('WebsiteStep: Validation check:', { website: website.trim(), analysis: !!analysis, isValid });
+    if (onValidationChange) {
+      console.log('WebsiteStep: Calling onValidationChange with:', isValid);
+      onValidationChange(isValid);
+    }
+  }, [website, analysis, onValidationChange]);
 
   useEffect(() => {
     // Prefill from last session analysis on mount
@@ -517,31 +528,6 @@ const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderConte
             useAnalysisForGenAI={useAnalysisForGenAI}
             onUseAnalysisChange={setUseAnalysisForGenAI}
           />
-          
-          {/* Continue Button */}
-          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={handleContinue}
-              disabled={loading}
-              sx={{
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                borderRadius: 2,
-                boxShadow: '0 4px 14px rgba(25, 118, 210, 0.4)',
-                '&:hover': {
-                  boxShadow: '0 6px 20px rgba(25, 118, 210, 0.6)',
-                  transform: 'translateY(-2px)'
-                },
-                transition: 'all 0.2s ease-in-out'
-              }}
-            >
-              Continue to Next Step
-            </Button>
-          </Box>
         </Box>
       )}
 
