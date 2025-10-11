@@ -45,14 +45,18 @@ const FinalStep: React.FC<FinalStepProps> = ({ onContinue, updateHeaderContent }
       // Load individual data sources for detailed information
       const websiteAnalysis = await getWebsiteAnalysisData();
       const researchPreferences = await getResearchPreferencesData();
-      
+      // Frontend fallbacks to Step 2 cached data (ensures non-breaking UI)
+      const cachedUrl = typeof window !== 'undefined' ? localStorage.getItem('website_url') : null;
+      const cachedAnalysisRaw = typeof window !== 'undefined' ? localStorage.getItem('website_analysis_data') : null;
+      const cachedAnalysis = cachedAnalysisRaw ? safeParseJSON(cachedAnalysisRaw) : undefined;
+
       setOnboardingData({
         apiKeys: summary.api_keys || {},
-        websiteUrl: websiteAnalysis?.website_url || summary.website_url,
+        websiteUrl: websiteAnalysis?.website_url || summary.website_url || cachedUrl || undefined,
         researchPreferences: researchPreferences || summary.research_preferences,
         personalizationSettings: summary.personalization_settings,
         integrations: summary.integrations || {},
-        styleAnalysis: websiteAnalysis?.style_analysis || summary.style_analysis
+        styleAnalysis: websiteAnalysis?.style_analysis || summary.style_analysis || cachedAnalysis || undefined
       });
     } catch (error) {
       console.error('Error loading onboarding data:', error);
@@ -73,6 +77,12 @@ const FinalStep: React.FC<FinalStepProps> = ({ onContinue, updateHeaderContent }
     } finally {
       setDataLoading(false);
     }
+  };
+
+  // Safe JSON parser for cached data
+  const safeParseJSON = (raw: string | null): any | undefined => {
+    if (!raw) return undefined;
+    try { return JSON.parse(raw); } catch { return undefined; }
   };
 
   const handleLaunch = async () => {

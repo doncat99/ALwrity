@@ -8,7 +8,7 @@ Base = declarative_base()
 class OnboardingSession(Base):
     __tablename__ = 'onboarding_sessions'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, nullable=False)  # Replace with ForeignKey if you have a user table
+    user_id = Column(String(255), nullable=False)  # Clerk user ID (string)
     current_step = Column(Integer, default=1)
     progress = Column(Float, default=0.0)
     started_at = Column(DateTime, default=func.now())
@@ -60,6 +60,8 @@ class WebsiteAnalysis(Base):
     target_audience = Column(JSON)  # Demographics, expertise level, industry focus
     content_type = Column(JSON)  # Primary type, secondary types, purpose
     recommended_settings = Column(JSON)  # Writing tone, target audience, content type
+    # brand_analysis = Column(JSON)  # Brand voice, values, positioning, competitive differentiation
+    # content_strategy_insights = Column(JSON)  # SWOT analysis, strengths, weaknesses, opportunities, threats
     
     # Crawl results
     crawl_result = Column(JSON)  # Raw crawl data
@@ -90,6 +92,8 @@ class WebsiteAnalysis(Base):
             'target_audience': self.target_audience,
             'content_type': self.content_type,
             'recommended_settings': self.recommended_settings,
+            # 'brand_analysis': self.brand_analysis,
+            # 'content_strategy_insights': self.content_strategy_insights,
             'crawl_result': self.crawl_result,
             'style_patterns': self.style_patterns,
             'style_guidelines': self.style_guidelines,

@@ -170,8 +170,36 @@ class OnboardingProgress:
         required_steps = [1, 2, 3, 6]  # Steps 1, 2, 3, and 6 are required
         for step_num in required_steps:
             step = self.get_step_data(step_num)
-            if step and step.status not in [StepStatus.COMPLETED, StepStatus.SKIPPED]:
-                return False
+            if step and step.status in [StepStatus.COMPLETED, StepStatus.SKIPPED]:
+                continue
+
+            # DB-aware fallback for steps 2 and 3
+            try:
+                from services.onboarding_database_service import OnboardingDatabaseService
+                from services.database import get_db
+                db = next(get_db())
+                db_service = OnboardingDatabaseService(db)
+                if step_num == 2:
+                    w = db_service.get_website_analysis(self.user_id, db)
+                    if w and (w.get('website_url') or w.get('writing_style')):
+                        # Mark as completed to normalize state
+                        try:
+                            self.mark_step_completed(2, {'source': 'db-fallback'})
+                        except Exception:
+                            pass
+                        continue
+                if step_num == 3:
+                    p = db_service.get_research_preferences(self.user_id, db)
+                    if p and p.get('research_depth'):
+                        try:
+                            self.mark_step_completed(3, {'source': 'db-fallback'})
+                        except Exception:
+                            pass
+                        continue
+            except Exception:
+                pass
+
+            return False
         return True
     
     def get_completion_percentage(self) -> float:

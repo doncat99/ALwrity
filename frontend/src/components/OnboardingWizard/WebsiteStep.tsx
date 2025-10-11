@@ -15,6 +15,7 @@ import {
   DialogActions,
   DialogContentText
 } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import {
   Analytics as AnalyticsIcon,
   History as HistoryIcon,
@@ -150,6 +151,49 @@ interface ExistingAnalysis {
 // =============================================================================
 
 const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderContent, onValidationChange }) => {
+  // Scoped high-contrast theme for Step 2 only
+  const scopedTheme = React.useMemo(() => createTheme({
+    palette: {
+      mode: 'light',
+      background: { default: '#ffffff', paper: '#ffffff' },
+      text: { primary: '#111827', secondary: '#374151' }
+    },
+    components: {
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundColor: '#ffffff !important',
+            backgroundImage: 'none !important'
+          }
+        }
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            backgroundColor: '#ffffff !important',
+            backgroundImage: 'none !important'
+          }
+        }
+      },
+      MuiTypography: {
+        styleOverrides: {
+          root: {
+            color: '#111827 !important',
+            WebkitTextFillColor: '#111827'
+          }
+        }
+      },
+      MuiTooltip: {
+        styleOverrides: {
+          tooltip: {
+            color: '#111827',
+            backgroundColor: '#F9FAFB',
+            border: '1px solid #E5E7EB'
+          }
+        }
+      }
+    }
+  }), []);
   const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -431,9 +475,11 @@ const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderConte
   }
 
   return (
+    <ThemeProvider theme={scopedTheme}>
     <Box sx={{ 
-      maxWidth: 900, 
-      mx: 'auto', 
+      maxWidth: '100%',
+      width: '100%',
+      mx: 0,
       p: 3,
       '@keyframes fadeIn': {
         '0%': { opacity: 0, transform: 'translateY(20px)' },
@@ -455,13 +501,7 @@ const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderConte
         </Typography>
       </Box>
 
-      {/* API Key Configuration Notice */}
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2">
-          <strong>Note:</strong> To perform accurate style analysis, you need to configure AI provider API keys in step 1. 
-          If you haven't completed step 1 yet, please go back and configure your API keys for the best experience.
-        </Typography>
-      </Alert>
+      {/* API Key Configuration Notice removed per request */}
 
       <Card sx={{ mb: 3, p: 3 }}>
         <Grid container spacing={2} alignItems="center">
@@ -591,6 +631,7 @@ const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderConte
         </DialogActions>
       </Dialog>
     </Box>
+    </ThemeProvider>
   );
 };
 
