@@ -28,6 +28,9 @@ from api.component_logic import router as component_logic_router
 # Import subscription API endpoints
 from api.subscription_api import router as subscription_router
 
+# Import Step 3 onboarding routes
+from api.onboarding_utils.step3_routes import router as step3_routes
+
 # Import SEO tools router
 from routers.seo_tools import router as seo_tools_router
 # Import Facebook Writer endpoints
