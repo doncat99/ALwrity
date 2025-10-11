@@ -563,7 +563,7 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         key="research" 
         onContinue={handleNext} 
         onBack={handleBack}
-        userUrl={stepData?.website || ''}
+        userUrl={stepData?.website || localStorage.getItem('website_url') || ''}
         industryContext={stepData?.industryContext}
         onDataReady={handleCompetitorDataReady}
       />,
