@@ -41,13 +41,19 @@ class ExaService:
     def __init__(self):
         """Initialize the Exa Service with API credentials."""
         self.api_key = os.getenv("EXA_API_KEY")
+        self.exa = None
+        self.enabled = False
         
         if not self.api_key:
-            raise ValueError("Exa API key not configured. Please set EXA_API_KEY environment variable.")
+            logger.warning("EXA_API_KEY not configured; Exa service will be disabled")
         else:
-            self.exa = Exa(api_key=self.api_key)
-            self.enabled = True
-            logger.info("Exa Service initialized successfully")
+            try:
+                self.exa = Exa(api_key=self.api_key)
+                self.enabled = True
+                logger.info("Exa Service initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize Exa service: {e}")
+                self.enabled = False
     
     async def discover_competitors(
         self,
