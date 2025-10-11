@@ -336,6 +336,10 @@ const WebsiteStep: React.FC<WebsiteStepProps> = ({ onContinue, updateHeaderConte
         setDomainName(analysisResult.domainName || '');
         setAnalysis(analysisResult.analysis);
         
+        // Store in localStorage for Step 3 (Competitor Analysis)
+        localStorage.setItem('website_url', fixedUrl);
+        localStorage.setItem('website_analysis_data', JSON.stringify(analysisResult.analysis));
+        
         if (analysisResult.warning) {
           setSuccess(`Website style analysis completed successfully! Note: ${analysisResult.warning}`);
         } else {
