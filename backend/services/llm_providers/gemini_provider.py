@@ -471,12 +471,25 @@ def gemini_structured_json_response(prompt, schema, temperature=0.7, top_p=0.9, 
         return {"error": "No valid structured response content found"}
 
     except ValueError as e:
-        # API key related errors
+        # API key related errors should not be retried
         logger.error(f"API key error in Gemini Pro structured JSON generation: {e}")
         return {"error": str(e)}
     except Exception as e:
-        logger.error(f"Error in Gemini Pro structured JSON generation: {e}")
-        return {"error": str(e)}
+        # Let tenacity handle retries, especially for 429 RESOURCE_EXHAUSTED
+        msg = str(e)
+        if "RESOURCE_EXHAUSTED" in msg or "429" in msg or "rate limit" in msg.lower():
+            # If RetryInfo is present with a retryDelay, honor it before re-raising
+            try:
+                import re, time
+                m = re.search(r"retryDelay':\s*'?(\d+)s" , msg)
+                if m:
+                    delay_s = int(m.group(1))
+                    logger.warning(f"Rate limit hit, sleeping {delay_s}s before retry...")
+                    time.sleep(delay_s)
+            except Exception:
+                pass
+        # Re-raise to trigger tenacity's backoff/retry
+        raise
 
 
 # Removed JSON repair functions to avoid false positives

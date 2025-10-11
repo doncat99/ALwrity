@@ -203,6 +203,15 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
       try {
         setLoading(true);
         console.log('Wizard: Starting initialization...');
+        // Fast local restore: try localStorage active step first (non-authoritative)
+        const cachedActiveStep = localStorage.getItem('onboarding_active_step');
+        if (cachedActiveStep !== null) {
+          const stepIdx = Math.max(0, Math.min(steps.length - 1, parseInt(cachedActiveStep, 10)));
+          if (!Number.isNaN(stepIdx)) {
+            console.log('Wizard: Provisional activeStep from localStorage:', stepIdx);
+            setActiveStep(stepIdx);
+          }
+        }
         
         // Check if we already have init data from App (cached in sessionStorage)
         const cachedInit = sessionStorage.getItem('onboarding_init');
@@ -232,7 +241,16 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
           }
 
           // Set state from cached data - NO API CALLS NEEDED!
-          setActiveStep(onboarding.current_step - 1);
+          let computedStep = Math.max(1, Math.min(steps.length, onboarding.current_step));
+          // If localStorage has a higher step index, prefer it for UX continuity
+          const lsStep = localStorage.getItem('onboarding_active_step');
+          if (lsStep !== null) {
+            const lsIdx = Math.max(0, Math.min(steps.length - 1, parseInt(lsStep, 10)));
+            if (!Number.isNaN(lsIdx)) {
+              computedStep = Math.max(computedStep, lsIdx + 1);
+            }
+          }
+          setActiveStep(computedStep - 1);
           setProgressState(onboarding.completion_percentage);
           // Note: Session managed by Clerk auth, no need to track separately
 
@@ -273,7 +291,15 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         sessionStorage.setItem('onboarding_init', JSON.stringify(response.data));
 
         // Set state from API response
-        setActiveStep(onboarding.current_step - 1);
+        let computedStep = Math.max(1, Math.min(steps.length, onboarding.current_step));
+        const lsStep = localStorage.getItem('onboarding_active_step');
+        if (lsStep !== null) {
+          const lsIdx = Math.max(0, Math.min(steps.length - 1, parseInt(lsStep, 10)));
+          if (!Number.isNaN(lsIdx)) {
+            computedStep = Math.max(computedStep, lsIdx + 1);
+          }
+        }
+        setActiveStep(computedStep - 1);
         setProgressState(onboarding.completion_percentage);
         // Note: Session managed by Clerk auth, no need to track separately
 
@@ -487,6 +513,9 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     }
     
     setActiveStep(nextStep);
+    try {
+      localStorage.setItem('onboarding_active_step', String(nextStep));
+    } catch (_e) {}
     console.log('Wizard: Setting activeStep to:', nextStep);
     
     // Update progress

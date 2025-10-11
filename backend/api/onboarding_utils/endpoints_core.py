@@ -45,6 +45,34 @@ async def initialize_onboarding(current_user: Dict[str, Any] = Depends(get_curre
 
         next_step = progress.get_next_incomplete_step()
 
+        # Derive a resilient current_step from DB if progress looks unset (production refresh)
+        derived_current_step = progress.current_step
+        try:
+            # Only derive if we're at the initial state
+            if not progress.is_completed and (progress.current_step in (1, 0)):
+                from services.onboarding_database_service import OnboardingDatabaseService
+                from services.database import SessionLocal
+                db = SessionLocal()
+                try:
+                    db_service = OnboardingDatabaseService()
+                    # If website analysis exists -> at least step 2 completed
+                    website = db_service.get_website_analysis(user_id, db)
+                    if website and (website.get('website_url') or website.get('writing_style') or website.get('status') == 'completed'):
+                        derived_current_step = max(derived_current_step, 2)
+                    # If competitor research data exists, bump to step 3 (best-effort via preferences)
+                    prefs = db_service.get_research_preferences(user_id, db)
+                    if prefs and (prefs.get('research_depth') or prefs.get('content_types')):
+                        derived_current_step = max(derived_current_step, 3)
+                    # If persona data exists, bump to step 4
+                    persona = db_service.get_persona_data(user_id, db)
+                    if persona and (persona.get('corePersona') or persona.get('platformPersonas')):
+                        derived_current_step = max(derived_current_step, 4)
+                finally:
+                    db.close()
+        except Exception:
+            # Non-fatal; keep original progress.current_step
+            pass
+
         response_data = {
             "user": {
                 "id": user_id,
@@ -55,7 +83,7 @@ async def initialize_onboarding(current_user: Dict[str, Any] = Depends(get_curre
             },
             "onboarding": {
                 "is_completed": progress.is_completed,
-                "current_step": progress.current_step,
+                "current_step": derived_current_step,
                 "completion_percentage": progress.get_completion_percentage(),
                 "next_step": next_step,
                 "started_at": progress.started_at,
