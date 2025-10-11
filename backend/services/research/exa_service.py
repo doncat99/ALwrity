@@ -43,17 +43,30 @@ class ExaService:
         self.api_key = os.getenv("EXA_API_KEY")
         self.exa = None
         self.enabled = False
-        
-        if not self.api_key:
-            logger.warning("EXA_API_KEY not configured; Exa service will be disabled")
-        else:
-            try:
-                self.exa = Exa(api_key=self.api_key)
-                self.enabled = True
-                logger.info("Exa Service initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize Exa service: {e}")
+
+        # Don't assume key is available at import time in production.
+        # Keys may be injected per-request via middleware, so defer init.
+        self._try_initialize()
+
+    def _try_initialize(self) -> None:
+        """Attempt to (re)initialize the Exa SDK from current environment."""
+        if self.enabled and self.exa:
+            return
+        try:
+            self.api_key = os.getenv("EXA_API_KEY")
+            if not self.api_key:
+                # Leave disabled; caller may try again after middleware injection
+                logger.warning("EXA_API_KEY not configured; Exa service will be disabled")
                 self.enabled = False
+                self.exa = None
+                return
+            self.exa = Exa(api_key=self.api_key)
+            self.enabled = True
+            logger.info("Exa Service initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Exa service: {e}")
+            self.enabled = False
+            self.exa = None
     
     async def discover_competitors(
         self,
@@ -78,6 +91,8 @@ class ExaService:
             Dictionary containing competitor analysis results
         """
         try:
+            # Ensure we pick up any per-request injected key
+            self._try_initialize()
             if not self.enabled:
                 raise ValueError("Exa Service is not enabled - API key missing")
             
@@ -405,6 +420,8 @@ class ExaService:
             Dictionary containing social media discovery results
         """
         try:
+            # Ensure we pick up any per-request injected key
+            self._try_initialize()
             if not self.enabled:
                 raise ValueError("Exa Service is not enabled - API key missing")
             
@@ -712,6 +729,8 @@ class ExaService:
             Dictionary containing service health status
         """
         try:
+            # Ensure latest env before health check
+            self._try_initialize()
             if not self.enabled:
                 return {
                     "status": "disabled",
