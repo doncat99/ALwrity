@@ -37,7 +37,7 @@ class OnboardingCompletionService:
             # Validate API keys are configured
             self._validate_api_keys()
             
-            # Generate writing persona from onboarding data
+            # Generate writing persona from onboarding data only if not already present
             persona_generated = await self._generate_persona_from_onboarding(user_id)
             
             # Complete the onboarding process
@@ -144,9 +144,18 @@ class OnboardingCompletionService:
         try:
             persona_service = PersonaAnalysisService()
             
-            # Use user_id = 1 for now (assuming single user system)
-            persona_user_id = 1
-            persona_result = persona_service.generate_persona_from_onboarding(persona_user_id)
+            # If a persona already exists for this user, skip regeneration
+            try:
+                existing = persona_service.get_user_personas(int(user_id))
+                if existing and len(existing) > 0:
+                    logger.info("Persona already exists for user %s; skipping regeneration during completion", user_id)
+                    return False
+            except Exception:
+                # Non-fatal; proceed to attempt generation
+                pass
+
+            # Generate persona for this user
+            persona_result = persona_service.generate_persona_from_onboarding(int(user_id))
             
             if "error" not in persona_result:
                 logger.info(f"✅ Writing persona generated during onboarding completion: {persona_result.get('persona_id')}")

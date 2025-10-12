@@ -531,7 +531,13 @@ async def execute_persona_generation_task(task_id: str, persona_request: Persona
                 )
                 
                 if "error" in core_persona:
-                    update_task_status(task_id, "failed", 0, f"Core persona generation failed: {core_persona['error']}")
+                    error_msg = core_persona['error']
+                    # Check if this is a quota/rate limit error
+                    if "RESOURCE_EXHAUSTED" in str(error_msg) or "429" in str(error_msg) or "quota" in str(error_msg).lower():
+                        update_task_status(task_id, "failed", 0, f"Quota exhausted: {error_msg}", error=str(error_msg))
+                        logger.error(f"Task {task_id}: Quota exhausted, marking as failed immediately")
+                    else:
+                        update_task_status(task_id, "failed", 0, f"Core persona generation failed: {error_msg}", error=str(error_msg))
                     return
                 
                 update_task_status(task_id, "running", 40, "Core persona generated successfully")

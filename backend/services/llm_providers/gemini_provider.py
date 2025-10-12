@@ -475,20 +475,14 @@ def gemini_structured_json_response(prompt, schema, temperature=0.7, top_p=0.9, 
         logger.error(f"API key error in Gemini Pro structured JSON generation: {e}")
         return {"error": str(e)}
     except Exception as e:
-        # Let tenacity handle retries, especially for 429 RESOURCE_EXHAUSTED
+        # Check if this is a quota/rate limit error
         msg = str(e)
-        if "RESOURCE_EXHAUSTED" in msg or "429" in msg or "rate limit" in msg.lower():
-            # If RetryInfo is present with a retryDelay, honor it before re-raising
-            try:
-                import re, time
-                m = re.search(r"retryDelay':\s*'?(\d+)s" , msg)
-                if m:
-                    delay_s = int(m.group(1))
-                    logger.warning(f"Rate limit hit, sleeping {delay_s}s before retry...")
-                    time.sleep(delay_s)
-            except Exception:
-                pass
-        # Re-raise to trigger tenacity's backoff/retry
+        if "RESOURCE_EXHAUSTED" in msg or "429" in msg or "quota" in msg.lower():
+            logger.error(f"Rate limit/quota error in Gemini Pro structured JSON generation: {msg}")
+            # Return error instead of retrying - quota exhausted means we need to wait or upgrade plan
+            return {"error": msg}
+        # For other errors, let tenacity handle retries
+        logger.error(f"Error in Gemini Pro structured JSON generation: {e}")
         raise
 
 
