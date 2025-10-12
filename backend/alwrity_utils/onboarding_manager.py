@@ -156,10 +156,10 @@ class OnboardingManager:
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.get("/api/onboarding/api-keys/onboarding")
-        async def api_keys_for_onboarding():
+        async def api_keys_for_onboarding(current_user: dict = Depends(get_current_user)):
             """Get all configured API keys for onboarding (unmasked)."""
             try:
-                return await get_api_keys_for_onboarding()
+                return await get_api_keys_for_onboarding(current_user)
             except Exception as e:
                 logger.error(f"Error in api_keys_for_onboarding: {e}")
                 raise HTTPException(status_code=500, detail=str(e))

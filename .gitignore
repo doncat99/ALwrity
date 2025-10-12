@@ -81,6 +81,8 @@ backend/research_cache.db
 gsc_credentials.json
 **/gsc_credentials.json
 
+.cursor
+
 # Onboarding progress files
 .onboarding_progress.json
 backend/.onboarding_progress.json

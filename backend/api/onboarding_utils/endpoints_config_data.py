@@ -25,11 +25,12 @@ async def get_api_keys():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def get_api_keys_for_onboarding():
+async def get_api_keys_for_onboarding(current_user: dict = None):
     try:
         from api.onboarding_utils.api_key_management_service import APIKeyManagementService
         api_service = APIKeyManagementService()
-        return await api_service.get_api_keys_for_onboarding()
+        user_id = str(current_user.get('id')) if current_user and current_user.get('id') else None
+        return await api_service.get_api_keys_for_onboarding(user_id)
     except Exception as e:
         logger.error(f"Error getting API keys for onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")

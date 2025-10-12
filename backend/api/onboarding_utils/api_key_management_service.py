@@ -70,20 +70,38 @@ class APIKeyManagementService:
             logger.error(f"Error getting API keys: {str(e)}")
             raise HTTPException(status_code=500, detail="Internal server error")
     
-    async def get_api_keys_for_onboarding(self) -> Dict[str, Any]:
-        """Get all configured API keys for onboarding (unmasked)."""
+    async def get_api_keys_for_onboarding(self, user_id: str | None = None) -> Dict[str, Any]:
+        """Get all configured API keys for onboarding (unmasked), user-aware.
+
+        In production, keys are per-user and stored in DB; in local, we use env.
+        """
         try:
-            self.api_key_manager.load_api_keys()  # Load keys from environment
-            api_keys = self.api_key_manager.api_keys  # Get the loaded keys
-            
-            # Return actual API keys for onboarding pre-filling
-            result = {
+            # Prefer DB per-user keys when user_id is provided and DB is available
+            if user_id and getattr(self.api_key_manager, 'use_database', False) and getattr(self.api_key_manager, 'db_service', None):
+                try:
+                    from services.database import SessionLocal
+                    db = SessionLocal()
+                    try:
+                        api_keys = self.api_key_manager.db_service.get_api_keys(user_id, db) or {}
+                        logger.info(f"Loaded {len(api_keys)} API keys from database for user {user_id}")
+                        return {
+                            "api_keys": api_keys,
+                            "total_providers": len(api_keys),
+                            "configured_providers": [k for k, v in api_keys.items() if v]
+                        }
+                    finally:
+                        db.close()
+                except Exception as db_err:
+                    logger.warning(f"DB lookup for API keys failed, falling back to env: {db_err}")
+
+            # Fallback: load from environment/in-memory
+            self.api_key_manager.load_api_keys()
+            api_keys = self.api_key_manager.api_keys
+            return {
                 "api_keys": api_keys,
                 "total_providers": len(api_keys),
                 "configured_providers": [k for k, v in api_keys.items() if v]
             }
-            
-            return result
         except Exception as e:
             logger.error(f"Error getting API keys for onboarding: {str(e)}")
             raise HTTPException(status_code=500, detail="Internal server error")
