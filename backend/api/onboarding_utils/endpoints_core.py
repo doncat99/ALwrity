@@ -45,16 +45,25 @@ async def initialize_onboarding(current_user: Dict[str, Any] = Depends(get_curre
 
         next_step = progress.get_next_incomplete_step()
 
-        # Derive a resilient current_step from DB if progress looks unset (production refresh)
+        # Derive a resilient current_step and is_completed from DB if file-based progress is absent/outdated
         derived_current_step = progress.current_step
+        derived_is_completed = progress.is_completed
         try:
             # Only derive if we're at the initial state
-            if not progress.is_completed and (progress.current_step in (1, 0)):
+            if (progress.current_step in (1, 0)) or not progress.is_completed:
                 from services.onboarding_database_service import OnboardingDatabaseService
                 from services.database import SessionLocal
                 db = SessionLocal()
                 try:
                     db_service = OnboardingDatabaseService()
+                    # If a DB session exists, prefer that state for completion
+                    session_row = db_service.get_session_by_user(user_id, db)
+                    if session_row:
+                        # Trust explicit completion state from DB if available
+                        if (getattr(session_row, 'current_step', 0) or 0) >= 6 or (getattr(session_row, 'progress', 0.0) or 0.0) >= 100.0:
+                            derived_current_step = max(derived_current_step, 6)
+                            derived_is_completed = True
+                    
                     # If website analysis exists -> at least step 2 completed
                     website = db_service.get_website_analysis(user_id, db)
                     if website and (website.get('website_url') or website.get('writing_style') or website.get('status') == 'completed'):
@@ -63,10 +72,12 @@ async def initialize_onboarding(current_user: Dict[str, Any] = Depends(get_curre
                     prefs = db_service.get_research_preferences(user_id, db)
                     if prefs and (prefs.get('research_depth') or prefs.get('content_types')):
                         derived_current_step = max(derived_current_step, 3)
-                    # If persona data exists, bump to step 4
+                    # If persona data exists, bump to step 5 (personalization done)
                     persona = db_service.get_persona_data(user_id, db)
                     if persona and (persona.get('corePersona') or persona.get('platformPersonas')):
-                        derived_current_step = max(derived_current_step, 4)
+                        derived_current_step = max(derived_current_step, 5)
+                        # If DB session did not explicitly mark completion but all major data exists,
+                        # do not auto-complete; leave final step to the user.
                 finally:
                     db.close()
         except Exception:
@@ -82,7 +93,7 @@ async def initialize_onboarding(current_user: Dict[str, Any] = Depends(get_curre
                 "clerk_user_id": user_id,
             },
             "onboarding": {
-                "is_completed": progress.is_completed,
+                "is_completed": derived_is_completed,
                 "current_step": derived_current_step,
                 "completion_percentage": progress.get_completion_percentage(),
                 "next_step": next_step,

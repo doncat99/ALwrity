@@ -34,8 +34,8 @@ class OnboardingCompletionService:
                     detail=f"Cannot complete onboarding. The following steps must be completed first: {missing_steps_str}"
                 )
             
-            # Validate API keys are configured
-            self._validate_api_keys()
+            # Validate API keys are configured (DB-aware)
+            self._validate_api_keys(user_id)
             
             # Generate writing persona from onboarding data only if not already present
             persona_generated = await self._generate_persona_from_onboarding(user_id)
@@ -81,6 +81,15 @@ class OnboardingCompletionService:
             # DB-aware fallbacks for migration period
             try:
                 if db_service:
+                    if step_num == 1:
+                        # Treat as completed if user has any API key in DB
+                        keys = db_service.get_api_keys(user_id, db)
+                        if keys and any(v for v in keys.values()):
+                            try:
+                                progress.mark_step_completed(1, {'source': 'db-fallback'})
+                            except Exception:
+                                pass
+                            continue
                     if step_num == 2:
                         # Treat as completed if website analysis exists in DB
                         website = db_service.get_website_analysis(user_id, db)
@@ -129,14 +138,52 @@ class OnboardingCompletionService:
         
         return missing_steps
     
-    def _validate_api_keys(self):
-        """Validate that API keys are configured."""
-        api_manager = get_api_key_manager()
-        api_keys = api_manager.get_all_keys()
-        if not api_keys:
+    def _validate_api_keys(self, user_id: str):
+        """Validate that API keys are configured for the current user.
+
+        Priority:
+        1) Check database for per-user keys (production, user isolation)
+        2) Fallback to in-memory/env keys via APIKeyManager (development/local)
+        """
+        try:
+            # Prefer per-user DB keys in production
+            db = None
+            try:
+                db = next(get_db())
+                db_service = OnboardingDatabaseService(db)
+                user_keys = db_service.get_api_keys(user_id, db)
+                if user_keys and any(v for v in user_keys.values()):
+                    return
+            except Exception:
+                # DB lookup failed - continue to env fallback
+                pass
+            finally:
+                try:
+                    if db and hasattr(db, 'close'):
+                        db.close()
+                except Exception:
+                    pass
+
+            # Fallback to env/in-memory
+            api_manager = get_api_key_manager()
+            # Ensure latest env is loaded (middleware may have injected per-request keys)
+            try:
+                api_manager.load_api_keys()
+            except Exception:
+                pass
+            api_keys = api_manager.get_all_keys()
+            if not api_keys:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot complete onboarding. At least one AI provider API key must be configured."
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            # On unexpected error, fail closed with clear message
             raise HTTPException(
                 status_code=400,
-                detail="Cannot complete onboarding. At least one AI provider API key must be configured."
+                detail="Cannot complete onboarding. API key validation failed."
             )
     
     async def _generate_persona_from_onboarding(self, user_id: str) -> bool:
