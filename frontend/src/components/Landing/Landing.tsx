@@ -570,6 +570,19 @@ const Landing: React.FC = () => {
         <SolopreneurDilemma />
       </Suspense>
 
+      {/* Pricing Section - Embedded in Landing */}
+      <Box 
+        id="pricing" 
+        sx={{ 
+          py: 8, 
+          background: `linear-gradient(180deg, ${alpha(theme.palette.background.default, 0.95)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`,
+        }}
+      >
+        <Suspense fallback={<LoadingSpinner />}>
+          {React.createElement(lazy(() => import('../Pricing/PricingPage')))}
+        </Suspense>
+      </Box>
+
       {/* Introducing ALwrity Section with Background - Lazy Loaded */}
       <Suspense fallback={<LoadingSpinner />}>
         <IntroducingAlwrity />

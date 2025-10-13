@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import AskAlwrityIcon from '../../assets/images/AskAlwrity-min.ico';
+import { SubscriptionGuard } from '../SubscriptionGuard';
 
 // Shared components
 import DashboardHeader from '../shared/DashboardHeader';
@@ -299,8 +300,13 @@ const MainDashboard: React.FC = () => {
             />
 
 
-            {/* Content Lifecycle Pillars - First Panel */}
-            <ContentLifecyclePillars />
+            {/* Subscription Guard - Protect main dashboard content */}
+            <SubscriptionGuard
+              fallbackMessage="Your subscription is not active. Please upgrade to access the dashboard features."
+              showUpgradeButton={true}
+            >
+              {/* Content Lifecycle Pillars - First Panel */}
+              <ContentLifecyclePillars />
 
             {/* Side-by-side layout for Areas 2 and 3 */}
             <Box sx={{ display: 'flex', gap: 3, mt: 3 }}>
@@ -350,6 +356,7 @@ const MainDashboard: React.FC = () => {
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
             />
+            </SubscriptionGuard>
           </motion.div>
         </AnimatePresence>
 

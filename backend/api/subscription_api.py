@@ -14,8 +14,8 @@ from services.database import get_db
 from services.usage_tracking_service import UsageTrackingService
 from services.pricing_service import PricingService
 from models.subscription_models import (
-    APIProvider, SubscriptionPlan, UserSubscription, UsageSummary, 
-    APIProviderPricing, UsageAlert, SubscriptionTier
+    APIProvider, SubscriptionPlan, UserSubscription, UsageSummary,
+    APIProviderPricing, UsageAlert, SubscriptionTier, BillingCycle
 )
 
 router = APIRouter(prefix="/api/subscription", tags=["subscription"])
@@ -207,6 +207,181 @@ async def get_user_subscription(
     
     except Exception as e:
         logger.error(f"Error getting user subscription: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/status/{user_id}")
+async def get_subscription_status(
+    user_id: str,
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Get simple subscription status for enforcement checks."""
+
+    try:
+        subscription = db.query(UserSubscription).filter(
+            UserSubscription.user_id == user_id,
+            UserSubscription.is_active == True
+        ).first()
+
+        if not subscription:
+            # Check if free tier exists
+            free_plan = db.query(SubscriptionPlan).filter(
+                SubscriptionPlan.tier == SubscriptionTier.FREE,
+                SubscriptionPlan.is_active == True
+            ).first()
+
+            if free_plan:
+                return {
+                    "success": True,
+                    "data": {
+                        "active": True,
+                        "plan": "free",
+                        "tier": "free",
+                        "can_use_api": True,
+                        "limits": {
+                            "gemini_calls": free_plan.gemini_calls_limit,
+                            "openai_calls": free_plan.openai_calls_limit,
+                            "anthropic_calls": free_plan.anthropic_calls_limit,
+                            "mistral_calls": free_plan.mistral_calls_limit,
+                            "tavily_calls": free_plan.tavily_calls_limit,
+                            "serper_calls": free_plan.serper_calls_limit,
+                            "metaphor_calls": free_plan.metaphor_calls_limit,
+                            "firecrawl_calls": free_plan.firecrawl_calls_limit,
+                            "stability_calls": free_plan.stability_calls_limit,
+                            "monthly_cost": free_plan.monthly_cost_limit
+                        }
+                    }
+                }
+            else:
+                return {
+                    "success": True,
+                    "data": {
+                        "active": False,
+                        "plan": "none",
+                        "tier": "none",
+                        "can_use_api": False,
+                        "reason": "No active subscription or free tier found"
+                    }
+                }
+
+        # Check if subscription is within valid period
+        now = datetime.utcnow()
+        if subscription.current_period_end < now:
+            return {
+                "success": True,
+                "data": {
+                    "active": False,
+                    "plan": subscription.plan.tier.value,
+                    "tier": subscription.plan.tier.value,
+                    "can_use_api": False,
+                    "reason": "Subscription expired"
+                }
+            }
+
+        return {
+            "success": True,
+            "data": {
+                "active": True,
+                "plan": subscription.plan.tier.value,
+                "tier": subscription.plan.tier.value,
+                "can_use_api": True,
+                "limits": {
+                    "gemini_calls": subscription.plan.gemini_calls_limit,
+                    "openai_calls": subscription.plan.openai_calls_limit,
+                    "anthropic_calls": subscription.plan.anthropic_calls_limit,
+                    "mistral_calls": subscription.plan.mistral_calls_limit,
+                    "tavily_calls": subscription.plan.tavily_calls_limit,
+                    "serper_calls": subscription.plan.serper_calls_limit,
+                    "metaphor_calls": subscription.plan.metaphor_calls_limit,
+                    "firecrawl_calls": subscription.plan.firecrawl_calls_limit,
+                    "stability_calls": subscription.plan.stability_calls_limit,
+                    "monthly_cost": subscription.plan.monthly_cost_limit
+                }
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting subscription status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/subscribe/{user_id}")
+async def subscribe_to_plan(
+    user_id: str,
+    subscription_data: dict,
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Create or update a user's subscription."""
+
+    try:
+        plan_id = subscription_data.get('plan_id')
+        billing_cycle = subscription_data.get('billing_cycle', 'monthly')
+
+        if not plan_id:
+            raise HTTPException(status_code=400, detail="plan_id is required")
+
+        # Get the plan
+        plan = db.query(SubscriptionPlan).filter(
+            SubscriptionPlan.id == plan_id,
+            SubscriptionPlan.is_active == True
+        ).first()
+
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plan not found")
+
+        # Check if user already has an active subscription
+        existing_subscription = db.query(UserSubscription).filter(
+            UserSubscription.user_id == user_id,
+            UserSubscription.is_active == True
+        ).first()
+
+        now = datetime.utcnow()
+
+        if existing_subscription:
+            # Update existing subscription
+            existing_subscription.plan_id = plan_id
+            existing_subscription.billing_cycle = BillingCycle(billing_cycle)
+            existing_subscription.current_period_start = now
+            existing_subscription.current_period_end = now + timedelta(
+                days=365 if billing_cycle == 'yearly' else 30
+            )
+            existing_subscription.updated_at = now
+
+            subscription = existing_subscription
+        else:
+            # Create new subscription
+            subscription = UserSubscription(
+                user_id=user_id,
+                plan_id=plan_id,
+                billing_cycle=BillingCycle(billing_cycle),
+                current_period_start=now,
+                current_period_end=now + timedelta(
+                    days=365 if billing_cycle == 'yearly' else 30
+                ),
+                status=UsageStatus.ACTIVE,
+                is_active=True,
+                auto_renew=True
+            )
+            db.add(subscription)
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Successfully subscribed to {plan.name}",
+            "data": {
+                "subscription_id": subscription.id,
+                "plan_name": plan.name,
+                "billing_cycle": billing_cycle,
+                "current_period_start": subscription.current_period_start.isoformat(),
+                "current_period_end": subscription.current_period_end.isoformat(),
+                "status": subscription.status.value
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error subscribing to plan: {e}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/pricing")

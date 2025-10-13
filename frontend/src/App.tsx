@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { CopilotKit } from "@copilotkit/react-core";
@@ -11,6 +11,7 @@ import ContentPlanningDashboard from './components/ContentPlanningDashboard/Cont
 import FacebookWriter from './components/FacebookWriter/FacebookWriter';
 import LinkedInWriter from './components/LinkedInWriter/LinkedInWriter';
 import BlogWriter from './components/BlogWriter/BlogWriter';
+import PricingPage from './components/Pricing/PricingPage';
 import WixTestPage from './components/WixTestPage/WixTestPage';
 import WixCallbackPage from './components/WixCallbackPage/WixCallbackPage';
 import WordPressCallbackPage from './components/WordPressCallbackPage/WordPressCallbackPage';
@@ -20,9 +21,11 @@ import Landing from './components/Landing/Landing';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 import ErrorBoundaryTest from './components/shared/ErrorBoundaryTest';
 import { OnboardingProvider } from './contexts/OnboardingContext';
+import { SubscriptionProvider } from './contexts/SubscriptionContext';
 
 import { apiClient, setAuthTokenGetter } from './api/client';
 import { useOnboarding } from './contexts/OnboardingContext';
+import { useState, useEffect } from 'react';
 
 // interface OnboardingStatus {
 //   onboarding_required: boolean;
@@ -41,13 +44,36 @@ const ConditionalCopilotKit: React.FC<{ children: React.ReactNode }> = ({ childr
   return <>{children}</>;
 };
 
-// Component to handle initial routing based on onboarding status
-// Now uses OnboardingContext instead of making its own API calls
+// Component to handle initial routing based on subscription and onboarding status
+// Flow: Check Subscription → Check Onboarding → Route accordingly
 const InitialRouteHandler: React.FC = () => {
   const { loading, error, isOnboardingComplete } = useOnboarding();
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
-  // Loading state
-  if (loading) {
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const userId = localStorage.getItem('user_id') || 'anonymous';
+        const response = await apiClient.get(`/api/subscription/status/${userId}`);
+        const subscriptionData = response.data.data;
+        
+        // User has active subscription if plan exists
+        setHasActiveSubscription(subscriptionData?.active || false);
+      } catch (err) {
+        console.error('Error checking subscription:', err);
+        // On error, assume no subscription (will redirect to pricing)
+        setHasActiveSubscription(false);
+      } finally {
+        setCheckingSubscription(false);
+      }
+    };
+
+    checkSubscription();
+  }, []);
+
+  // Loading state - checking both subscription and onboarding
+  if (loading || checkingSubscription) {
     return (
       <Box
         display="flex"
@@ -59,7 +85,7 @@ const InitialRouteHandler: React.FC = () => {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          Checking onboarding status...
+          {checkingSubscription ? 'Checking subscription...' : 'Checking onboarding status...'}
         </Typography>
       </Box>
     );
@@ -87,12 +113,19 @@ const InitialRouteHandler: React.FC = () => {
     );
   }
 
-  // Redirect based on onboarding status from context
+  // Decision tree: Subscription → Onboarding → Dashboard
+  // 1. No subscription? → Pricing page
+  if (!hasActiveSubscription) {
+    console.log('InitialRouteHandler: No active subscription, redirecting to pricing');
+    return <Navigate to="/pricing" replace />;
+  }
+
+  // 2. Has subscription, check onboarding
   if (isOnboardingComplete) {
-    console.log('InitialRouteHandler: Onboarding complete (from context), redirecting to dashboard');
+    console.log('InitialRouteHandler: Subscription active & onboarding complete, redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   } else {
-    console.log('InitialRouteHandler: Onboarding not complete (from context), redirecting to onboarding');
+    console.log('InitialRouteHandler: Subscription active but onboarding incomplete, redirecting to onboarding');
     return <Navigate to="/onboarding" replace />;
   }
 };
@@ -255,6 +288,7 @@ const App: React.FC = () => {
                 <Route path="/facebook-writer" element={<ProtectedRoute><FacebookWriter /></ProtectedRoute>} />
                 <Route path="/linkedin-writer" element={<ProtectedRoute><LinkedInWriter /></ProtectedRoute>} />
                 <Route path="/blog-writer" element={<ProtectedRoute><BlogWriter /></ProtectedRoute>} />
+                <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/wix-test" element={<WixTestPage />} />
                 <Route path="/wix-test-direct" element={<WixTestPage />} />
                 <Route path="/wix/callback" element={<WixCallbackPage />} />
@@ -293,9 +327,11 @@ const App: React.FC = () => {
       }}
     >
       <ClerkProvider publishableKey={clerkPublishableKey}>
-        <OnboardingProvider>
-          {renderApp()}
-        </OnboardingProvider>
+        <SubscriptionProvider>
+          <OnboardingProvider>
+            {renderApp()}
+          </OnboardingProvider>
+        </SubscriptionProvider>
       </ClerkProvider>
     </ErrorBoundary>
   );

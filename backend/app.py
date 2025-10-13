@@ -97,9 +97,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add API monitoring middleware
-# Temporarily disabled for Wix testing
-# app.middleware("http")(monitoring_middleware)
+# Add API monitoring middleware for subscription enforcement
+app.middleware("http")(monitoring_middleware)
 
 # Initialize modular utilities
 health_checker = HealthChecker()
