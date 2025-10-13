@@ -15,7 +15,7 @@ from services.usage_tracking_service import UsageTrackingService
 from services.pricing_service import PricingService
 from models.subscription_models import (
     APIProvider, SubscriptionPlan, UserSubscription, UsageSummary,
-    APIProviderPricing, UsageAlert, SubscriptionTier, BillingCycle
+    APIProviderPricing, UsageAlert, SubscriptionTier, BillingCycle, UsageStatus
 )
 
 router = APIRouter(prefix="/api/subscription", tags=["subscription"])

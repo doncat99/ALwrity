@@ -82,6 +82,7 @@ const PricingPage: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
   const [subscribing, setSubscribing] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [knowMoreModal, setKnowMoreModal] = useState<{ open: boolean; title: string; content: React.ReactNode }>({
     open: false,
     title: '',
@@ -112,6 +113,17 @@ const PricingPage: React.FC = () => {
   const handleSubscribe = async (planId: number) => {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
+
+    // Get user_id from localStorage (set by Clerk auth)
+    const userId = localStorage.getItem('user_id');
+    
+    // Check if user is signed in
+    if (!userId || userId === 'anonymous' || userId === '') {
+      // User not signed in, show sign-in prompt
+      console.warn('PricingPage: User not signed in, showing prompt');
+      setShowSignInPrompt(true);
+      return;
+    }
 
     // For alpha testing, only allow Free and Basic plans (Pro features not ready)
     if (plan.tier !== 'free' && plan.tier !== 'basic') {
@@ -934,6 +946,38 @@ const PricingPage: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setKnowMoreModal({ open: false, title: '', content: null })}>
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Sign In Prompt Modal */}
+      <Dialog
+        open={showSignInPrompt}
+        onClose={() => setShowSignInPrompt(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Sign In Required</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Please sign in to subscribe to a plan and start using ALwrity.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            If you don't have an account, signing in will automatically create one for you.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowSignInPrompt(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={() => {
+              // Redirect to landing page which has sign-in
+              window.location.href = '/';
+            }}
+          >
+            Sign In
           </Button>
         </DialogActions>
       </Dialog>

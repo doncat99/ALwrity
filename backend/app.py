@@ -97,9 +97,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add API monitoring middleware for subscription enforcement
-app.middleware("http")(monitoring_middleware)
-
 # Initialize modular utilities
 health_checker = HealthChecker()
 rate_limiter = RateLimiter(window_seconds=60, max_requests=200)
@@ -107,17 +104,25 @@ frontend_serving = FrontendServing(app)
 router_manager = RouterManager(app)
 onboarding_manager = OnboardingManager(app)
 
+# Middleware Order (FastAPI executes in REVERSE order of registration - LIFO):
+# Registration order:  1. Monitoring  2. Rate Limit  3. API Key Injection
+# Execution order:     1. API Key Injection (sets user_id)  2. Rate Limit  3. Monitoring (uses user_id)
+
+# 1. FIRST REGISTERED (runs LAST) - Monitoring middleware
+app.middleware("http")(monitoring_middleware)
+
+# 2. SECOND REGISTERED (runs SECOND) - Rate limiting
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     """Rate limiting middleware using modular utilities."""
     return await rate_limiter.rate_limit_middleware(request, call_next)
 
-# API key injection middleware for production (user-specific keys)
+# 3. LAST REGISTERED (runs FIRST) - API key injection
 @app.middleware("http")
 async def inject_user_api_keys(request: Request, call_next):
     """
     Inject user-specific API keys into environment for the request duration.
-    This allows existing code using os.getenv() to work in production.
+    Sets request.state.user_id for downstream middleware.
     """
     from middleware.api_key_injection_middleware import api_key_injection_middleware
     return await api_key_injection_middleware(request, call_next)

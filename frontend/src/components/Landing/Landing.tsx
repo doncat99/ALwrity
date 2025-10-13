@@ -578,9 +578,37 @@ const Landing: React.FC = () => {
           background: `linear-gradient(180deg, ${alpha(theme.palette.background.default, 0.95)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`,
         }}
       >
-        <Suspense fallback={<LoadingSpinner />}>
-          {React.createElement(lazy(() => import('../Pricing/PricingPage')))}
-        </Suspense>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 6 }}>
+            <Typography variant="h3" component="h2" gutterBottom fontWeight={700}>
+              Choose Your Plan
+            </Typography>
+            <Typography variant="h6" color="text.secondary">
+              Start with a free plan or upgrade for advanced features
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={() => window.location.href = '/pricing'}
+              sx={{
+                px: 6,
+                py: 2,
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                '&:hover': {
+                  background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.secondary.dark} 100%)`,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.4)}`,
+                }
+              }}
+            >
+              View All Plans & Features
+            </Button>
+          </Box>
+        </Container>
       </Box>
 
       {/* Introducing ALwrity Section with Background - Lazy Loaded */}

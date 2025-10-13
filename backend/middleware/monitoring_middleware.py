@@ -466,13 +466,18 @@ async def monitoring_middleware(request: Request, call_next):
     # Extract request details - Enhanced user identification
     user_id = None
     try:
-        # Check query parameters
-        if hasattr(request, 'query_params') and 'user_id' in request.query_params:
+        # PRIORITY 1: Check request.state.user_id (set by API key injection middleware)
+        if hasattr(request.state, 'user_id') and request.state.user_id:
+            user_id = request.state.user_id
+            logger.debug(f"Monitoring: Using user_id from request.state: {user_id}")
+        
+        # PRIORITY 2: Check query parameters
+        elif hasattr(request, 'query_params') and 'user_id' in request.query_params:
             user_id = request.query_params['user_id']
         elif hasattr(request, 'path_params') and 'user_id' in request.path_params:
             user_id = request.path_params['user_id']
         
-        # Check headers for user identification
+        # PRIORITY 3: Check headers for user identification
         elif 'x-user-id' in request.headers:
             user_id = request.headers['x-user-id']
         elif 'x-user-email' in request.headers:
@@ -482,22 +487,24 @@ async def monitoring_middleware(request: Request, call_next):
         
         # Check for authorization header with user info
         elif 'authorization' in request.headers:
-            auth_header = request.headers['authorization']
-            # Extract user info from JWT or other auth tokens if needed
-            # For now, use a default user for testing
-            user_id = "default_user"
+            # Auth middleware should have set request.state.user_id
+            # If not, skip usage limits (unauthenticated or auth will handle)
+            user_id = None
+            logger.debug("Monitoring: Auth header present but no user_id in state - skipping limits")
         
         # For alpha testing, use IP address as user identifier if no other ID found
-        if not user_id and request.client:
+        # But only if there's no auth header (truly anonymous)
+        elif not user_id and request.client and 'authorization' not in request.headers:
             user_id = f"alpha_user_{request.client.host}"
         
-        # Final fallback for testing
-        if not user_id:
-            user_id = "anonymous_user"
+        # Final fallback: None (skip usage limits for truly anonymous/unauthenticated)
+        # This prevents false positives for authenticated users
+        else:
+            user_id = None
             
     except Exception as e:
         logger.debug(f"Error extracting user ID: {e}")
-        user_id = "error_user"
+        user_id = None  # On error, skip usage limits
     
     # Capture request body for usage tracking (read once, safely)
     request_body = None

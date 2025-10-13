@@ -45,11 +45,15 @@ const ConditionalCopilotKit: React.FC<{ children: React.ReactNode }> = ({ childr
 };
 
 // Component to handle initial routing based on subscription and onboarding status
-// Flow: Check Subscription → Check Onboarding → Route accordingly
+// Flow: Subscription → Onboarding → Dashboard
 const InitialRouteHandler: React.FC = () => {
   const { loading, error, isOnboardingComplete } = useOnboarding();
   const [checkingSubscription, setCheckingSubscription] = useState(true);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    active: boolean;
+    plan: string;
+    isNewUser: boolean;
+  } | null>(null);
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -58,12 +62,22 @@ const InitialRouteHandler: React.FC = () => {
         const response = await apiClient.get(`/api/subscription/status/${userId}`);
         const subscriptionData = response.data.data;
         
-        // User has active subscription if plan exists
-        setHasActiveSubscription(subscriptionData?.active || false);
+        // Check if user is new (no subscription record at all)
+        const isNewUser = !subscriptionData || subscriptionData.plan === 'none';
+        
+        setSubscriptionStatus({
+          active: subscriptionData?.active || false,
+          plan: subscriptionData?.plan || 'none',
+          isNewUser
+        });
       } catch (err) {
         console.error('Error checking subscription:', err);
-        // On error, assume no subscription (will redirect to pricing)
-        setHasActiveSubscription(false);
+        // On error, treat as new user
+        setSubscriptionStatus({
+          active: false,
+          plan: 'none',
+          isNewUser: true
+        });
       } finally {
         setCheckingSubscription(false);
       }
@@ -113,21 +127,28 @@ const InitialRouteHandler: React.FC = () => {
     );
   }
 
-  // Decision tree: Subscription → Onboarding → Dashboard
-  // 1. No subscription? → Pricing page
-  if (!hasActiveSubscription) {
-    console.log('InitialRouteHandler: No active subscription, redirecting to pricing');
+  if (!subscriptionStatus) {
+    return null; // Should not happen, but just in case
+  }
+
+  // Decision tree for SIGNED-IN users:
+  // Priority: Subscription → Onboarding → Dashboard
+  
+  // 1. No active subscription? → Must subscribe first (even if onboarding is complete)
+  if (subscriptionStatus.isNewUser || !subscriptionStatus.active) {
+    console.log('InitialRouteHandler: No active subscription → Pricing page');
     return <Navigate to="/pricing" replace />;
   }
 
-  // 2. Has subscription, check onboarding
-  if (isOnboardingComplete) {
-    console.log('InitialRouteHandler: Subscription active & onboarding complete, redirecting to dashboard');
-    return <Navigate to="/dashboard" replace />;
-  } else {
-    console.log('InitialRouteHandler: Subscription active but onboarding incomplete, redirecting to onboarding');
+  // 2. Has active subscription, check onboarding status
+  if (!isOnboardingComplete) {
+    console.log('InitialRouteHandler: Subscription active but onboarding incomplete → Onboarding');
     return <Navigate to="/onboarding" replace />;
   }
+
+  // 3. Has subscription AND completed onboarding → Dashboard
+  console.log('InitialRouteHandler: All set (subscription + onboarding) → Dashboard');
+  return <Navigate to="/dashboard" replace />;
 };
 
 // Root route that chooses Landing (signed out) or InitialRouteHandler (signed in)
@@ -139,9 +160,24 @@ const RootRoute: React.FC = () => {
   return <Landing />;
 };
 
-// Installs Clerk auth token getter into axios clients; must render under ClerkProvider
+// Installs Clerk auth token getter into axios clients and stores user_id
+// Must render under ClerkProvider
 const TokenInstaller: React.FC = () => {
-  const { getToken } = useAuth();
+  const { getToken, userId, isSignedIn } = useAuth();
+  
+  // Store user_id in localStorage when user signs in
+  useEffect(() => {
+    if (isSignedIn && userId) {
+      console.log('TokenInstaller: Storing user_id in localStorage:', userId);
+      localStorage.setItem('user_id', userId);
+    } else if (!isSignedIn) {
+      // Clear user_id when signed out
+      console.log('TokenInstaller: Clearing user_id from localStorage');
+      localStorage.removeItem('user_id');
+    }
+  }, [isSignedIn, userId]);
+  
+  // Install token getter for API calls
   useEffect(() => {
     setAuthTokenGetter(async () => {
       try {
@@ -157,6 +193,7 @@ const TokenInstaller: React.FC = () => {
       }
     });
   }, [getToken]);
+  
   return null;
 };
 
