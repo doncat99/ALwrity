@@ -14,11 +14,22 @@ from .linkedin_persona_schemas import LinkedInPersonaSchemas
 class LinkedInPersonaService:
     """Service for generating LinkedIn-specific persona adaptations."""
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        """Implement singleton pattern to prevent multiple initializations."""
+        if cls._instance is None:
+            cls._instance = super(LinkedInPersonaService, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        """Initialize the LinkedIn persona service."""
-        self.prompts = LinkedInPersonaPrompts()
-        self.schemas = LinkedInPersonaSchemas()
-        logger.info("LinkedInPersonaService initialized")
+        """Initialize the LinkedIn persona service (only once)."""
+        if not self._initialized:
+            self.prompts = LinkedInPersonaPrompts()
+            self.schemas = LinkedInPersonaSchemas()
+            logger.debug("LinkedInPersonaService initialized")
+            self._initialized = True
     
     def generate_linkedin_persona(self, core_persona: Dict[str, Any], onboarding_data: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -72,6 +72,21 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Custom error types for better error handling
+export class ConnectionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConnectionError';
+  }
+}
+
+export class NetworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
+
 // Add response interceptor with automatic token refresh on 401
 apiClient.interceptors.response.use(
   (response) => {
@@ -79,11 +94,30 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    
+
+    // Handle network errors and timeouts (backend not available)
+    if (!error.response) {
+      // Network error, timeout, or backend not reachable
+      const connectionError = new NetworkError(
+        'Unable to connect to the backend server. Please check if the server is running.'
+      );
+      console.error('Network/Connection Error:', error.message || error);
+      return Promise.reject(connectionError);
+    }
+
+    // Handle server errors (5xx)
+    if (error.response.status >= 500) {
+      const connectionError = new ConnectionError(
+        'Backend server is experiencing issues. Please try again later.'
+      );
+      console.error('Server Error:', error.response.status, error.response.data);
+      return Promise.reject(connectionError);
+    }
+
     // If 401 and we haven't retried yet, try to refresh token and retry
     if (error?.response?.status === 401 && !originalRequest._retry && authTokenGetter) {
       originalRequest._retry = true;
-      
+
       try {
         // Get fresh token
         const newToken = await authTokenGetter();
@@ -96,9 +130,9 @@ apiClient.interceptors.response.use(
       } catch (retryError) {
         console.error('Token refresh failed:', retryError);
       }
-      
+
       // If retry failed and not in onboarding, redirect
-      const isOnboardingRoute = window.location.pathname.includes('/onboarding') || 
+      const isOnboardingRoute = window.location.pathname.includes('/onboarding') ||
                                  window.location.pathname === '/';
       if (!isOnboardingRoute) {
         try { window.location.assign('/'); } catch {}
@@ -106,7 +140,7 @@ apiClient.interceptors.response.use(
         console.warn('401 Unauthorized - token refresh failed');
       }
     }
-    
+
     console.error('API Error:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }

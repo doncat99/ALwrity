@@ -215,7 +215,7 @@ class PricingService:
                 self.db.add(pricing)
         
         self.db.commit()
-        logger.info("Default API pricing initialized")
+        logger.debug("Default API pricing initialized")
     
     def initialize_default_plans(self):
         """Initialize default subscription plans."""
@@ -318,7 +318,7 @@ class PricingService:
                 self.db.add(plan)
         
         self.db.commit()
-        logger.info("Default subscription plans initialized")
+        logger.debug("Default subscription plans initialized")
     
     def calculate_api_cost(self, provider: APIProvider, model_name: str, 
                           tokens_input: int = 0, tokens_output: int = 0, 

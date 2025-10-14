@@ -47,15 +47,26 @@ class AIServiceMetrics:
 class AIServiceManager:
     """Centralized AI service management for content planning system."""
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        """Implement singleton pattern to prevent multiple initializations."""
+        if cls._instance is None:
+            cls._instance = super(AIServiceManager, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        """Initialize AI service manager."""
-        self.logger = logger
-        self.metrics: List[AIServiceMetrics] = []
-        self.prompts = self._load_centralized_prompts()
-        self.schemas = self._load_centralized_schemas()
-        self.config = self._load_ai_configuration()
-        
-        logger.info("AIServiceManager initialized")
+        """Initialize AI service manager (only once)."""
+        if not self._initialized:
+            self.logger = logger
+            self.metrics: List[AIServiceMetrics] = []
+            self.prompts = self._load_centralized_prompts()
+            self.schemas = self._load_centralized_schemas()
+            self.config = self._load_ai_configuration()
+            
+            logger.debug("AIServiceManager initialized")
+            self._initialized = True
     
     def _load_ai_configuration(self) -> Dict[str, Any]:
         """Load AI configuration settings."""

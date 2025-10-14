@@ -20,14 +20,25 @@ from services.llm_providers.gemini_provider import gemini_structured_json_respon
 class FacebookPersonaService:
     """Facebook-specific persona generation and optimization service."""
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        """Implement singleton pattern to prevent multiple initializations."""
+        if cls._instance is None:
+            cls._instance = super(FacebookPersonaService, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        """Initialize the Facebook persona service."""
-        self.schemas = FacebookPersonaSchema
-        self.constraints = FacebookPersonaConstraints()
-        self.validation = FacebookPersonaValidation()
-        self.optimization = FacebookPersonaOptimization()
-        self.prompts = FacebookPersonaPrompts()
-        logger.info("FacebookPersonaService initialized")
+        """Initialize the Facebook persona service (only once)."""
+        if not self._initialized:
+            self.schemas = FacebookPersonaSchema
+            self.constraints = FacebookPersonaConstraints()
+            self.validation = FacebookPersonaValidation()
+            self.optimization = FacebookPersonaOptimization()
+            self.prompts = FacebookPersonaPrompts()
+            logger.debug("FacebookPersonaService initialized")
+            self._initialized = True
     
     def generate_facebook_persona(self, core_persona: Dict[str, Any], onboarding_data: Dict[str, Any]) -> Dict[str, Any]:
         """

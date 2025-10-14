@@ -51,40 +51,54 @@ class DependencyManager:
     
     def check_critical_dependencies(self) -> Tuple[bool, List[str]]:
         """Check if critical dependencies are available."""
-        print("🔍 Checking critical dependencies...")
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
+        if verbose:
+            print("🔍 Checking critical dependencies...")
         
         missing_packages = []
         
         for package in self.critical_packages:
             try:
                 __import__(package.replace('-', '_'))
-                print(f"   ✅ {package}")
+                if verbose:
+                    print(f"   ✅ {package}")
             except ImportError:
-                print(f"   ❌ {package} - MISSING")
+                if verbose:
+                    print(f"   ❌ {package} - MISSING")
                 missing_packages.append(package)
         
         if missing_packages:
-            print(f"❌ Missing critical packages: {', '.join(missing_packages)}")
+            if verbose:
+                print(f"❌ Missing critical packages: {', '.join(missing_packages)}")
             return False, missing_packages
         
-        print("✅ All critical dependencies available!")
+        if verbose:
+            print("✅ All critical dependencies available!")
         return True, []
     
     def check_optional_dependencies(self) -> Tuple[bool, List[str]]:
         """Check if optional dependencies are available."""
-        print("🔍 Checking optional dependencies...")
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
+        if verbose:
+            print("🔍 Checking optional dependencies...")
         
         missing_packages = []
         
         for package in self.optional_packages:
             try:
                 __import__(package.replace('-', '_'))
-                print(f"   ✅ {package}")
+                if verbose:
+                    print(f"   ✅ {package}")
             except ImportError:
-                print(f"   ⚠️  {package} - MISSING (optional)")
+                if verbose:
+                    print(f"   ⚠️  {package} - MISSING (optional)")
                 missing_packages.append(package)
         
-        if missing_packages:
+        if missing_packages and verbose:
             print(f"⚠️  Missing optional packages: {', '.join(missing_packages)}")
             print("   Some features may not be available")
         

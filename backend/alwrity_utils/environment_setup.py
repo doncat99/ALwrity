@@ -28,21 +28,29 @@ class EnvironmentSetup:
     
     def setup_directories(self) -> bool:
         """Create necessary directories for ALwrity."""
-        print("📁 Setting up directories...")
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
+        if verbose:
+            print("📁 Setting up directories...")
         
         if not self.required_directories:
-            print("   ⚠️  Skipping directory creation in production mode")
+            if verbose:
+                print("   ⚠️  Skipping directory creation in production mode")
             return True
         
         for directory in self.required_directories:
             try:
                 Path(directory).mkdir(parents=True, exist_ok=True)
-                print(f"   ✅ Created: {directory}")
+                if verbose:
+                    print(f"   ✅ Created: {directory}")
             except Exception as e:
-                print(f"   ❌ Failed to create {directory}: {e}")
+                if verbose:
+                    print(f"   ❌ Failed to create {directory}: {e}")
                 return False
         
-        print("✅ All directories created successfully")
+        if verbose:
+            print("✅ All directories created successfully")
         return True
     
     def setup_environment_variables(self) -> bool:

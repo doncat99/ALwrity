@@ -64,6 +64,13 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setSubscription(subscriptionData);
     } catch (err) {
       console.error('Error checking subscription:', err);
+
+      // Check if it's a connection error that should be handled at the app level
+      if (err instanceof Error && (err.name === 'NetworkError' || err.name === 'ConnectionError')) {
+        // Re-throw connection errors to be handled by the app-level error boundary
+        throw err;
+      }
+
       setError(err instanceof Error ? err.message : 'Failed to check subscription');
 
       // Default to free tier on error

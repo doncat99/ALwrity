@@ -26,12 +26,12 @@ def create_billing_tables():
     
     try:
         # Create engine
-        engine = create_engine(DATABASE_URL, echo=True)
+        engine = create_engine(DATABASE_URL, echo=False)
         
         # Create all tables
-        logger.info("Creating billing and subscription system tables...")
+        logger.debug("Creating billing and subscription system tables...")
         SubscriptionBase.metadata.create_all(bind=engine)
-        logger.info("✅ Billing and subscription tables created successfully")
+        logger.debug("✅ Billing and subscription tables created successfully")
         
         # Create session for data initialization
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -41,13 +41,13 @@ def create_billing_tables():
             # Initialize pricing and plans
             pricing_service = PricingService(db)
             
-            logger.info("Initializing default API pricing...")
+            logger.debug("Initializing default API pricing...")
             pricing_service.initialize_default_pricing()
-            logger.info("✅ Default API pricing initialized")
+            logger.debug("✅ Default API pricing initialized")
             
-            logger.info("Initializing default subscription plans...")
+            logger.debug("Initializing default subscription plans...")
             pricing_service.initialize_default_plans()
-            logger.info("✅ Default subscription plans initialized")
+            logger.debug("✅ Default subscription plans initialized")
             
         except Exception as e:
             logger.error(f"Error initializing default data: {e}")
@@ -57,7 +57,7 @@ def create_billing_tables():
         finally:
             db.close()
             
-        logger.info("🎉 Billing system setup completed successfully!")
+        logger.info("✅ Billing system setup completed successfully!")
         
         # Display summary
         display_setup_summary(engine)
@@ -94,7 +94,7 @@ def display_setup_summary(engine):
             
             logger.info(f"\n📊 Created Tables ({len(tables)}):")
             for table in tables:
-                logger.info(f"  • {table[0]}")
+                logger.debug(f"  • {table[0]}")
             
             # Check subscription plans
             try:
@@ -114,7 +114,7 @@ def display_setup_summary(engine):
                     
                     for plan in plans:
                         name, tier, monthly, yearly = plan
-                        logger.info(f"  • {name} ({tier}): ${monthly}/month, ${yearly}/year")
+                        logger.debug(f"  • {name} ({tier}): ${monthly}/month, ${yearly}/year")
             except Exception as e:
                 logger.warning(f"Could not check subscription plans: {e}")
             
@@ -124,22 +124,22 @@ def display_setup_summary(engine):
                 result = conn.execute(pricing_query)
                 pricing_count = result.fetchone()[0]
                 logger.info(f"\n💰 API Pricing Entries: {pricing_count}")
-                
+
                 if pricing_count > 0:
                     pricing_detail_query = text("""
-                        SELECT provider, model_name, cost_per_input_token, cost_per_output_token 
-                        FROM api_provider_pricing 
+                        SELECT provider, model_name, cost_per_input_token, cost_per_output_token
+                        FROM api_provider_pricing
                         WHERE cost_per_input_token > 0 OR cost_per_output_token > 0
                         ORDER BY provider, model_name
                         LIMIT 10
                     """)
                     result = conn.execute(pricing_detail_query)
                     pricing_entries = result.fetchall()
-                    
+
                     logger.info("\n  LLM Pricing (per token) - Top 10:")
                     for entry in pricing_entries:
                         provider, model, input_cost, output_cost = entry
-                        logger.info(f"    • {provider}/{model}: ${input_cost:.8f} in, ${output_cost:.8f} out")
+                        logger.debug(f"    • {provider}/{model}: ${input_cost:.8f} in, ${output_cost:.8f} out")
             except Exception as e:
                 logger.warning(f"Could not check API pricing: {e}")
             
@@ -183,7 +183,7 @@ def check_existing_tables(engine):
             
             if existing_tables:
                 logger.warning(f"Found existing billing tables: {[t[0] for t in existing_tables]}")
-                logger.info("Tables already exist. Skipping creation to preserve data.")
+                logger.debug("Tables already exist. Skipping creation to preserve data.")
                 return False
             
             return True
@@ -193,7 +193,7 @@ def check_existing_tables(engine):
         return True  # Proceed anyway
 
 if __name__ == "__main__":
-    logger.info("🚀 Starting billing system database migration...")
+    logger.debug("🚀 Starting billing system database migration...")
     
     try:
         # Create engine to check existing tables
@@ -201,7 +201,7 @@ if __name__ == "__main__":
         
         # Check existing tables
         if not check_existing_tables(engine):
-            logger.info("✅ Billing tables already exist, skipping creation")
+            logger.debug("✅ Billing tables already exist, skipping creation")
             sys.exit(0)
         
         # Create tables and initialize data
@@ -210,7 +210,7 @@ if __name__ == "__main__":
         logger.info("✅ Billing system migration completed successfully!")
         
     except KeyboardInterrupt:
-        logger.info("Migration cancelled by user")
+        logger.warning("Migration cancelled by user")
         sys.exit(0)
     except Exception as e:
         logger.error(f"❌ Migration failed: {e}")

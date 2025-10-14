@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { CopilotKit } from "@copilotkit/react-core";
 import { ClerkProvider, useAuth } from '@clerk/clerk-react';
@@ -26,6 +26,7 @@ import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { apiClient, setAuthTokenGetter } from './api/client';
 import { useOnboarding } from './contexts/OnboardingContext';
 import { useState, useEffect } from 'react';
+import ConnectionErrorPage from './components/shared/ConnectionErrorPage';
 
 // interface OnboardingStatus {
 //   onboarding_required: boolean;
@@ -37,9 +38,6 @@ import { useState, useEffect } from 'react';
 
 // Conditional CopilotKit wrapper that only shows sidebar on content-planning route
 const ConditionalCopilotKit: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
-  // const isContentPlanningRoute = location.pathname === '/content-planning';
-
   // Do not render CopilotSidebar here. Let specific pages/components control it.
   return <>{children}</>;
 };
@@ -54,6 +52,13 @@ const InitialRouteHandler: React.FC = () => {
     plan: string;
     isNewUser: boolean;
   } | null>(null);
+  const [connectionError, setConnectionError] = useState<{
+    hasError: boolean;
+    error: Error | null;
+  }>({
+    hasError: false,
+    error: null,
+  });
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -61,18 +66,35 @@ const InitialRouteHandler: React.FC = () => {
         const userId = localStorage.getItem('user_id') || 'anonymous';
         const response = await apiClient.get(`/api/subscription/status/${userId}`);
         const subscriptionData = response.data.data;
-        
+
         // Check if user is new (no subscription record at all)
         const isNewUser = !subscriptionData || subscriptionData.plan === 'none';
-        
+
         setSubscriptionStatus({
           active: subscriptionData?.active || false,
           plan: subscriptionData?.plan || 'none',
           isNewUser
         });
-      } catch (err) {
+
+        // Clear any connection errors
+        setConnectionError({
+          hasError: false,
+          error: null,
+        });
+
+      } catch (err: any) {
         console.error('Error checking subscription:', err);
-        // On error, treat as new user
+
+        // Check if it's a connection error - handle it locally
+        if (err instanceof Error && (err.name === 'NetworkError' || err.name === 'ConnectionError')) {
+          setConnectionError({
+            hasError: true,
+            error: err,
+          });
+          return; // Don't set subscription status for connection errors
+        }
+
+        // For other errors, treat as new user
         setSubscriptionStatus({
           active: false,
           plan: 'none',
@@ -85,6 +107,65 @@ const InitialRouteHandler: React.FC = () => {
 
     checkSubscription();
   }, []);
+
+  // Handle connection error - show connection error page
+  if (connectionError.hasError) {
+    const handleRetry = () => {
+      setConnectionError({
+        hasError: false,
+        error: null,
+      });
+      setCheckingSubscription(true);
+      // Re-trigger the subscription check
+      const checkSubscription = async () => {
+        try {
+          const userId = localStorage.getItem('user_id') || 'anonymous';
+          const response = await apiClient.get(`/api/subscription/status/${userId}`);
+          const subscriptionData = response.data.data;
+
+          const isNewUser = !subscriptionData || subscriptionData.plan === 'none';
+
+          setSubscriptionStatus({
+            active: subscriptionData?.active || false,
+            plan: subscriptionData?.plan || 'none',
+            isNewUser
+          });
+        } catch (err: any) {
+          console.error('Error checking subscription on retry:', err);
+
+          if (err instanceof Error && (err.name === 'NetworkError' || err.name === 'ConnectionError')) {
+            setConnectionError({
+              hasError: true,
+              error: err,
+            });
+          } else {
+            setSubscriptionStatus({
+              active: false,
+              plan: 'none',
+              isNewUser: true
+            });
+          }
+        } finally {
+          setCheckingSubscription(false);
+        }
+      };
+
+      checkSubscription();
+    };
+
+    const handleGoHome = () => {
+      window.location.href = '/';
+    };
+
+    return (
+      <ConnectionErrorPage
+        onRetry={handleRetry}
+        onGoHome={handleGoHome}
+        message={connectionError.error?.message || "Backend service is not available. Please check if the server is running."}
+        title="Connection Error"
+      />
+    );
+  }
 
   // Loading state - checking both subscription and onboarding
   if (loading || checkingSubscription) {
@@ -200,7 +281,6 @@ const TokenInstaller: React.FC = () => {
 const App: React.FC = () => {
   // React Hooks MUST be at the top before any conditionals
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
   // Get CopilotKit key from localStorage or .env
   const [copilotApiKey, setCopilotApiKey] = useState(() => {
@@ -208,18 +288,10 @@ const App: React.FC = () => {
     return savedKey || process.env.REACT_APP_COPILOTKIT_API_KEY || '';
   });
 
+  // Initialize app - loading state will be managed by InitialRouteHandler
   useEffect(() => {
-    const checkBackendHealth = async () => {
-      try {
-        await apiClient.get('/health');
-        setLoading(false);
-      } catch (err) {
-        setError('Backend service is not available. Please check if the server is running.');
-        setLoading(false);
-      }
-    };
-
-    checkBackendHealth();
+    // Remove manual health check - connection errors are handled by ErrorBoundary
+    setLoading(false);
   }, []);
 
   // Listen for CopilotKit key updates
@@ -257,29 +329,6 @@ const App: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Box
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="center"
-        minHeight="100vh"
-        gap={2}
-        p={3}
-      >
-        <Typography variant="h5" color="error" gutterBottom>
-          Connection Error
-        </Typography>
-        <Typography variant="body1" color="textSecondary" textAlign="center">
-          {error}
-        </Typography>
-        <Typography variant="body2" color="textSecondary" textAlign="center">
-          Please ensure the backend server is running and try refreshing the page.
-        </Typography>
-      </Box>
-    );
-  }
 
   // Get environment variables with fallbacks
   const clerkPublishableKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY || '';

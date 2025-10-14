@@ -6,7 +6,7 @@ from datetime import datetime
 
 Base = declarative_base()
 
-logger.info("🔄 Loading UserBusinessInfo model...")
+logger.debug("🔄 Loading UserBusinessInfo model...")
 
 class UserBusinessInfo(Base):
     __tablename__ = 'user_business_info'
@@ -35,4 +35,4 @@ class UserBusinessInfo(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
-logger.info("✅ UserBusinessInfo model loaded successfully!")
+logger.debug("✅ UserBusinessInfo model loaded successfully!")

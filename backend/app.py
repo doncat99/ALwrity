@@ -19,6 +19,10 @@ from alwrity_utils import HealthChecker, RateLimiter, FrontendServing, RouterMan
 # Load environment variables
 load_dotenv()
 
+# Set up clean logging for end users
+from logging_config import setup_clean_logging
+setup_clean_logging()
+
 # Import middleware
 from middleware.auth_middleware import get_current_user
 

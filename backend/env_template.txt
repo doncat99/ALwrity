@@ -1,27 +1,29 @@
-# Clerk Authentication
-CLERK_SECRET_KEY=your_clerk_secret_key_here
-CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
+# ALwrity Backend Configuration
 
-# Google Search Console
-GSC_REDIRECT_URI=your-domain-name/gsc/callback
+# API Keys (Configure these in the onboarding process)
+# OPENAI_API_KEY=your_openai_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+# ANTHROPIC_API_KEY=your_anthropic_api_key_here
+# MISTRAL_API_KEY=your_mistral_api_key_here
 
-# Wix Integration (Headless OAuth - Client ID only, no Client Secret required)
-WIX_CLIENT_ID=
-WIX_REDIRECT_URI=your-domain-name/wix/callback
+# Research API Keys (Optional)
+# TAVILY_API_KEY=your_tavily_api_key_here
+# SERPER_API_KEY=your_serper_api_key_here
+EXA_API_KEY=your_exa_api_key_here
 
-# WordPress.com OAuth2 Integration
-# IMPORTANT: You need to register a WordPress.com application to get valid credentials
-# 1. Go to https://developer.wordpress.com/apps/
-# 2. Create a new application
-# 3. Set the redirect URI to: https://your-domain.com/wp/callback
-# 4. Copy the Client ID and Client Secret below
-# For development, these are placeholder values that may not work
-WORDPRESS_CLIENT_ID=your_wordpress_com_client_id_here
-WORDPRESS_CLIENT_SECRET=your_wordpress_com_client_secret_here
-WORDPRESS_REDIRECT_URI=
+# Authentication
+# CLERK_SECRET_KEY=your_clerk_secret_key_here
 
-# Development Settings
-DISABLE_AUTH=false
+# OAuth Redirect URIs
+GSC_REDIRECT_URI=https://your-frontend.vercel.app/gsc/callback
+WORDPRESS_REDIRECT_URI=https://your-frontend.vercel.app/wp/callback
+WIX_REDIRECT_URI=https://your-frontend.vercel.app/wix/callback
 
-# local development
-DEPLOY_ENV=local
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=8000
+DEBUG=true
+
+# Logging
+LOG_LEVEL=INFO

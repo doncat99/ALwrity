@@ -24,10 +24,21 @@ from services.database import get_db_session
 class AIEngineService:
     """AI engine for content planning insights and analysis."""
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        """Implement singleton pattern to prevent multiple initializations."""
+        if cls._instance is None:
+            cls._instance = super(AIEngineService, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        """Initialize the AI engine service."""
-        self.ai_service_manager = AIServiceManager()
-        logger.info("AIEngineService initialized")
+        """Initialize the AI engine service (only once)."""
+        if not self._initialized:
+            self.ai_service_manager = AIServiceManager()
+            logger.debug("AIEngineService initialized")
+            self._initialized = True
     
     async def analyze_content_gaps(self, analysis_summary: Dict[str, Any]) -> Dict[str, Any]:
         """

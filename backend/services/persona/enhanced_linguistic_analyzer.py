@@ -26,7 +26,7 @@ class EnhancedLinguisticAnalyzer:
             import spacy
             self.nlp = spacy.load("en_core_web_sm")
             self.spacy_available = True
-            logger.info("SUCCESS: spaCy model loaded successfully - Enhanced linguistic analysis available")
+            logger.debug("SUCCESS: spaCy model loaded successfully - Enhanced linguistic analysis available")
         except ImportError as e:
             logger.error(f"ERROR: spaCy is REQUIRED for persona generation. Install with: pip install spacy && python -m spacy download en_core_web_sm")
             raise ImportError("spaCy is required for enhanced persona generation. Install with: pip install spacy && python -m spacy download en_core_web_sm") from e

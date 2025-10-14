@@ -70,129 +70,103 @@ class OnboardingSummaryService:
         try:
             db = next(get_db())
             api_keys = self.db_service.get_api_keys(self.user_id, db)
-            logger.info(f"Retrieved {len(api_keys)} API keys from database for user {self.user_id}")
-            return api_keys
+            db.close()
+            
+            if not api_keys:
+                return {
+                    "openai": {"configured": False, "value": None},
+                    "anthropic": {"configured": False, "value": None},
+                    "google": {"configured": False, "value": None}
+                }
+            
+            return {
+                "openai": {
+                    "configured": bool(api_keys.get('openai_api_key')),
+                    "value": api_keys.get('openai_api_key')[:8] + "..." if api_keys.get('openai_api_key') else None
+                },
+                "anthropic": {
+                    "configured": bool(api_keys.get('anthropic_api_key')),
+                    "value": api_keys.get('anthropic_api_key')[:8] + "..." if api_keys.get('anthropic_api_key') else None
+                },
+                "google": {
+                    "configured": bool(api_keys.get('google_api_key')),
+                    "value": api_keys.get('google_api_key')[:8] + "..." if api_keys.get('google_api_key') else None
+                }
+            }
         except Exception as e:
-            logger.error(f"Error getting API keys from database: {e}")
-            return {}
+            logger.error(f"Error getting API keys: {str(e)}")
+            return {
+                "openai": {"configured": False, "value": None},
+                "anthropic": {"configured": False, "value": None},
+                "google": {"configured": False, "value": None}
+            }
     
     def _get_website_analysis(self) -> Optional[Dict[str, Any]]:
-        """Get website analysis data from database (Step 2)."""
+        """Get website analysis data from database."""
         try:
             db = next(get_db())
             website_data = self.db_service.get_website_analysis(self.user_id, db)
-            if website_data:
-                logger.info(f"Retrieved website analysis from database for user {self.user_id}")
-            else:
-                logger.warning(f"No website analysis found in database for user {self.user_id}")
+            db.close()
             return website_data
         except Exception as e:
-            logger.error(f"Error getting website analysis from database: {e}")
+            logger.error(f"Error getting website analysis: {str(e)}")
             return None
     
     def _get_research_preferences(self) -> Optional[Dict[str, Any]]:
-        """Get research preferences data from database (Step 3)."""
+        """Get research preferences from database."""
         try:
             db = next(get_db())
-            research_data = self.db_service.get_research_preferences(self.user_id, db)
-            if research_data:
-                logger.info(f"Retrieved research preferences from database for user {self.user_id}")
-            else:
-                logger.warning(f"No research preferences found in database for user {self.user_id}")
-            return research_data
+            preferences = self.db_service.get_research_preferences(self.user_id, db)
+            db.close()
+            return preferences
         except Exception as e:
-            logger.error(f"Error getting research preferences from database: {e}")
+            logger.error(f"Error getting research preferences: {str(e)}")
             return None
     
-    def _get_personalization_settings(self, research_preferences: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        """Get personalization settings from Step 4 (Persona) database."""
-        try:
-            # Try to get from Step 4 (Persona) in database
-            db = next(get_db())
-            persona_data = self.db_service.get_persona_data(self.user_id, db)
-            
-            if persona_data:
-                logger.info(f"Retrieved persona data from database for user {self.user_id}")
-                # Extract personalization settings from persona data
-                if 'corePersona' in persona_data:
-                    core_persona = persona_data.get('corePersona', {})
-                    return {
-                        'writing_style': core_persona.get('linguistic_fingerprint', {}).get('tone', 'Professional'),
-                        'tone': core_persona.get('tonal_range', {}).get('primary_tone', 'Formal'),
-                        'brand_voice': core_persona.get('identity', {}).get('voice', 'Trustworthy and Expert')
-                    }
-            
-            # Fallback to research preferences if persona data not available
-            if research_preferences:
-                logger.info(f"Using research preferences as fallback for personalization")
-                return {
-                    'writing_style': research_preferences.get('writing_style', {}).get('tone', 'Professional'),
-                    'tone': research_preferences.get('writing_style', {}).get('voice', 'Formal'),
-                    'brand_voice': research_preferences.get('writing_style', {}).get('complexity', 'Trustworthy and Expert')
-                }
-            
-            return None
-        except Exception as e:
-            logger.error(f"Error getting personalization settings from database: {e}")
-            return None
+    def _get_personalization_settings(self, research_preferences: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Get personalization settings based on research preferences."""
+        if not research_preferences:
+            return {
+                "writing_style": "professional",
+                "target_audience": "general",
+                "content_focus": "informative"
+            }
+        
+        return {
+            "writing_style": research_preferences.get('writing_style', 'professional'),
+            "target_audience": research_preferences.get('target_audience', 'general'),
+            "content_focus": research_preferences.get('content_focus', 'informative')
+        }
     
-    def _check_persona_readiness(self, website_analysis: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        """Check if persona can be generated."""
-        try:
-            persona_service = PersonaAnalysisService()
-            
-            # Check if persona can be generated
-            onboarding_data = persona_service._collect_onboarding_data(self.user_id)
-            if onboarding_data:
-                data_sufficiency = persona_service._calculate_data_sufficiency(onboarding_data)
-                return {
-                    "ready": data_sufficiency >= 50.0,
-                    "data_sufficiency": data_sufficiency,
-                    "can_generate": website_analysis is not None
-                }
-            return {"ready": False, "data_sufficiency": 0.0, "can_generate": False}
-        except Exception as e:
-            logger.warning(f"Could not check persona readiness: {str(e)}")
-            return {"ready": False, "error": str(e)}
+    def _check_persona_readiness(self, website_analysis: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Check if persona generation is ready based on available data."""
+        if not website_analysis:
+            return {
+                "ready": False,
+                "reason": "Website analysis not completed",
+                "missing_data": ["website_url", "style_analysis"]
+            }
+        
+        required_fields = ['website_url', 'writing_style', 'target_audience']
+        missing_fields = [field for field in required_fields if not website_analysis.get(field)]
+        
+        return {
+            "ready": len(missing_fields) == 0,
+            "reason": "All required data available" if len(missing_fields) == 0 else f"Missing: {', '.join(missing_fields)}",
+            "missing_data": missing_fields
+        }
     
     def _determine_capabilities(self, api_keys: Dict[str, Any], website_analysis: Optional[Dict[str, Any]], 
                               research_preferences: Optional[Dict[str, Any]], 
-                              personalization_settings: Optional[Dict[str, Any]], 
-                              persona_readiness: Optional[Dict[str, Any]]) -> Dict[str, bool]:
-        """Determine user capabilities based on onboarding data."""
-        return {
-            "ai_content": len(api_keys) > 0,
-            "style_analysis": website_analysis is not None,
-            "research_tools": research_preferences is not None,
-            "personalization": personalization_settings is not None,
-            "persona_generation": persona_readiness.get("ready", False) if persona_readiness else False,
-            "integrations": False  # TODO: Implement
+                              personalization_settings: Dict[str, Any], 
+                              persona_readiness: Dict[str, Any]) -> Dict[str, Any]:
+        """Determine available capabilities based on configured data."""
+        capabilities = {
+            "ai_content_generation": any(key.get("configured") for key in api_keys.values()),
+            "website_analysis": website_analysis is not None,
+            "research_capabilities": research_preferences is not None,
+            "persona_generation": persona_readiness.get("ready", False),
+            "content_optimization": website_analysis is not None and research_preferences is not None
         }
-    
-    async def get_website_analysis_data(self) -> Optional[Dict[str, Any]]:
-        """Get website analysis data for FinalStep."""
-        try:
-            analysis = self._get_website_analysis()
-            
-            if analysis:
-                return {
-                    "website_url": analysis.get('website_url'),
-                    "style_analysis": analysis.get('style_analysis'),
-                    "style_patterns": analysis.get('style_patterns'),
-                    "style_guidelines": analysis.get('style_guidelines'),
-                    "status": analysis.get('status'),
-                    "completed_at": analysis.get('created_at')
-                }
-            else:
-                return None
-        except Exception as e:
-            logger.error(f"Error getting website analysis data: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error")
-    
-    async def get_research_preferences_data(self) -> Optional[Dict[str, Any]]:
-        """Get research preferences data for FinalStep."""
-        try:
-            return self._get_research_preferences()
-        except Exception as e:
-            logger.error(f"Error getting research preferences data: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+        
+        return capabilities

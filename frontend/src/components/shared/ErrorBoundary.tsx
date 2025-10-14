@@ -136,13 +136,16 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   render() {
     if (this.state.hasError) {
+      const { error } = this.state;
+
+
       // Custom fallback UI provided
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
       // Default fallback UI
-      const { error, errorInfo, showDetails } = this.state;
+      const { errorInfo, showDetails } = this.state;
       const { context, showDetails: showDetailsDefault } = this.props;
 
       return (

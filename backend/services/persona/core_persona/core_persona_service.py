@@ -18,13 +18,24 @@ from services.persona.facebook.facebook_persona_service import FacebookPersonaSe
 class CorePersonaService:
     """Core service for generating writing personas using Gemini AI."""
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        """Implement singleton pattern to prevent multiple initializations."""
+        if cls._instance is None:
+            cls._instance = super(CorePersonaService, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        """Initialize the core persona service."""
-        self.data_collector = OnboardingDataCollector()
-        self.prompt_builder = PersonaPromptBuilder()
-        self.linkedin_service = LinkedInPersonaService()
-        self.facebook_service = FacebookPersonaService()
-        logger.info("CorePersonaService initialized")
+        """Initialize the core persona service (only once)."""
+        if not self._initialized:
+            self.data_collector = OnboardingDataCollector()
+            self.prompt_builder = PersonaPromptBuilder()
+            self.linkedin_service = LinkedInPersonaService()
+            self.facebook_service = FacebookPersonaService()
+            logger.debug("CorePersonaService initialized")
+            self._initialized = True
     
     def generate_core_persona(self, onboarding_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate core writing persona using Gemini structured response."""

@@ -16,72 +16,98 @@ class DatabaseSetup:
     
     def setup_essential_tables(self) -> bool:
         """Set up essential database tables."""
-        print("📊 Setting up essential database tables...")
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
+        if verbose:
+            print("📊 Setting up essential database tables...")
         
         try:
             from services.database import init_database, engine
             
             # Initialize database connection
             init_database()
-            print("   ✅ Database connection initialized")
+            if verbose:
+                print("   ✅ Database connection initialized")
             
             # Create essential tables
             self._create_monitoring_tables()
             self._create_subscription_tables()
             self._create_persona_tables()
             
-            print("✅ Essential database tables created")
+            if verbose:
+                print("✅ Essential database tables created")
             return True
             
         except Exception as e:
-            print(f"⚠️  Warning: Database setup failed: {e}")
-            if self.production_mode:
-                print("   Continuing in production mode...")
-                return True
-            else:
-                print("   This may affect functionality")
-                return True  # Don't fail startup for database issues
+            if verbose:
+                print(f"⚠️  Warning: Database setup failed: {e}")
+                if self.production_mode:
+                    print("   Continuing in production mode...")
+                else:
+                    print("   This may affect functionality")
+            return True  # Don't fail startup for database issues
     
     def _create_monitoring_tables(self) -> bool:
         """Create API monitoring tables."""
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
         try:
             from models.api_monitoring import Base as MonitoringBase
             MonitoringBase.metadata.create_all(bind=engine)
-            print("   ✅ Monitoring tables created")
+            if verbose:
+                print("   ✅ Monitoring tables created")
             return True
         except Exception as e:
-            print(f"   ⚠️  Monitoring tables failed: {e}")
+            if verbose:
+                print(f"   ⚠️  Monitoring tables failed: {e}")
             return True  # Non-critical
     
     def _create_subscription_tables(self) -> bool:
         """Create subscription and billing tables."""
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
         try:
             from models.subscription_models import Base as SubscriptionBase
             SubscriptionBase.metadata.create_all(bind=engine)
-            print("   ✅ Subscription tables created")
+            if verbose:
+                print("   ✅ Subscription tables created")
             return True
         except Exception as e:
-            print(f"   ⚠️  Subscription tables failed: {e}")
+            if verbose:
+                print(f"   ⚠️  Subscription tables failed: {e}")
             return True  # Non-critical
     
     def _create_persona_tables(self) -> bool:
         """Create persona analysis tables."""
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
         try:
             from models.persona_models import Base as PersonaBase
             PersonaBase.metadata.create_all(bind=engine)
-            print("   ✅ Persona tables created")
+            if verbose:
+                print("   ✅ Persona tables created")
             return True
         except Exception as e:
-            print(f"   ⚠️  Persona tables failed: {e}")
+            if verbose:
+                print(f"   ⚠️  Persona tables failed: {e}")
             return True  # Non-critical
     
     def verify_tables(self) -> bool:
         """Verify that essential tables exist."""
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
         if self.production_mode:
-            print("⚠️  Skipping table verification in production mode")
+            if verbose:
+                print("⚠️  Skipping table verification in production mode")
             return True
         
-        print("🔍 Verifying database tables...")
+        if verbose:
+            print("🔍 Verifying database tables...")
         
         try:
             from services.database import engine
@@ -97,11 +123,13 @@ class DatabaseSetup:
             ]
             
             existing_tables = [table for table in essential_tables if table in tables]
-            print(f"   ✅ Found tables: {existing_tables}")
+            if verbose:
+                print(f"   ✅ Found tables: {existing_tables}")
             
             if len(existing_tables) < len(essential_tables):
                 missing = [table for table in essential_tables if table not in existing_tables]
-                print(f"   ⚠️  Missing tables: {missing}")
+                if verbose:
+                    print(f"   ⚠️  Missing tables: {missing}")
             
             return True
             
@@ -124,11 +152,11 @@ class DatabaseSetup:
             # Set up billing tables  
             self._setup_billing_tables()
             
-            print("✅ Advanced database features configured")
+            logger.debug("✅ Advanced database features configured")
             return True
             
         except Exception as e:
-            print(f"⚠️  Advanced table setup failed: {e}")
+            logger.warning(f"Advanced table setup failed: {e}")
             return True  # Non-critical
     
     def _setup_monitoring_tables(self) -> bool:
@@ -157,16 +185,16 @@ class DatabaseSetup:
             
             # Check if tables already exist
             if check_existing_tables(engine):
-                print("   ✅ Billing tables already exist")
+                logger.debug("✅ Billing tables already exist")
                 return True
             
             if create_billing_tables():
-                print("   ✅ Billing tables created")
+                logger.debug("✅ Billing tables created")
                 return True
             else:
-                print("   ⚠️  Billing setup failed")
+                logger.warning("Billing setup failed")
                 return True  # Non-critical
                 
         except Exception as e:
-            print(f"   ⚠️  Billing setup failed: {e}")
+            logger.warning(f"Billing setup failed: {e}")
             return True  # Non-critical

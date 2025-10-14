@@ -24,7 +24,7 @@ class PersonaQualityImprover:
     def __init__(self):
         """Initialize the quality improver."""
         self.linguistic_analyzer = EnhancedLinguisticAnalyzer()
-        logger.info("PersonaQualityImprover initialized")
+        logger.debug("PersonaQualityImprover initialized")
     
     def assess_persona_quality_comprehensive(
         self, 

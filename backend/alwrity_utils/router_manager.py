@@ -18,22 +18,31 @@ class RouterManager:
     
     def include_router_safely(self, router, router_name: str = None) -> bool:
         """Include a router safely with error handling."""
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
         try:
             self.app.include_router(router)
             router_name = router_name or getattr(router, 'prefix', 'unknown')
             self.included_routers.append(router_name)
-            logger.info(f"✅ Router included successfully: {router_name}")
+            if verbose:
+                logger.info(f"✅ Router included successfully: {router_name}")
             return True
         except Exception as e:
             router_name = router_name or 'unknown'
             self.failed_routers.append({"name": router_name, "error": str(e)})
-            logger.warning(f"❌ Router inclusion failed: {router_name} - {e}")
+            if verbose:
+                logger.warning(f"❌ Router inclusion failed: {router_name} - {e}")
             return False
     
     def include_core_routers(self) -> bool:
         """Include core application routers."""
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
         try:
-            logger.info("Including core routers...")
+            if verbose:
+                logger.info("Including core routers...")
             
             # Component logic router
             from api.component_logic import router as component_logic_router

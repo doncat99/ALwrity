@@ -17,28 +17,37 @@ def bootstrap_linguistic_models():
     This prevents import-time failures when EnhancedLinguisticAnalyzer is loaded.
     """
     import subprocess
+    import os
     
-    print("🔍 Bootstrapping linguistic models...")
+    verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+    
+    if verbose:
+        print("🔍 Bootstrapping linguistic models...")
     
     # Check and download spaCy model
     try:
         import spacy
         try:
             nlp = spacy.load("en_core_web_sm")
-            print("   ✅ spaCy model 'en_core_web_sm' available")
+            if verbose:
+                print("   ✅ spaCy model 'en_core_web_sm' available")
         except OSError:
-            print("   ⚠️  spaCy model 'en_core_web_sm' not found, downloading...")
+            if verbose:
+                print("   ⚠️  spaCy model 'en_core_web_sm' not found, downloading...")
             try:
                 subprocess.check_call([
                     sys.executable, "-m", "spacy", "download", "en_core_web_sm"
                 ])
-                print("   ✅ spaCy model downloaded successfully")
+                if verbose:
+                    print("   ✅ spaCy model downloaded successfully")
             except subprocess.CalledProcessError as e:
-                print(f"   ❌ Failed to download spaCy model: {e}")
-                print("   Please run: python -m spacy download en_core_web_sm")
+                if verbose:
+                    print(f"   ❌ Failed to download spaCy model: {e}")
+                    print("   Please run: python -m spacy download en_core_web_sm")
                 return False
     except ImportError:
-        print("   ⚠️  spaCy not installed - skipping")
+        if verbose:
+            print("   ⚠️  spaCy not installed - skipping")
     
     # Check and download NLTK data
     try:
@@ -52,25 +61,32 @@ def bootstrap_linguistic_models():
         for data_package, path in essential_data:
             try:
                 nltk.data.find(path)
-                print(f"   ✅ NLTK {data_package} available")
+                if verbose:
+                    print(f"   ✅ NLTK {data_package} available")
             except LookupError:
-                print(f"   ⚠️  NLTK {data_package} not found, downloading...")
+                if verbose:
+                    print(f"   ⚠️  NLTK {data_package} not found, downloading...")
                 try:
                     nltk.download(data_package, quiet=True)
-                    print(f"   ✅ NLTK {data_package} downloaded")
+                    if verbose:
+                        print(f"   ✅ NLTK {data_package} downloaded")
                 except Exception as e:
-                    print(f"   ⚠️  Failed to download {data_package}: {e}")
+                    if verbose:
+                        print(f"   ⚠️  Failed to download {data_package}: {e}")
                     # Try fallback
                     if data_package == 'punkt_tab':
                         try:
                             nltk.download('punkt', quiet=True)
-                            print(f"   ✅ NLTK punkt (fallback) downloaded")
+                            if verbose:
+                                print(f"   ✅ NLTK punkt (fallback) downloaded")
                         except:
                             pass
     except ImportError:
-        print("   ⚠️  NLTK not installed - skipping")
+        if verbose:
+            print("   ⚠️  NLTK not installed - skipping")
     
-    print("✅ Linguistic model bootstrap complete")
+    if verbose:
+        print("✅ Linguistic model bootstrap complete")
     return True
 
 
@@ -127,11 +143,10 @@ def start_backend(enable_reload=False, production_mode=False):
         import uvicorn
         
         # Explicitly initialize database before starting server
-        print("[DB]  Initializing database...")
         init_database()
-        print("[OK] Database initialized successfully")
         
-        print("\n🌐 Backend is starting...")
+        print("\n🌐 ALwrity Backend Server")
+        print("=" * 50)
         print("   📖 API Documentation: http://localhost:8000/api/docs")
         print("   🔍 Health Check: http://localhost:8000/health")
         print("   📊 ReDoc: http://localhost:8000/api/redoc")
@@ -142,12 +157,13 @@ def start_backend(enable_reload=False, production_mode=False):
             print("   📊 Usage Tracking: http://localhost:8000/api/subscription/usage/demo")
         
         print("\n[STOP]  Press Ctrl+C to stop the server")
-        print("=" * 60)
-        print("\n💡 Usage:")
-        print("   Production mode: python start_alwrity_backend.py --production")
-        print("   Development mode: python start_alwrity_backend.py --dev")
-        print("   With auto-reload: python start_alwrity_backend.py --reload")
-        print("=" * 60)
+        print("=" * 50)
+        
+        # Set up clean logging for end users
+        from logging_config import setup_clean_logging, get_uvicorn_log_level
+        
+        verbose_mode = setup_clean_logging()
+        uvicorn_log_level = get_uvicorn_log_level()
         
         uvicorn.run(
             "app:app",
@@ -186,7 +202,7 @@ def start_backend(enable_reload=False, production_mode=False):
                 "api/**/*.py",
                 "services/**/*.py"
             ],
-            log_level="info"
+            log_level=uvicorn_log_level
         )
         
     except KeyboardInterrupt:
@@ -205,16 +221,23 @@ def main():
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
     parser.add_argument("--dev", action="store_true", help="Enable development mode (auto-reload)")
     parser.add_argument("--production", action="store_true", help="Enable production mode (optimized for deployment)")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging for debugging")
     args = parser.parse_args()
     
     # Determine mode
     production_mode = args.production
     enable_reload = (args.reload or args.dev) and not production_mode
+    verbose_mode = args.verbose
     
-    print("ALwrity Backend Server")
+    # Set global verbose flag for utilities
+    os.environ["ALWRITY_VERBOSE"] = "true" if verbose_mode else "false"
+    
+    print("🚀 ALwrity Backend Server")
     print("=" * 40)
     print(f"Mode: {'PRODUCTION' if production_mode else 'DEVELOPMENT'}")
     print(f"Auto-reload: {'ENABLED' if enable_reload else 'DISABLED'}")
+    if verbose_mode:
+        print("Verbose logging: ENABLED")
     print("=" * 40)
     
     # Check if we're in the right directory
@@ -230,39 +253,59 @@ def main():
     database_setup = DatabaseSetup(production_mode=production_mode)
     production_optimizer = ProductionOptimizer()
     
+    # Setup progress tracking
+    setup_steps = [
+        "Checking dependencies",
+        "Setting up environment", 
+        "Configuring database",
+        "Starting server"
+    ]
+    
+    print("🔧 Initializing ALwrity...")
+    
     # Apply production optimizations if needed
     if production_mode:
         if not production_optimizer.apply_production_optimizations():
-            print("[ERROR] Production optimization failed")
+            print("❌ Production optimization failed")
             return False
     
-    # Check and install dependencies
+    # Step 1: Dependencies
+    print(f"   📦 {setup_steps[0]}...", end=" ", flush=True)
     critical_ok, missing_critical = dependency_manager.check_critical_dependencies()
     if not critical_ok:
-        print("[ERROR] Critical dependencies missing, installing...")
+        print("installing...", end=" ", flush=True)
         if not dependency_manager.install_requirements():
-            print("[ERROR] Failed to install dependencies")
+            print("❌ Failed")
             return False
+        print("✅ Done")
+    else:
+        print("✅ Done")
     
-    # Check optional dependencies (non-critical)
-    dependency_manager.check_optional_dependencies()
+    # Check optional dependencies (non-critical) - only in verbose mode
+    if verbose_mode:
+        dependency_manager.check_optional_dependencies()
     
-    # Setup environment
+    # Step 2: Environment
+    print(f"   🔧 {setup_steps[1]}...", end=" ", flush=True)
     if not environment_setup.setup_directories():
-        print("[ERROR] Directory setup failed")
+        print("❌ Directory setup failed")
         return False
     
     if not environment_setup.setup_environment_variables():
-        print("[ERROR] Environment variable setup failed")
+        print("❌ Environment setup failed")
         return False
     
     # Create .env file only in development
     if not production_mode:
         environment_setup.create_env_file()
+    print("✅ Done")
     
-    # Setup database
+    # Step 3: Database
+    print(f"   📊 {setup_steps[2]}...", end=" ", flush=True)
     if not database_setup.setup_essential_tables():
-        print("[WARNING] Database setup had issues, continuing...")
+        print("⚠️  Issues detected, continuing...")
+    else:
+        print("✅ Done")
     
     # Setup advanced features in development, verify in all modes
     if not production_mode:
@@ -274,7 +317,8 @@ def main():
     # Note: Linguistic models (spaCy/NLTK) are bootstrapped before imports
     # See bootstrap_linguistic_models() at the top of this file
     
-    # Start backend
+    # Step 4: Start backend
+    print(f"   🚀 {setup_steps[3]}...")
     return start_backend(enable_reload=enable_reload, production_mode=production_mode)
 
 
