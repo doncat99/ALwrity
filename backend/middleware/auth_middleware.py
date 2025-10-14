@@ -51,24 +51,38 @@ class ClerkAuthMiddleware:
                 if self.clerk_secret_key and self.clerk_publishable_key:
                     # Extract instance from publishable key for JWKS URL
                     # Format: pk_test_<instance>.<domain> or pk_live_<instance>.<domain>
-                    parts = self.clerk_publishable_key.replace('pk_test_', '').replace('pk_live_', '').split('.')
-                    if len(parts) >= 1:
-                        # Extract the domain from publishable key or use default
-                        # Clerk URLs are typically: https://<instance>.clerk.accounts.dev
-                        instance = parts[0]
-                        jwks_url = f"https://{instance}.clerk.accounts.dev/.well-known/jwks.json"
-                        
-                        # Create Clerk configuration with JWKS URL
-                        clerk_config = ClerkConfig(
-                            secret_key=self.clerk_secret_key,
-                            jwks_url=jwks_url
-                        )
-                        # Create ClerkHTTPBearer instance for dependency injection
-                        self.clerk_bearer = ClerkHTTPBearer(clerk_config)
-                        logger.info(f"fastapi-clerk-auth initialized successfully with JWKS URL: {jwks_url}")
-                    else:
-                        logger.warning("Could not extract instance from publishable key")
-                        self.clerk_bearer = None
+                    # Example: pk_test_bGl2aW5nLWhhbXN0ZXItNTkuY2xlcmsuYWNjb3VudHMuZGV2JA
+                    # This is base64 encoded, so we need to decode it first
+                    try:
+                        import base64
+                        # Remove the prefix and decode the base64 part
+                        key_part = self.clerk_publishable_key.replace('pk_test_', '').replace('pk_live_', '')
+                        # The key contains dots, so we need to handle it properly
+                        if '.' in key_part:
+                            # Split and decode the first part
+                            instance_part = key_part.split('.')[0]
+                            decoded_instance = base64.b64decode(instance_part + '==').decode('utf-8').rstrip('$')
+                            jwks_url = f"https://{decoded_instance}/.well-known/jwks.json"
+                        else:
+                            # Fallback to original method
+                            decoded_instance = base64.b64decode(key_part + '==').decode('utf-8').rstrip('$')
+                            jwks_url = f"https://{decoded_instance}/.well-known/jwks.json"
+                    except Exception as decode_error:
+                        logger.error(f"Failed to decode publishable key: {decode_error}")
+                        # Fallback to original method
+                        parts = self.clerk_publishable_key.replace('pk_test_', '').replace('pk_live_', '').split('.')
+                        if len(parts) >= 1:
+                            instance = parts[0]
+                            jwks_url = f"https://{instance}.clerk.accounts.dev/.well-known/jwks.json"
+                    
+                    # Create Clerk configuration with JWKS URL
+                    clerk_config = ClerkConfig(
+                        secret_key=self.clerk_secret_key,
+                        jwks_url=jwks_url
+                    )
+                    # Create ClerkHTTPBearer instance for dependency injection
+                    self.clerk_bearer = ClerkHTTPBearer(clerk_config)
+                    logger.info(f"fastapi-clerk-auth initialized successfully with JWKS URL: {jwks_url}")
                 else:
                     logger.warning("CLERK_SECRET_KEY or CLERK_PUBLISHABLE_KEY not found")
                     self.clerk_bearer = None
@@ -207,6 +221,17 @@ async def get_current_user(
 ) -> Dict[str, Any]:
     """Get current authenticated user."""
     try:
+        # If auth is disabled, return mock user without requiring credentials
+        if clerk_auth.disable_auth:
+            logger.info("Authentication disabled, returning mock user")
+            return {
+                'id': 'mock_user_id',
+                'email': 'mock@example.com',
+                'first_name': 'Mock',
+                'last_name': 'User',
+                'clerk_user_id': 'mock_clerk_user_id'
+            }
+
         if not credentials:
             logger.warning("No credentials provided")
             raise HTTPException(

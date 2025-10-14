@@ -53,6 +53,9 @@ from api.user_environment import router as user_environment_router
 # Import strategy copilot endpoints
 from api.content_planning.strategy_copilot import router as strategy_copilot_router
 
+# Import OLLAMA endpoints
+from routers.ollama_router import router as ollama_router
+
 # Import database service
 from services.database import init_database, close_database
 
@@ -171,6 +174,9 @@ async def onboarding_status():
 # Include routers using modular utilities
 router_manager.include_core_routers()
 router_manager.include_optional_routers()
+
+# Include OLLAMA router
+app.include_router(ollama_router)
 
 # SEO Dashboard endpoints
 @app.get("/api/seo-dashboard/data")

@@ -3,6 +3,8 @@ import { getApiKeysForOnboarding, getStep1ApiKeysFromProgress, saveApiKey } from
 import { getKeyStatus, formatErrorMessage } from '../../common/onboardingUtils';
 import { Provider } from './ProviderCard';
 import { apiClient } from '../../../../api/client';
+import { useOllamaInstallation } from '../../../../hooks/useOllamaInstallation';
+import { ollamaApi } from '../../../../api/ollama';
 
 export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
   const [geminiKey, setGeminiKey] = useState('');
@@ -21,6 +23,25 @@ export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
   const [keysLoaded, setKeysLoaded] = useState(false);
   const [currentProviderIndex, setCurrentProviderIndex] = useState(0);
   const [showCompletionToast, setShowCompletionToast] = useState(false);
+  
+  // Privacy Mode / OLLAMA integration
+  const {
+    isInstalling: ollamaInstalling,
+    isInstalled: ollamaInstalled,
+    isModalOpen: ollamaModalOpen,
+    platform: ollamaPlatform,
+    steps: ollamaSteps,
+    currentStep: ollamaCurrentStep,
+    overallProgress: ollamaProgress,
+    error: ollamaError,
+    ollamaStatus,
+    startInstallation: startOllamaInstallation,
+    stopInstallation: stopOllamaInstallation,
+    openModal: openOllamaModal,
+    closeModal: closeOllamaModal,
+    checkInstallationStatus: checkOllamaStatus,
+    retryInstallation: retryOllamaInstallation,
+  } = useOllamaInstallation();
 
   const loadExistingKeys = useCallback(async () => {
     try {
@@ -227,8 +248,33 @@ export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
     },
   ];
 
-  // All three keys are required
-  const isValid = !!(geminiKey.trim() && exaKey.trim() && copilotkitKey.trim());
+  // Privacy Mode handlers
+  const handlePrivacyModeInstallation = useCallback(async () => {
+    try {
+      openOllamaModal();
+      await startOllamaInstallation();
+    } catch (error) {
+      console.error('Privacy Mode installation failed:', error);
+      setError('Failed to start Privacy Mode installation. Please try again.');
+    }
+  }, [openOllamaModal, startOllamaInstallation]);
+
+  const handlePrivacyModeComplete = useCallback(() => {
+    setSuccess('Privacy Mode installed successfully! Your AI processing will now happen locally.');
+    // Optionally auto-fill or disable some API key fields when Privacy Mode is active
+  }, []);
+
+  const handlePrivacyModeError = useCallback((error: string) => {
+    setError(`Privacy Mode installation failed: ${error}`);
+  }, []);
+
+  // Check OLLAMA status on component mount
+  useEffect(() => {
+    checkOllamaStatus();
+  }, [checkOllamaStatus]);
+
+  // All three keys are required OR Privacy Mode must be installed
+  const isValid = !!(geminiKey.trim() && exaKey.trim() && copilotkitKey.trim()) || ollamaInstalled;
   
   // Debug logging
   useEffect(() => {
@@ -236,9 +282,10 @@ export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
       gemini: geminiKey.trim(),
       exa: exaKey.trim(),
       copilotkit: copilotkitKey.trim(),
+      ollamaInstalled,
       isValid
     });
-  }, [geminiKey, exaKey, copilotkitKey, isValid]);
+  }, [geminiKey, exaKey, copilotkitKey, ollamaInstalled, isValid]);
   
   // When keys change and all are valid, auto-save them
   useEffect(() => {
@@ -334,11 +381,30 @@ export const useApiKeyStep = (onContinue: (stepData?: any) => void) => {
     showCompletionToast,
     setShowCompletionToast,
 
+    // Privacy Mode / OLLAMA state
+    ollamaInstalling,
+    ollamaInstalled,
+    ollamaModalOpen,
+    ollamaPlatform,
+    ollamaSteps,
+    ollamaCurrentStep,
+    ollamaProgress,
+    ollamaError,
+    ollamaStatus,
+
     // Actions
     setShowHelp,
     handleContinue,
     handleBenefitsClick,
     handleCloseBenefitsModal,
     loadExistingKeys,
+    
+    // Privacy Mode actions
+    handlePrivacyModeInstallation,
+    handlePrivacyModeComplete,
+    handlePrivacyModeError,
+    openOllamaModal,
+    closeOllamaModal,
+    retryOllamaInstallation,
   };
 };

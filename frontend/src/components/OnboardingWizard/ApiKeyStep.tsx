@@ -17,6 +17,7 @@ import {
 } from './ApiKeyStep/utils';
 import ApiKeyCarousel from './ApiKeyStep/utils/ApiKeyCarousel';
 import ApiKeySidebar from './ApiKeyStep/utils/ApiKeySidebar';
+import { PrivacyModeButton, InstallationModal } from '../PrivacyMode';
 
 interface ApiKeyStepProps {
   onContinue: (stepData?: any) => void;
@@ -45,6 +46,23 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
     handleContinue,
     handleBenefitsClick,
     handleCloseBenefitsModal,
+    
+    // Privacy Mode / OLLAMA
+    ollamaInstalling,
+    ollamaInstalled,
+    ollamaModalOpen,
+    ollamaPlatform,
+    ollamaSteps,
+    ollamaCurrentStep,
+    ollamaProgress,
+    ollamaError,
+    ollamaStatus,
+    handlePrivacyModeInstallation,
+    handlePrivacyModeComplete,
+    handlePrivacyModeError,
+    openOllamaModal,
+    closeOllamaModal,
+    retryOllamaInstallation,
   } = useApiKeyStep(onContinue);
 
   const handleProviderFocus = (provider: any) => {
@@ -120,6 +138,20 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
             selectedProvider={selectedProvider}
           />
 
+        {/* Privacy Mode Installation Modal */}
+        <InstallationModal
+          open={ollamaModalOpen}
+          onClose={closeOllamaModal}
+          onComplete={handlePrivacyModeComplete}
+          onError={handlePrivacyModeError}
+          platform={ollamaPlatform}
+          steps={ollamaSteps}
+          currentStep={ollamaCurrentStep}
+          overallProgress={ollamaProgress}
+          error={ollamaError}
+          retryInstallation={retryOllamaInstallation}
+        />
+
         {/* Help Section */}
           <HelpSection showHelp={showHelp} />
 
@@ -151,14 +183,32 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
         </Box>
 
 
+        {/* Privacy Mode Section */}
+        {!ollamaInstalled && (
+          <Box sx={{ mt: 4, mb: 4 }}>
+            <PrivacyModeButton
+              onInstallationStart={handlePrivacyModeInstallation}
+              onInstallationComplete={handlePrivacyModeComplete}
+              onInstallationError={handlePrivacyModeError}
+              isInstalling={ollamaInstalling}
+              isInstalled={ollamaInstalled}
+              disabled={loading}
+            />
+          </Box>
+        )}
+
         {/* Security Notice */}
           <Box sx={{ 
-            mt: 4, 
+            mt: ollamaInstalled ? 2 : 4, 
             textAlign: 'center',
             p: 3,
             borderRadius: 3,
-            background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
-            border: '1px solid #E2E8F0',
+            background: ollamaInstalled 
+              ? 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)'
+              : 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
+            border: ollamaInstalled 
+              ? '1px solid #BBF7D0'
+              : '1px solid #E2E8F0',
           }}>
             <Typography variant="body2" sx={{ 
             display: 'flex', 
@@ -167,11 +217,14 @@ const ApiKeyStep: React.FC<ApiKeyStepProps> = ({ onContinue, updateHeaderContent
               gap: 1,
             fontFamily: 'Inter, system-ui, sans-serif',
               fontWeight: 500,
-              color: '#475569',
+              color: ollamaInstalled ? '#166534' : '#475569',
               fontSize: '0.95rem',
           }}>
-              <Lock sx={{ fontSize: 18, color: '#10B981' }} />
-            Your API keys are encrypted and stored securely on your device
+              <Lock sx={{ fontSize: 18, color: ollamaInstalled ? '#16A34A' : '#10B981' }} />
+            {ollamaInstalled 
+              ? 'Privacy Mode Active: AI processing happens locally on your device'
+              : 'Your API keys are encrypted and stored securely on your device'
+            }
           </Typography>
         </Box>
         </Container>

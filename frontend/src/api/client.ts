@@ -43,6 +43,15 @@ export const longRunningApiClient = axios.create({
   },
 });
 
+// Create a specialized client for OLLAMA installation with extended timeout
+export const ollamaInstallClient = axios.create({
+  baseURL: getApiUrl(),
+  timeout: 180000, // 3 minutes timeout for OLLAMA installation
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 // Create a specialized client for polling operations with reasonable timeout
 export const pollingApiClient = axios.create({
   baseURL: getApiUrl(),

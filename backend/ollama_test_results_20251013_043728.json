@@ -1,0 +1,129 @@
+{
+  "timestamp": "2025-10-13T04:36:10.688751",
+  "platform": "windows",
+  "architecture": "amd64",
+  "tests": {
+    "system_requirements_structure": {
+      "passed": true,
+      "message": "Requirements structure valid",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:10.719751"
+    },
+    "system_requirements_check_platform": {
+      "passed": false,
+      "message": "Missing sufficient field: platform",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:10.719751"
+    },
+    "platform_info_structure": {
+      "passed": true,
+      "message": "Platform info structure valid",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:10.720752"
+    },
+    "ollama_paths": {
+      "passed": true,
+      "message": "All OLLAMA paths present",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:10.720752"
+    },
+    "installation_method": {
+      "passed": true,
+      "message": "Installation method valid",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:10.720752"
+    },
+    "service_management": {
+      "passed": true,
+      "message": "Service management info valid",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:10.720752"
+    },
+    "installation_service_platform": {
+      "passed": true,
+      "message": "Platform detection working",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:10.721751"
+    },
+    "installation_service_download_url": {
+      "passed": true,
+      "message": "Download URL valid",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:10.721751"
+    },
+    "installation_service_status": {
+      "passed": true,
+      "message": "Installation status check working",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:14.854252"
+    },
+    "validation_service_structure": {
+      "passed": true,
+      "message": "Validation structure valid",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:35.503654"
+    },
+    "validation_service_checks": {
+      "passed": true,
+      "message": "All validation checks present",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:35.504163"
+    },
+    "validation_service_summary": {
+      "passed": true,
+      "message": "Validation summary valid",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:35.504163"
+    },
+    "integration_requirements": {
+      "passed": true,
+      "message": "Requirements check working",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:35.505197"
+    },
+    "integration_platform_info": {
+      "passed": true,
+      "message": "Platform info retrieval working",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:35.505197"
+    },
+    "integration_status": {
+      "passed": true,
+      "message": "Installation status check working",
+      "details": {},
+      "timestamp": "2025-10-13T04:36:39.614368"
+    },
+    "integration_validation": {
+      "passed": true,
+      "message": "Validation working",
+      "details": {},
+      "timestamp": "2025-10-13T04:37:00.304187"
+    },
+    "integration_workflow": {
+      "passed": true,
+      "message": "Complete workflow simulation working",
+      "details": {},
+      "timestamp": "2025-10-13T04:37:24.809836"
+    },
+    "error_handling_download": {
+      "passed": true,
+      "message": "Download error handling working",
+      "details": {},
+      "timestamp": "2025-10-13T04:37:24.811842"
+    },
+    "error_handling_api": {
+      "passed": true,
+      "message": "API error handling working",
+      "details": {},
+      "timestamp": "2025-10-13T04:37:28.909587"
+    }
+  },
+  "summary": {
+    "total_tests": 19,
+    "passed": 18,
+    "failed": 1,
+    "skipped": 0,
+    "duration_seconds": 78.19,
+    "success_rate": 94.74
+  }
+}
