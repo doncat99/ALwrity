@@ -87,7 +87,8 @@ export const usePlatformConnections = () => {
       }
       
       // For other platforms, you can add their connection logic here
-      console.log(`Connecting to ${platformId}...`);
+      console.log(`🔧 USE_PLATFORM_CONNECTIONS: Connecting to ${platformId}...`);
+      console.log(`🔧 USE_PLATFORM_CONNECTIONS: Stack trace:`, new Error().stack);
       
     } catch (error) {
       console.error('Connection error:', error);

@@ -64,6 +64,18 @@ class RouterManager:
             from routers.wordpress_oauth import router as wordpress_oauth_router
             self.include_router_safely(wordpress_oauth_router, "wordpress_oauth")
             
+            # Bing Webmaster router
+            from routers.bing_oauth import router as bing_oauth_router
+            self.include_router_safely(bing_oauth_router, "bing_oauth")
+            
+            # Bing Analytics router
+            from routers.bing_analytics import router as bing_analytics_router
+            self.include_router_safely(bing_analytics_router, "bing_analytics")
+            
+            # Bing Analytics Storage router
+            from routers.bing_analytics_storage import router as bing_analytics_storage_router
+            self.include_router_safely(bing_analytics_storage_router, "bing_analytics_storage")
+            
             # SEO tools router
             from routers.seo_tools import router as seo_tools_router
             self.include_router_safely(seo_tools_router, "seo_tools")
@@ -111,6 +123,33 @@ class RouterManager:
             # Frontend environment manager router
             from routers.frontend_env_manager import router as frontend_env_router
             self.include_router_safely(frontend_env_router, "frontend_env_manager")
+            
+            # Platform analytics router
+            try:
+                from routers.platform_analytics import router as platform_analytics_router
+                self.include_router_safely(platform_analytics_router, "platform_analytics")
+                logger.info("✅ Platform analytics router included successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to include platform analytics router: {e}")
+                # Continue with other routers
+            
+            # Bing insights router
+            try:
+                from routers.bing_insights import router as bing_insights_router
+                self.include_router_safely(bing_insights_router, "bing_insights")
+                logger.info("✅ Bing insights router included successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to include Bing insights router: {e}")
+                # Continue with other routers
+            
+            # Background jobs router
+            try:
+                from routers.background_jobs import router as background_jobs_router
+                self.include_router_safely(background_jobs_router, "background_jobs")
+                logger.info("✅ Background jobs router included successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to include Background jobs router: {e}")
+                # Continue with other routers
             
             logger.info("✅ Core routers included successfully")
             return True

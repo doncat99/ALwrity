@@ -25,7 +25,7 @@ class WixService:
     
     def __init__(self):
         self.client_id = os.getenv('WIX_CLIENT_ID')
-        self.redirect_uri = os.getenv('WIX_REDIRECT_URI', 'https://littery-sonny-unscrutinisingly.ngrok-free.dev/wix/callback')
+        self.redirect_uri = os.getenv('WIX_REDIRECT_URI', 'https://alwrity-ai.vercel.app/wix/callback')
         self.base_url = 'https://www.wixapis.com'
         self.oauth_url = 'https://www.wix.com/oauth/authorize'
         # Modular services

@@ -173,11 +173,55 @@ class OnboardingManager:
                 logger.error(f"Error in api_key_save: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
-        @self.app.post("/api/onboarding/api-keys/validate")
+        @self.app.get("/api/onboarding/api-keys/validate")
         async def api_key_validate():
-            """Validate all configured API keys."""
+            """Get API key validation status and configuration."""
             try:
-                return await validate_api_keys()
+                import os
+                from dotenv import load_dotenv
+                
+                # Load environment variables
+                backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                env_path = os.path.join(backend_dir, ".env")
+                load_dotenv(env_path, override=True)
+                
+                # Check for required API keys (backend only)
+                api_keys = {}
+                required_keys = {
+                    'GEMINI_API_KEY': 'gemini',
+                    'EXA_API_KEY': 'exa'
+                    # Note: CopilotKit is frontend-only, validated separately
+                }
+                
+                missing_keys = []
+                configured_providers = []
+                
+                for env_var, provider in required_keys.items():
+                    key_value = os.getenv(env_var)
+                    if key_value and key_value.strip():
+                        api_keys[provider] = key_value.strip()
+                        configured_providers.append(provider)
+                    else:
+                        missing_keys.append(provider)
+                
+                # Determine if all required keys are present
+                required_providers = ['gemini', 'exa']  # Backend keys only
+                all_required_present = all(provider in configured_providers for provider in required_providers)
+                
+                result = {
+                    "api_keys": api_keys,
+                    "validation_results": {
+                        "gemini": {"valid": 'gemini' in configured_providers, "status": "configured" if 'gemini' in configured_providers else "missing"},
+                        "exa": {"valid": 'exa' in configured_providers, "status": "configured" if 'exa' in configured_providers else "missing"}
+                    },
+                    "all_valid": all_required_present,
+                    "total_providers": len(configured_providers),
+                    "configured_providers": configured_providers,
+                    "missing_keys": missing_keys
+                }
+                
+                logger.info(f"API Key Validation Result: {result}")
+                return result
             except Exception as e:
                 logger.error(f"Error in api_key_validate: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -301,7 +345,7 @@ class OnboardingManager:
 
         # Business Information endpoints
         @self.app.post("/api/onboarding/business-info")
-        async def business_info_save(request: 'BusinessInfoRequest'):
+        async def business_info_save(request: dict):
             """Save business information for users without websites."""
             try:
                 from models.business_info_request import BusinessInfoRequest
@@ -329,7 +373,7 @@ class OnboardingManager:
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.put("/api/onboarding/business-info/{business_info_id}")
-        async def business_info_update(business_info_id: int, request: 'BusinessInfoRequest'):
+        async def business_info_update(business_info_id: int, request: dict):
             """Update business information."""
             try:
                 from models.business_info_request import BusinessInfoRequest

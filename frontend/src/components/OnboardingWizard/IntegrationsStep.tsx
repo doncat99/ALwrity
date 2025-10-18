@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Fade,
-  Snackbar
+  Snackbar,
+  Typography,
+  Paper
 } from '@mui/material';
 import {
   // Social Media Icons
@@ -16,7 +18,8 @@ import {
   // Platform Icons
   Web as WordPressIcon,
   Web as WixIcon,
-  Google as GoogleIcon
+  Google as GoogleIcon,
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 
 // Import refactored components
@@ -24,8 +27,12 @@ import EmailSection from './common/EmailSection';
 import PlatformSection from './common/PlatformSection';
 import BenefitsSummary from './common/BenefitsSummary';
 import ComingSoonSection from './common/ComingSoonSection';
+import { useWordPressOAuth } from '../../hooks/useWordPressOAuth';
+import { useBingOAuth } from '../../hooks/useBingOAuth';
 import { useGSCConnection } from './common/useGSCConnection';
 import { usePlatformConnections } from './common/usePlatformConnections';
+import PlatformAnalytics from '../shared/PlatformAnalytics';
+import { cachedAnalyticsAPI } from '../../api/cachedAnalytics';
 
 interface IntegrationsStepProps {
   onContinue: () => void;
@@ -50,7 +57,39 @@ const IntegrationsStep: React.FC<IntegrationsStepProps> = ({ onContinue, updateH
   
   // Use custom hooks
   const { gscSites, connectedPlatforms, setConnectedPlatforms, handleGSCConnect } = useGSCConnection();
+
+  // Invalidate analytics cache when platform connections change
+  const invalidateAnalyticsCache = useCallback(() => {
+    console.log('🔄 IntegrationsStep: Invalidating analytics cache due to connection change');
+    cachedAnalyticsAPI.invalidateAll();
+  }, []);
+
+  // Force refresh analytics data (bypass cache)
+  const forceRefreshAnalytics = useCallback(async () => {
+    console.log('🔄 IntegrationsStep: Force refreshing analytics data (bypassing cache)');
+    try {
+      // Clear all cache first
+      cachedAnalyticsAPI.clearCache();
+      
+      // Force refresh platform status
+      await cachedAnalyticsAPI.forceRefreshPlatformStatus();
+      
+      // Force refresh analytics data
+      await cachedAnalyticsAPI.forceRefreshAnalyticsData(['bing', 'gsc']);
+      
+      console.log('✅ IntegrationsStep: Analytics data force refreshed successfully');
+    } catch (error) {
+      console.error('❌ IntegrationsStep: Error force refreshing analytics:', error);
+    }
+  }, []);
   const { isLoading, showToast, setShowToast, toastMessage, handleConnect } = usePlatformConnections();
+  
+  // WordPress OAuth hook
+  const { connected: wordpressConnected, sites: wordpressSites } = useWordPressOAuth();
+  
+  // Bing OAuth hook
+  const { connected: bingConnected, sites: bingSites, connect: connectBing } = useBingOAuth();
+  console.log('Bing OAuth hook initialized:', { bingConnected, connectBing: typeof connectBing });
 
   // Initialize integrations data
   const [integrations] = useState<IntegrationPlatform[]>([
@@ -89,6 +128,18 @@ const IntegrationsStep: React.FC<IntegrationsStepProps> = ({ onContinue, updateH
       features: ['Search performance data', 'Keyword insights', 'Content optimization'],
       benefits: ['Real-time SEO metrics', 'Keyword performance tracking', 'Content gap analysis'],
       oauthUrl: '/gsc/auth/url',
+      isEnabled: true
+    },
+    {
+      id: 'bing',
+      name: 'Bing Webmaster Tools',
+      description: 'Connect Bing Webmaster for comprehensive SEO insights and search performance data',
+      icon: <AnalyticsIcon />,
+      category: 'analytics',
+      status: 'available',
+      features: ['Bing search performance', 'SEO insights', 'Index status monitoring'],
+      benefits: ['Bing search analytics', 'SEO optimization insights', 'Search engine visibility tracking'],
+      oauthUrl: '/bing/auth/url',
       isEnabled: true
     },
     // Social Media Platforms
@@ -178,7 +229,65 @@ const IntegrationsStep: React.FC<IntegrationsStepProps> = ({ onContinue, updateH
     });
   }, [updateHeaderContent]);
 
-  // Handle OAuth callback parameters
+  // Handle WordPress connection status changes
+  useEffect(() => {
+    console.log('IntegrationsStep: WordPress status changed:', {
+      wordpressConnected,
+      wordpressSitesCount: wordpressSites.length,
+      connectedPlatforms,
+      currentPlatforms: connectedPlatforms
+    });
+    
+    if (wordpressConnected && wordpressSites.length > 0) {
+      // WordPress is connected, add to connected platforms
+      if (!connectedPlatforms.includes('wordpress')) {
+        console.log('IntegrationsStep: Adding WordPress to connected platforms');
+        setConnectedPlatforms([...connectedPlatforms, 'wordpress']);
+        console.log('WordPress connection detected:', wordpressSites);
+        invalidateAnalyticsCache();
+      } else {
+        console.log('IntegrationsStep: WordPress already in connected platforms');
+      }
+    } else if (!wordpressConnected && connectedPlatforms.includes('wordpress')) {
+      // WordPress is disconnected, remove from connected platforms
+      console.log('IntegrationsStep: Removing WordPress from connected platforms');
+      setConnectedPlatforms(connectedPlatforms.filter(platform => platform !== 'wordpress'));
+      console.log('WordPress disconnection detected');
+      invalidateAnalyticsCache();
+    } else {
+      console.log('IntegrationsStep: No WordPress status change needed');
+    }
+  }, [wordpressConnected, wordpressSites, connectedPlatforms, setConnectedPlatforms, invalidateAnalyticsCache]);
+
+  // Handle Bing connection status changes
+  useEffect(() => {
+    console.log('IntegrationsStep: Bing status changed:', {
+      bingConnected,
+      bingSitesCount: bingSites.length,
+      connectedPlatforms,
+      currentPlatforms: connectedPlatforms
+    });
+    
+    if (bingConnected && bingSites.length > 0) {
+      if (!connectedPlatforms.includes('bing')) {
+        console.log('IntegrationsStep: Adding Bing to connected platforms');
+        setConnectedPlatforms([...connectedPlatforms, 'bing']);
+        console.log('Bing connection detected:', bingSites);
+        invalidateAnalyticsCache();
+      } else {
+        console.log('IntegrationsStep: Bing already in connected platforms');
+      }
+    } else if (!bingConnected && connectedPlatforms.includes('bing')) {
+      console.log('IntegrationsStep: Removing Bing from connected platforms');
+      setConnectedPlatforms(connectedPlatforms.filter(platform => platform !== 'bing'));
+      console.log('Bing disconnection detected');
+      invalidateAnalyticsCache();
+    } else {
+      console.log('IntegrationsStep: No Bing status change needed');
+    }
+  }, [bingConnected, bingSites, connectedPlatforms, setConnectedPlatforms, invalidateAnalyticsCache]);
+
+  // Handle OAuth callback parameters (legacy support)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const wordpressConnected = urlParams.get('wordpress_connected');
@@ -246,9 +355,31 @@ const IntegrationsStep: React.FC<IntegrationsStepProps> = ({ onContinue, updateH
   }, []);
 
   const handlePlatformConnect = async (platformId: string) => {
+    console.log('🚀 INTEGRATIONS_STEP: handlePlatformConnect called with platformId:', platformId);
+    console.log('🚀 INTEGRATIONS_STEP: platformId type:', typeof platformId);
+    console.log('🚀 INTEGRATIONS_STEP: platformId length:', platformId.length);
+    console.log('🚀 INTEGRATIONS_STEP: platformId === "bing":', platformId === 'bing');
+    console.log('🚀 INTEGRATIONS_STEP: platformId === "gsc":', platformId === 'gsc');
+    console.log('🚀 INTEGRATIONS_STEP: connectBing function type:', typeof connectBing);
+    console.log('🚀 INTEGRATIONS_STEP: connectBing function:', connectBing);
+    console.log('🚀 INTEGRATIONS_STEP: Stack trace:', new Error().stack);
+    
     if (platformId === 'gsc') {
+      console.log('🚀 INTEGRATIONS_STEP: Handling GSC connection');
       await handleGSCConnect();
+    } else if (platformId === 'bing') {
+      console.log('🚀 INTEGRATIONS_STEP: Handling Bing connection - about to call connectBing');
+      // Use the Bing OAuth hook for connection
+      try {
+        console.log('🚀 INTEGRATIONS_STEP: Calling connectBing()...');
+        await connectBing();
+        console.log('🚀 INTEGRATIONS_STEP: Bing connection initiated successfully');
+      } catch (error) {
+        console.error('🚀 INTEGRATIONS_STEP: Bing connection failed:', error);
+      }
     } else {
+      console.log('🚀 INTEGRATIONS_STEP: Handling other platform connection:', platformId);
+      console.log('🚀 INTEGRATIONS_STEP: This should NOT happen for Bing!');
       await handleConnect(platformId);
     }
   };
@@ -297,6 +428,47 @@ const IntegrationsStep: React.FC<IntegrationsStepProps> = ({ onContinue, updateH
                 />
         </div>
       </Fade>
+
+      {/* Analytics Data Display */}
+      {connectedPlatforms.length > 0 && (
+        <Fade in timeout={1200}>
+          <div>
+            <Paper 
+              elevation={2} 
+              sx={{ 
+                mt: 3, 
+                p: 3, 
+                borderRadius: 2,
+                background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <AnalyticsIcon sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                  Platform Analytics
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                Here's what data is available from your connected platforms:
+              </Typography>
+              
+              <PlatformAnalytics 
+                platforms={connectedPlatforms}
+                showSummary={true}
+                refreshInterval={0}
+                onDataLoaded={(data: any) => {
+                  console.log('Analytics data loaded:', data);
+                }}
+                onRefreshReady={(refreshFn) => {
+                  console.log('🔄 PlatformAnalytics refresh function ready');
+                  // Store the refresh function for potential use
+                  (window as any).refreshAnalytics = refreshFn;
+                }}
+              />
+            </Paper>
+          </div>
+        </Fade>
+      )}
 
       {/* Social Media Platforms */}
       <Fade in timeout={1200}>

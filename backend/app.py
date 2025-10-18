@@ -1,5 +1,3 @@
-"""Main FastAPI application for ALwrity backend."""
-
 from fastapi import FastAPI, HTTPException, Depends, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -94,7 +92,7 @@ app.add_middleware(
         "http://localhost:8000",  # Backend dev server
         "http://localhost:3001",  # Alternative React port
         "https://alwrity-ai.vercel.app",
-        "https://littery-sonny-unscrutinisingly.ngrok-free.dev",  # ngrok frontend
+        "https://alwrity-ai.vercel.app",  # Vercel frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -122,14 +120,7 @@ async def rate_limit_middleware(request: Request, call_next):
     return await rate_limiter.rate_limit_middleware(request, call_next)
 
 # 3. LAST REGISTERED (runs FIRST) - API key injection
-@app.middleware("http")
-async def inject_user_api_keys(request: Request, call_next):
-    """
-    Inject user-specific API keys into environment for the request duration.
-    Sets request.state.user_id for downstream middleware.
-    """
-    from middleware.api_key_injection_middleware import api_key_injection_middleware
-    return await api_key_injection_middleware(request, call_next)
+# API key injection middleware removed - now using environment variables directly
 
 # Health check endpoints using modular utilities
 @app.get("/health")

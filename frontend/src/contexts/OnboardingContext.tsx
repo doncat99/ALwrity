@@ -71,6 +71,8 @@ interface OnboardingContextValue {
   refresh: () => Promise<void>;
   markStepComplete: (stepNumber: number) => void;
   clearError: () => void;
+  initializeOnboarding: () => void;
+  resetOnboarding: () => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextValue | undefined>(undefined);
@@ -145,13 +147,22 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     console.log('OnboardingContext: Clerk loaded, isSignedIn:', isSignedIn);
     
     if (isSignedIn) {
-      console.log('OnboardingContext: User signed in, fetching data...');
-      fetchOnboardingData();
+      console.log('OnboardingContext: User signed in, but waiting for subscription check...');
+      // Don't automatically fetch onboarding data - let InitialRouteHandler handle the flow
+      setLoading(false);
     } else {
       console.log('OnboardingContext: User not signed in, skipping data fetch');
       setLoading(false);
     }
-  }, [clerkLoaded, isSignedIn, fetchOnboardingData]);
+  }, [clerkLoaded, isSignedIn]);
+
+  // Separate effect to fetch data when explicitly requested
+  const initializeOnboarding = useCallback(() => {
+    if (isSignedIn && clerkLoaded) {
+      console.log('OnboardingContext: Initializing onboarding data...');
+      fetchOnboardingData();
+    }
+  }, [isSignedIn, clerkLoaded, fetchOnboardingData]);
 
   /**
    * Refresh onboarding data (e.g., after completing a step)
@@ -210,6 +221,26 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   }, []);
 
   /**
+   * Reset onboarding progress and clear cache
+   */
+  const resetOnboarding = useCallback(() => {
+    console.log('OnboardingContext: Resetting onboarding progress');
+    
+    // Clear all cached data
+    sessionStorage.removeItem('onboarding_init');
+    localStorage.removeItem('onboarding_step');
+    localStorage.removeItem('onboarding_data');
+    
+    // Reset state
+    setData(null);
+    setError(null);
+    setLoading(true);
+    
+    // Re-fetch fresh data
+    fetchOnboardingData();
+  }, [fetchOnboardingData]);
+
+  /**
    * Computed properties
    */
   const isOnboardingComplete = data?.onboarding?.is_completed ?? false;
@@ -226,6 +257,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     refresh,
     markStepComplete,
     clearError,
+    initializeOnboarding,
+    resetOnboarding,
   };
 
   return (

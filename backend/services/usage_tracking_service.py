@@ -35,9 +35,18 @@ class UsageTrackingService:
         
         try:
             # Calculate costs
+            # Use specific model names instead of generic defaults
+            default_models = {
+                "gemini": "gemini-2.5-flash",  # Use Flash as default (cost-effective)
+                "openai": "gpt-4o-mini",       # Use Mini as default (cost-effective)
+                "anthropic": "claude-3.5-sonnet"  # Use Sonnet as default
+            }
+            
+            model_name = model_used or default_models.get(provider.value, f"{provider.value}-default")
+            
             cost_data = self.pricing_service.calculate_api_cost(
                 provider=provider,
-                model_name=model_used or f"{provider.value}-default",
+                model_name=model_name,
                 tokens_input=tokens_input,
                 tokens_output=tokens_output,
                 request_count=1,

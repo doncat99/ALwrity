@@ -15,15 +15,17 @@ import PricingPage from './components/Pricing/PricingPage';
 import WixTestPage from './components/WixTestPage/WixTestPage';
 import WixCallbackPage from './components/WixCallbackPage/WixCallbackPage';
 import WordPressCallbackPage from './components/WordPressCallbackPage/WordPressCallbackPage';
+import BingCallbackPage from './components/BingCallbackPage/BingCallbackPage';
+import BingAnalyticsStorage from './components/BingAnalyticsStorage/BingAnalyticsStorage';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import GSCAuthCallback from './components/SEODashboard/components/GSCAuthCallback';
 import Landing from './components/Landing/Landing';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 import ErrorBoundaryTest from './components/shared/ErrorBoundaryTest';
 import { OnboardingProvider } from './contexts/OnboardingContext';
-import { SubscriptionProvider } from './contexts/SubscriptionContext';
+import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext';
 
-import { apiClient, setAuthTokenGetter } from './api/client';
+import { setAuthTokenGetter } from './api/client';
 import { useOnboarding } from './contexts/OnboardingContext';
 import { useState, useEffect } from 'react';
 import ConnectionErrorPage from './components/shared/ConnectionErrorPage';
@@ -45,13 +47,9 @@ const ConditionalCopilotKit: React.FC<{ children: React.ReactNode }> = ({ childr
 // Component to handle initial routing based on subscription and onboarding status
 // Flow: Subscription → Onboarding → Dashboard
 const InitialRouteHandler: React.FC = () => {
-  const { loading, error, isOnboardingComplete } = useOnboarding();
-  const [checkingSubscription, setCheckingSubscription] = useState(true);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<{
-    active: boolean;
-    plan: string;
-    isNewUser: boolean;
-  } | null>(null);
+  const { loading, error, isOnboardingComplete, initializeOnboarding } = useOnboarding();
+  const { subscription, loading: subscriptionLoading, error: subscriptionError, checkSubscription } = useSubscription();
+  // Note: subscriptionError is available for future error handling
   const [connectionError, setConnectionError] = useState<{
     hasError: boolean;
     error: Error | null;
@@ -60,53 +58,40 @@ const InitialRouteHandler: React.FC = () => {
     error: null,
   });
 
+  // Check subscription on mount
   useEffect(() => {
-    const checkSubscription = async () => {
-      try {
-        const userId = localStorage.getItem('user_id') || 'anonymous';
-        const response = await apiClient.get(`/api/subscription/status/${userId}`);
-        const subscriptionData = response.data.data;
-
-        // Check if user is new (no subscription record at all)
-        const isNewUser = !subscriptionData || subscriptionData.plan === 'none';
-
-        setSubscriptionStatus({
-          active: subscriptionData?.active || false,
-          plan: subscriptionData?.plan || 'none',
-          isNewUser
-        });
-
-        // Clear any connection errors
+    checkSubscription().catch((err) => {
+      console.error('Error checking subscription:', err);
+      
+      // Check if it's a connection error - handle it locally
+      if (err instanceof Error && (err.name === 'NetworkError' || err.name === 'ConnectionError')) {
         setConnectionError({
-          hasError: false,
-          error: null,
+          hasError: true,
+          error: err,
         });
-
-      } catch (err: any) {
-        console.error('Error checking subscription:', err);
-
-        // Check if it's a connection error - handle it locally
-        if (err instanceof Error && (err.name === 'NetworkError' || err.name === 'ConnectionError')) {
-          setConnectionError({
-            hasError: true,
-            error: err,
-          });
-          return; // Don't set subscription status for connection errors
-        }
-
-        // For other errors, treat as new user
-        setSubscriptionStatus({
-          active: false,
-          plan: 'none',
-          isNewUser: true
-        });
-      } finally {
-        setCheckingSubscription(false);
       }
-    };
+    });
+  }, [checkSubscription]);
 
-    checkSubscription();
-  }, []);
+  // Initialize onboarding only after subscription is confirmed
+  useEffect(() => {
+    if (subscription && !subscriptionLoading) {
+      // Check if user is new (no subscription record at all)
+      const isNewUser = !subscription || subscription.plan === 'none';
+      
+      console.log('InitialRouteHandler: Subscription data received:', {
+        plan: subscription.plan,
+        active: subscription.active,
+        isNewUser,
+        subscriptionLoading
+      });
+      
+      if (subscription.active && !isNewUser) {
+        console.log('InitialRouteHandler: Subscription confirmed, initializing onboarding...');
+        initializeOnboarding();
+      }
+    }
+  }, [subscription, subscriptionLoading, initializeOnboarding]);
 
   // Handle connection error - show connection error page
   if (connectionError.hasError) {
@@ -115,42 +100,15 @@ const InitialRouteHandler: React.FC = () => {
         hasError: false,
         error: null,
       });
-      setCheckingSubscription(true);
-      // Re-trigger the subscription check
-      const checkSubscription = async () => {
-        try {
-          const userId = localStorage.getItem('user_id') || 'anonymous';
-          const response = await apiClient.get(`/api/subscription/status/${userId}`);
-          const subscriptionData = response.data.data;
-
-          const isNewUser = !subscriptionData || subscriptionData.plan === 'none';
-
-          setSubscriptionStatus({
-            active: subscriptionData?.active || false,
-            plan: subscriptionData?.plan || 'none',
-            isNewUser
+      // Re-trigger the subscription check using context
+      checkSubscription().catch((err) => {
+        if (err instanceof Error && (err.name === 'NetworkError' || err.name === 'ConnectionError')) {
+          setConnectionError({
+            hasError: true,
+            error: err,
           });
-        } catch (err: any) {
-          console.error('Error checking subscription on retry:', err);
-
-          if (err instanceof Error && (err.name === 'NetworkError' || err.name === 'ConnectionError')) {
-            setConnectionError({
-              hasError: true,
-              error: err,
-            });
-          } else {
-            setSubscriptionStatus({
-              active: false,
-              plan: 'none',
-              isNewUser: true
-            });
-          }
-        } finally {
-          setCheckingSubscription(false);
         }
-      };
-
-      checkSubscription();
+      });
     };
 
     const handleGoHome = () => {
@@ -168,7 +126,7 @@ const InitialRouteHandler: React.FC = () => {
   }
 
   // Loading state - checking both subscription and onboarding
-  if (loading || checkingSubscription) {
+  if (loading || subscriptionLoading) {
     return (
       <Box
         display="flex"
@@ -180,7 +138,7 @@ const InitialRouteHandler: React.FC = () => {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="textSecondary">
-          {checkingSubscription ? 'Checking subscription...' : 'Checking onboarding status...'}
+          {subscriptionLoading ? 'Checking subscription...' : 'Checking onboarding status...'}
         </Typography>
       </Box>
     );
@@ -208,15 +166,18 @@ const InitialRouteHandler: React.FC = () => {
     );
   }
 
-  if (!subscriptionStatus) {
+  if (!subscription) {
     return null; // Should not happen, but just in case
   }
 
   // Decision tree for SIGNED-IN users:
   // Priority: Subscription → Onboarding → Dashboard
   
+  // Check if user is new (no subscription record at all)
+  const isNewUser = !subscription || subscription.plan === 'none';
+  
   // 1. No active subscription? → Must subscribe first (even if onboarding is complete)
-  if (subscriptionStatus.isNewUser || !subscriptionStatus.active) {
+  if (isNewUser || !subscription.active) {
     console.log('InitialRouteHandler: No active subscription → Pricing page');
     return <Navigate to="/pricing" replace />;
   }
@@ -251,6 +212,9 @@ const TokenInstaller: React.FC = () => {
     if (isSignedIn && userId) {
       console.log('TokenInstaller: Storing user_id in localStorage:', userId);
       localStorage.setItem('user_id', userId);
+      
+      // Trigger event to notify SubscriptionContext that user is authenticated
+      window.dispatchEvent(new CustomEvent('user-authenticated', { detail: { userId } }));
     } else if (!isSignedIn) {
       // Clear user_id when signed out
       console.log('TokenInstaller: Clearing user_id from localStorage');
@@ -263,8 +227,8 @@ const TokenInstaller: React.FC = () => {
     setAuthTokenGetter(async () => {
       try {
         const template = process.env.REACT_APP_CLERK_JWT_TEMPLATE;
-        // If a template is provided, request a template-specific JWT
-        if (template) {
+        // If a template is provided and it's not a placeholder, request a template-specific JWT
+        if (template && template !== 'your_jwt_template_name_here') {
           // @ts-ignore Clerk types allow options object
           return await getToken({ template });
         }
@@ -380,6 +344,8 @@ const App: React.FC = () => {
                 <Route path="/wix/callback" element={<WixCallbackPage />} />
                 <Route path="/wp/callback" element={<WordPressCallbackPage />} />
                 <Route path="/gsc/callback" element={<GSCAuthCallback />} />
+                <Route path="/bing/callback" element={<BingCallbackPage />} />
+                <Route path="/bing-analytics-storage" element={<ProtectedRoute><BingAnalyticsStorage /></ProtectedRoute>} />
           </Routes>
         </ConditionalCopilotKit>
       </Router>

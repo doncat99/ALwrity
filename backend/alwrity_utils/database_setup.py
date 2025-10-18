@@ -6,6 +6,7 @@ Handles database initialization and table creation.
 from typing import List, Tuple
 import sys
 from pathlib import Path
+from loguru import logger
 
 
 class DatabaseSetup:

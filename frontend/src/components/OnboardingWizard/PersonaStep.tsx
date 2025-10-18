@@ -329,12 +329,23 @@ const PersonaStep: React.FC<PersonaStepProps> = ({
 
   // Validation effect - notify wizard when persona data is ready
   useEffect(() => {
-    const isValid = !!(corePersona && platformPersonas && Object.keys(platformPersonas).length > 0 && qualityMetrics);
+    // Only validate as complete if:
+    // 1. Not currently generating
+    // 2. Generation completed successfully (has success data)
+    // 3. Has all required persona data
+    const hasValidData = !!(corePersona && platformPersonas && Object.keys(platformPersonas).length > 0 && qualityMetrics);
+    const isComplete = !isGenerating && hasValidData && generationStep === 'preview';
+    const isValid = isComplete;
+    
     console.log('PersonaStep: Validation check:', {
       corePersona: !!corePersona,
       platformPersonas: !!platformPersonas,
       platformPersonasCount: platformPersonas ? Object.keys(platformPersonas).length : 0,
       qualityMetrics: !!qualityMetrics,
+      isGenerating,
+      generationStep,
+      hasValidData,
+      isComplete,
       isValid
     });
     
@@ -342,23 +353,32 @@ const PersonaStep: React.FC<PersonaStepProps> = ({
       console.log('PersonaStep: Calling onValidationChange with:', isValid);
       onValidationChange(isValid);
     }
-  }, [corePersona, platformPersonas, qualityMetrics, onValidationChange]);
+  }, [corePersona, platformPersonas, qualityMetrics, isGenerating, generationStep, onValidationChange]);
 
-  // Auto-call onContinue when persona data is ready
+  // Auto-call onContinue when persona data is ready and generation is complete
   useEffect(() => {
     console.log('PersonaStep: Checking persona data readiness:', {
       corePersona: !!corePersona,
       platformPersonas: !!platformPersonas,
       qualityMetrics: !!qualityMetrics,
       success,
-      isGenerating
+      isGenerating,
+      generationStep
     });
     
-    if (corePersona && platformPersonas && qualityMetrics && success) {
-      console.log('PersonaStep: Persona data is ready, auto-calling onContinue');
+    // Only auto-continue if:
+    // 1. Generation is complete (not generating and at preview step)
+    // 2. Has valid persona data and success flag
+    const hasValidData = corePersona && platformPersonas && qualityMetrics && success;
+    const isGenerationComplete = !isGenerating && generationStep === 'preview';
+    
+    if (hasValidData && isGenerationComplete) {
+      console.log('PersonaStep: Persona data is ready and generation complete, auto-calling onContinue');
       handleContinue();
+    } else {
+      console.log('PersonaStep: Not ready to continue yet - hasValidData:', hasValidData, 'isGenerationComplete:', isGenerationComplete);
     }
-  }, [corePersona, platformPersonas, qualityMetrics, success, handleContinue]);
+  }, [corePersona, platformPersonas, qualityMetrics, success, isGenerating, generationStep, handleContinue]);
 
   // (auto-generation handled in initial effect via server/local cache fallback)
 

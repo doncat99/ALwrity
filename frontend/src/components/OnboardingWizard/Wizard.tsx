@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import { getCurrentStep, setCurrentStep } from '../../api/onboarding';
 import { apiClient } from '../../api/client';
-import ApiKeyStep from './ApiKeyStep';
+import ApiKeyValidationStep from './ApiKeyValidationStep';
 import WebsiteStep from './WebsiteStep';
 import CompetitorAnalysisStep from './CompetitorAnalysisStep';
 import PersonaStep from './PersonaStep';
@@ -181,7 +181,7 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     });
   }, []);
   
-  // Memoized callback specifically for ApiKeyStep to prevent infinite loops
+  // Memoized callback specifically for ApiKeyValidationStep to prevent infinite loops
   const handleApiKeyValidationChange = useCallback((isValid: boolean) => {
     handleStepValidationChange(0, isValid);
   }, [handleStepValidationChange]);
@@ -219,9 +219,22 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         if (cachedInit) {
           console.log('Wizard: Using cached init data from batch endpoint');
           const data = JSON.parse(cachedInit);
-
+          
           // Extract data from batch response
           const { onboarding, session } = data;
+          
+          // Check if user should start from step 1 due to new API key flow
+          // If backend says current_step is 1 but cache shows higher step, reset
+          if (onboarding.current_step === 1 && onboarding.completion_percentage === 0) {
+            console.log('Wizard: Detected new API key flow - user should start from step 1');
+            // Clear cache and start fresh
+            sessionStorage.removeItem('onboarding_init');
+            localStorage.removeItem('onboarding_active_step');
+            localStorage.removeItem('onboarding_data');
+            setActiveStep(0); // Start from step 1 (index 0)
+            setLoading(false);
+            return;
+          }
 
           // Load step data, especially research data from step 3 and persona data from step 4
           if (onboarding.steps && Array.isArray(onboarding.steps)) {
@@ -586,7 +599,7 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
 
   const renderStepContent = (step: number) => {
     const stepComponents = [
-      <ApiKeyStep key="api-keys" onContinue={handleNext} updateHeaderContent={updateHeaderContent} onValidationChange={handleApiKeyValidationChange} />,
+      <ApiKeyValidationStep key="api-keys" onContinue={handleNext} updateHeaderContent={updateHeaderContent} onValidationChange={handleApiKeyValidationChange} />,
       <WebsiteStep key="website" onContinue={handleNext} updateHeaderContent={updateHeaderContent} onValidationChange={(isValid) => handleStepValidationChange(1, isValid)} />,
       <CompetitorAnalysisStep 
         key="research" 

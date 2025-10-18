@@ -21,7 +21,7 @@ class WordPressOAuthService:
         # WordPress.com OAuth2 credentials
         self.client_id = os.getenv('WORDPRESS_CLIENT_ID', '')
         self.client_secret = os.getenv('WORDPRESS_CLIENT_SECRET', '')
-        self.redirect_uri = os.getenv('WORDPRESS_REDIRECT_URI', 'https://littery-sonny-unscrutinisingly.ngrok-free.dev/wp/callback')
+        self.redirect_uri = os.getenv('WORDPRESS_REDIRECT_URI', 'https://alwrity-ai.vercel.app/wp/callback')
         self.base_url = "https://public-api.wordpress.com"
 
         # Validate configuration
@@ -96,6 +96,7 @@ class WordPressOAuthService:
             auth_url = f"{self.base_url}/oauth2/authorize?{'&'.join(params)}"
 
             logger.info(f"Generated WordPress OAuth URL for user {user_id}")
+            logger.info(f"WordPress OAuth redirect URI: {self.redirect_uri}")
             return {
                 "auth_url": auth_url,
                 "state": state
@@ -108,6 +109,8 @@ class WordPressOAuthService:
     def handle_oauth_callback(self, code: str, state: str) -> Optional[Dict[str, Any]]:
         """Handle OAuth callback and exchange code for access token."""
         try:
+            logger.info(f"WordPress OAuth callback started - code: {code[:20]}..., state: {state[:20]}...")
+            
             # Validate state parameter
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -122,6 +125,7 @@ class WordPressOAuthService:
                     return None
                 
                 user_id = result[0]
+                logger.info(f"WordPress OAuth: State validated for user {user_id}")
                 
                 # Clean up used state
                 cursor.execute('DELETE FROM wordpress_oauth_states WHERE state = ?', (state,))
@@ -136,6 +140,7 @@ class WordPressOAuthService:
                 'grant_type': 'authorization_code'
             }
             
+            logger.info(f"WordPress OAuth: Exchanging code for token...")
             response = requests.post(
                 f"{self.base_url}/oauth2/token",
                 data=token_data,
@@ -147,6 +152,7 @@ class WordPressOAuthService:
                 return None
             
             token_info = response.json()
+            logger.info(f"WordPress OAuth: Token received - blog_id: {token_info.get('blog_id')}, blog_url: {token_info.get('blog_url')}")
             
             # Store token information
             access_token = token_info.get('access_token')
@@ -165,8 +171,9 @@ class WordPressOAuthService:
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 ''', (user_id, access_token, 'bearer', expires_at, scope, blog_id, blog_url))
                 conn.commit()
+                logger.info(f"WordPress OAuth: Token inserted into database for user {user_id}")
             
-            logger.info(f"WordPress OAuth token stored for user {user_id}")
+            logger.info(f"WordPress OAuth token stored successfully for user {user_id}, blog: {blog_url}")
             return {
                 "success": True,
                 "access_token": access_token,

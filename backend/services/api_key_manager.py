@@ -205,7 +205,19 @@ class OnboardingProgress:
     def get_completion_percentage(self) -> float:
         """Get the completion percentage."""
         completed_steps = sum(1 for step in self.steps if step.status in [StepStatus.COMPLETED, StepStatus.SKIPPED])
-        return (completed_steps / len(self.steps)) * 100
+        
+        # If we have a current step that's not completed, give partial credit
+        if self.current_step > 0 and self.current_step <= len(self.steps):
+            # Give 50% credit for being on the current step (even if not completed)
+            current_step_progress = 0.5 if self.current_step > completed_steps else 0
+            total_progress = completed_steps + current_step_progress
+            percentage = (total_progress / len(self.steps)) * 100
+            logger.info(f"Progress calculation: {percentage}% (completed: {completed_steps}, current: {self.current_step}, current_progress: {current_step_progress})")
+            return percentage
+        
+        percentage = (completed_steps / len(self.steps)) * 100
+        logger.info(f"Progress calculation (no current step): {percentage}% (completed: {completed_steps}/{len(self.steps)})")
+        return percentage
     
     def get_next_incomplete_step(self) -> Optional[int]:
         """Get the next incomplete step number."""

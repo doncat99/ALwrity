@@ -182,7 +182,7 @@ async def get_user_writing_personas(user_id: int = 1):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def save_business_info(business_info: 'BusinessInfoRequest'):
+async def save_business_info(business_info: dict):
     try:
         from api.onboarding_utils.business_info_service import BusinessInfoService
         business_service = BusinessInfoService()
@@ -212,7 +212,7 @@ async def get_business_info_by_user(user_id: int):
         raise HTTPException(status_code=500, detail=f"Failed to get business info: {str(e)}")
 
 
-async def update_business_info(business_info_id: int, business_info: 'BusinessInfoRequest'):
+async def update_business_info(business_info_id: int, business_info: dict):
     try:
         from api.onboarding_utils.business_info_service import BusinessInfoService
         business_service = BusinessInfoService()

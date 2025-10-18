@@ -315,32 +315,123 @@ class GSCService:
                 return cached_data
             
             service = self.get_authenticated_service(user_id)
+            if not service:
+                logger.error(f"Failed to get authenticated GSC service for user: {user_id}")
+                return {'error': 'Authentication failed', 'rows': [], 'rowCount': 0}
             
+            # Step 1: Verify data presence first (as per GSC API documentation)
+            verification_request = {
+                'startDate': start_date,
+                'endDate': end_date,
+                'dimensions': ['date']  # Only date dimension for verification
+            }
+            
+            logger.info(f"GSC Data verification request for user {user_id}: {verification_request}")
+            
+            try:
+                verification_response = service.searchanalytics().query(
+                    siteUrl=site_url,
+                    body=verification_request
+                ).execute()
+                
+                logger.info(f"GSC Data verification response for user {user_id}: {verification_response}")
+                
+                # Check if we have any data
+                verification_rows = verification_response.get('rows', [])
+                if not verification_rows:
+                    logger.warning(f"No GSC data available for user {user_id} in date range {start_date} to {end_date}")
+                    return {'error': 'No data available for this date range', 'rows': [], 'rowCount': 0}
+                
+                logger.info(f"GSC Data verification successful - found {len(verification_rows)} days with data")
+                
+            except Exception as verification_error:
+                logger.error(f"GSC Data verification failed for user {user_id}: {verification_error}")
+                return {'error': f'Data verification failed: {str(verification_error)}', 'rows': [], 'rowCount': 0}
+            
+            # Step 2: Get overall metrics (no dimensions)
             request = {
                 'startDate': start_date,
                 'endDate': end_date,
-                'dimensions': ['query', 'page', 'country', 'device'],
+                'dimensions': [],  # No dimensions for overall metrics
                 'rowLimit': 1000
             }
             
-            response = service.searchanalytics().query(
-                siteUrl=site_url,
-                body=request
-            ).execute()
+            logger.info(f"GSC API request for user {user_id}: {request}")
             
-            # Process and cache data
-            analytics_data = {
-                'rows': response.get('rows', []),
-                'rowCount': response.get('rowCount', 0),
+            try:
+                response = service.searchanalytics().query(
+                    siteUrl=site_url,
+                    body=request
+                ).execute()
+                
+                logger.info(f"GSC API response for user {user_id}: {response}")
+            except Exception as api_error:
+                logger.error(f"GSC API call failed for user {user_id}: {api_error}")
+                return {'error': str(api_error), 'rows': [], 'rowCount': 0}
+            
+            # Step 3: Get query-level data for insights (as per documentation)
+            query_request = {
                 'startDate': start_date,
                 'endDate': end_date,
-                'siteUrl': site_url
+                'dimensions': ['query'],  # Get query-level data
+                'rowLimit': 1000
             }
             
-            self._cache_data(user_id, site_url, 'analytics', analytics_data, cache_key)
+            logger.info(f"GSC Query-level request for user {user_id}: {query_request}")
             
-            logger.info(f"Retrieved analytics data for user: {user_id}, site: {site_url}")
-            return analytics_data
+            try:
+                query_response = service.searchanalytics().query(
+                    siteUrl=site_url,
+                    body=query_request
+                ).execute()
+                
+                logger.info(f"GSC Query-level response for user {user_id}: {query_response}")
+                
+                # Combine overall metrics with query-level data
+                analytics_data = {
+                    'overall_metrics': {
+                        'rows': response.get('rows', []),
+                        'rowCount': response.get('rowCount', 0)
+                    },
+                    'query_data': {
+                        'rows': query_response.get('rows', []),
+                        'rowCount': query_response.get('rowCount', 0)
+                    },
+                    'verification_data': {
+                        'rows': verification_rows,
+                        'rowCount': len(verification_rows)
+                    },
+                    'startDate': start_date,
+                    'endDate': end_date,
+                    'siteUrl': site_url
+                }
+                
+                self._cache_data(user_id, site_url, 'analytics', analytics_data, cache_key)
+                
+                logger.info(f"Retrieved comprehensive analytics data for user: {user_id}, site: {site_url}")
+                return analytics_data
+                
+            except Exception as query_error:
+                logger.error(f"GSC Query-level request failed for user {user_id}: {query_error}")
+                # Fall back to overall metrics only
+                analytics_data = {
+                    'overall_metrics': {
+                        'rows': response.get('rows', []),
+                        'rowCount': response.get('rowCount', 0)
+                    },
+                    'query_data': {'rows': [], 'rowCount': 0},
+                    'verification_data': {
+                        'rows': verification_rows,
+                        'rowCount': len(verification_rows)
+                    },
+                    'startDate': start_date,
+                    'endDate': end_date,
+                    'siteUrl': site_url,
+                    'warning': f'Query-level data unavailable: {str(query_error)}'
+                }
+                
+                self._cache_data(user_id, site_url, 'analytics', analytics_data, cache_key)
+                return analytics_data
             
         except Exception as e:
             logger.error(f"Error getting search analytics for user {user_id}: {e}")

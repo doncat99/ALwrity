@@ -111,7 +111,7 @@ class PersonaQualityImprover:
             platform_consistency = self._assess_platform_consistency(core_persona, platform_personas)
             
             # Platform optimization (25% weight)
-            platform_optimization = self._assess_platform_optimization(platform_personas)
+            platform_optimization = self._assess_platform_optimization_dict(platform_personas)
             
             # Linguistic quality (20% weight)
             linguistic_quality = self._assess_linguistic_quality(linguistic_analysis)
@@ -177,8 +177,8 @@ class PersonaQualityImprover:
         
         return int(sum(consistency_scores) / len(consistency_scores)) if consistency_scores else 75
     
-    def _assess_platform_optimization(self, platform_personas: Dict[str, Any]) -> int:
-        """Assess platform-specific optimization quality."""
+    def _assess_platform_optimization_dict(self, platform_personas: Dict[str, Any]) -> int:
+        """Assess platform-specific optimization quality for dictionary input."""
         if not platform_personas:
             return 50
         
@@ -582,9 +582,17 @@ class PersonaQualityImprover:
         else:
             return 50.0  # Default if no clear satisfaction data
     
-    def _assess_platform_optimization(self, persona: EnhancedWritingPersona) -> float:
+    def _assess_platform_optimization(self, persona) -> float:
         """Assess platform optimization quality."""
-        platform_personas = persona.platform_personas
+        # Handle both EnhancedWritingPersona objects and dictionaries
+        if hasattr(persona, 'platform_personas'):
+            platform_personas = persona.platform_personas
+        elif isinstance(persona, dict):
+            # For dictionary input, use the simpler assessment method
+            return float(self._assess_platform_optimization_dict(persona))
+        else:
+            logger.warning(f"Unexpected persona type: {type(persona)}")
+            return 0.0
         
         if not platform_personas:
             return 0.0

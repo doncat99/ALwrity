@@ -57,10 +57,19 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     try {
       // Get user ID from localStorage or auth context
       const userId = localStorage.getItem('user_id') || 'anonymous';
+      
+      // Don't make API call if user is anonymous (not authenticated)
+      if (userId === 'anonymous') {
+        console.log('SubscriptionContext: User not authenticated, skipping subscription check');
+        setLoading(false);
+        return;
+      }
 
+      console.log('SubscriptionContext: Checking subscription for user:', userId);
       const response = await apiClient.get(`/api/subscription/status/${userId}`);
       const subscriptionData = response.data.data;
 
+      console.log('SubscriptionContext: Received subscription data from backend:', subscriptionData);
       setSubscription(subscriptionData);
     } catch (err) {
       console.error('Error checking subscription:', err);
@@ -73,25 +82,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
       setError(err instanceof Error ? err.message : 'Failed to check subscription');
 
-      // Default to free tier on error
-      setSubscription({
-        active: true,
-        plan: 'free',
-        tier: 'free',
-        can_use_api: true,
-        limits: {
-          gemini_calls: 100,
-          openai_calls: 100,
-          anthropic_calls: 100,
-          mistral_calls: 100,
-          tavily_calls: 50,
-          serper_calls: 50,
-          metaphor_calls: 50,
-          firecrawl_calls: 50,
-          stability_calls: 20,
-          monthly_cost: 5.0
-        }
-      });
+      // Don't default to free tier on error - preserve existing subscription or leave null
+      // This prevents overriding correct subscription data with 'free' on temporary errors
+      console.warn('Subscription check failed, preserving existing data:', subscription);
     } finally {
       setLoading(false);
     }
@@ -114,11 +107,19 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       checkSubscription();
     };
 
+    // Listen for user authentication changes
+    const handleUserAuth = () => {
+      console.log('User authenticated, checking subscription...');
+      checkSubscription();
+    };
+
     window.addEventListener('subscription-updated', handleSubscriptionUpdate);
+    window.addEventListener('user-authenticated', handleUserAuth);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('subscription-updated', handleSubscriptionUpdate);
+      window.removeEventListener('user-authenticated', handleUserAuth);
     };
   }, []);
 

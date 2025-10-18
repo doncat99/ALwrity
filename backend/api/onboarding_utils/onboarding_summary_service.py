@@ -112,6 +112,18 @@ class OnboardingSummaryService:
             logger.error(f"Error getting website analysis: {str(e)}")
             return None
     
+    async def get_website_analysis_data(self) -> Dict[str, Any]:
+        """Get website analysis data for API endpoint."""
+        try:
+            website_analysis = self._get_website_analysis()
+            return {
+                "website_analysis": website_analysis,
+                "status": "success" if website_analysis else "no_data"
+            }
+        except Exception as e:
+            logger.error(f"Error in get_website_analysis_data: {str(e)}")
+            raise e
+    
     def _get_research_preferences(self) -> Optional[Dict[str, Any]]:
         """Get research preferences from database."""
         try:
@@ -170,3 +182,12 @@ class OnboardingSummaryService:
         }
         
         return capabilities
+    
+    async def get_research_preferences_data(self) -> Dict[str, Any]:
+        """Get research preferences data for the user."""
+        try:
+            research_prefs_service = ResearchPreferencesService()
+            return await research_prefs_service.get_research_preferences(self.user_id)
+        except Exception as e:
+            logger.error(f"Error getting research preferences data: {e}")
+            raise

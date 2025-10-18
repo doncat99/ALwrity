@@ -13,7 +13,7 @@ class BusinessInfoService:
     def __init__(self):
         pass
     
-    async def save_business_info(self, business_info: 'BusinessInfoRequest') -> Dict[str, Any]:
+    async def save_business_info(self, business_info: dict) -> Dict[str, Any]:
         """Save business information for users without websites."""
         try:
             from models.business_info_request import BusinessInfoRequest
@@ -65,7 +65,7 @@ class BusinessInfoService:
             logger.error(f"❌ Error getting business info: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to get business info: {str(e)}")
     
-    async def update_business_info(self, business_info_id: int, business_info: 'BusinessInfoRequest') -> Dict[str, Any]:
+    async def update_business_info(self, business_info_id: int, business_info: dict) -> Dict[str, Any]:
         """Update business information."""
         try:
             from models.business_info_request import BusinessInfoRequest

@@ -4,7 +4,7 @@ Handles WordPress.com OAuth2 authentication flow.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from typing import Dict, Any, Optional
 from pydantic import BaseModel
 from loguru import logger

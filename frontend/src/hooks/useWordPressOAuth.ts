@@ -26,6 +26,7 @@ export const useWordPressOAuth = (): UseWordPressOAuthReturn => {
   const [sites, setSites] = useState<WordPressOAuthSite[]>([]);
   const [totalSites, setTotalSites] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastStatusCheck, setLastStatusCheck] = useState<number>(0);
 
   // Set up authentication
   useEffect(() => {
@@ -46,21 +47,32 @@ export const useWordPressOAuth = (): UseWordPressOAuthReturn => {
     setupAuth();
   }, [getToken]);
 
-  // Check connection status on mount
-  useEffect(() => {
-    checkStatus();
-  }, []);
-
-  const checkStatus = async () => {
+  const checkStatus = useCallback(async () => {
+    // Throttle status checks to prevent excessive API calls
+    const now = Date.now();
+    const THROTTLE_MS = 10000; // 10 seconds - status doesn't change frequently
+    
+    if (now - lastStatusCheck < THROTTLE_MS) {
+      console.log('WordPress OAuth: Status check throttled (10s)');
+      return;
+    }
+    
     try {
       setIsLoading(true);
+      setLastStatusCheck(now);
+      console.log('WordPress OAuth: Checking status...');
       const status: WordPressOAuthStatus = await wordpressOAuthAPI.getStatus();
       
+      console.log('WordPress OAuth: Status response:', status);
       setConnected(status.connected);
       setSites(status.sites || []);
       setTotalSites(status.total_sites);
       
-      console.log('WordPress OAuth status checked:', status);
+      console.log('WordPress OAuth status checked:', {
+        connected: status.connected,
+        sitesCount: status.sites?.length || 0,
+        totalSites: status.total_sites
+      });
     } catch (error) {
       console.error('Error checking WordPress OAuth status:', error);
       setConnected(false);
@@ -69,7 +81,12 @@ export const useWordPressOAuth = (): UseWordPressOAuthReturn => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [lastStatusCheck]);
+
+  // Check connection status on mount
+  useEffect(() => {
+    checkStatus();
+  }, [checkStatus]);
 
   const startOAuthFlow = async () => {
     try {
@@ -91,14 +108,23 @@ export const useWordPressOAuth = (): UseWordPressOAuthReturn => {
         
         // Listen for popup completion and messages
         const messageHandler = (event: MessageEvent) => {
+          console.log('WordPress OAuth: Message received from any source:', {
+            origin: event.origin,
+            data: event.data,
+            source: event.source === popup ? 'our-popup' : 'other'
+          });
+          
           // Accept messages only from the popup we opened and from trusted origins
           const trustedOrigins = [window.location.origin, 'https://littery-sonny-unscrutinisingly.ngrok-free.dev'];
           if (event.source !== popup) return;
           if (!trustedOrigins.includes(event.origin)) return;
 
+          console.log('WordPress OAuth: Valid message from popup:', event.data);
+
           if (event.data.type === 'WPCOM_OAUTH_SUCCESS') {
             popup.close();
             clearInterval(checkClosed);
+            console.log('WordPress OAuth: Success message received, refreshing status...');
             // Refresh status after OAuth completion
             setTimeout(() => {
               checkStatus();
@@ -115,10 +141,15 @@ export const useWordPressOAuth = (): UseWordPressOAuthReturn => {
         };
 
         window.addEventListener('message', messageHandler);
+        
+        // Test if popup is working
+        console.log('WordPress OAuth: Popup opened, waiting for messages...');
+        
         const checkClosed = setInterval(() => {
           if (popup.closed) {
             clearInterval(checkClosed);
             window.removeEventListener('message', messageHandler);
+            console.log('WordPress OAuth: Popup closed, refreshing status...');
             // Refresh status after OAuth completion
             setTimeout(() => {
               checkStatus();
@@ -161,7 +192,7 @@ export const useWordPressOAuth = (): UseWordPressOAuthReturn => {
 
   const refreshStatus = useCallback(async (): Promise<void> => {
     await checkStatus();
-  }, []);
+  }, [checkStatus]);
 
   return {
     // Connection state
