@@ -64,13 +64,19 @@ const BackgroundJobManager: React.FC<BackgroundJobManagerProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobDialogOpen, setJobDialogOpen] = useState(false);
+  const [hasRunningJobs, setHasRunningJobs] = useState(false);
 
   // Fetch user jobs
   const fetchJobs = useCallback(async () => {
     try {
       const response = await apiClient.get('/api/background-jobs/user-jobs?limit=10');
       if (response.data.success) {
-        setJobs(response.data.data.jobs || []);
+        const newJobs = response.data.data.jobs || [];
+        setJobs(newJobs);
+        
+        // Update running jobs state
+        const runningJobs = newJobs.some((job: Job) => job.status === 'running' || job.status === 'pending');
+        setHasRunningJobs(runningJobs);
       }
     } catch (error) {
       console.error('Error fetching jobs:', error);
@@ -204,16 +210,21 @@ const BackgroundJobManager: React.FC<BackgroundJobManagerProps> = ({
   useEffect(() => {
     fetchJobs();
     
-    // Poll every 5 seconds for running jobs
-    const interval = setInterval(() => {
-      const hasRunningJobs = jobs.some(job => job.status === 'running' || job.status === 'pending');
-      if (hasRunningJobs) {
-        fetchJobs();
-      }
-    }, 5000);
+    // Only start polling if there are running jobs
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (hasRunningJobs) {
+      interval = setInterval(() => {
+        fetchJobs().catch(console.error);
+      }, 5000);
+    }
 
-    return () => clearInterval(interval);
-  }, [fetchJobs, jobs]);
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [fetchJobs, hasRunningJobs]); // Only depend on hasRunningJobs state
 
   return (
     <Box>

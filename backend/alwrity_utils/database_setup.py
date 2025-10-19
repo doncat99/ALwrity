@@ -35,6 +35,7 @@ class DatabaseSetup:
             self._create_monitoring_tables()
             self._create_subscription_tables()
             self._create_persona_tables()
+            self._create_onboarding_tables()
             
             if verbose:
                 print("✅ Essential database tables created")
@@ -97,6 +98,22 @@ class DatabaseSetup:
                 print(f"   ⚠️  Persona tables failed: {e}")
             return True  # Non-critical
     
+    def _create_onboarding_tables(self) -> bool:
+        """Create onboarding tables."""
+        import os
+        verbose = os.getenv("ALWRITY_VERBOSE", "false").lower() == "true"
+        
+        try:
+            from models.onboarding import Base as OnboardingBase
+            OnboardingBase.metadata.create_all(bind=engine)
+            if verbose:
+                print("   ✅ Onboarding tables created")
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"   ⚠️  Onboarding tables failed: {e}")
+            return True  # Non-critical
+    
     def verify_tables(self) -> bool:
         """Verify that essential tables exist."""
         import os
@@ -120,7 +137,9 @@ class DatabaseSetup:
             essential_tables = [
                 'api_monitoring_logs',
                 'subscription_plans',
-                'user_subscriptions'
+                'user_subscriptions',
+                'onboarding_sessions',
+                'persona_data'
             ]
             
             existing_tables = [table for table in essential_tables if table in tables]

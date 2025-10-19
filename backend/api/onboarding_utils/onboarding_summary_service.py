@@ -186,8 +186,12 @@ class OnboardingSummaryService:
     async def get_research_preferences_data(self) -> Dict[str, Any]:
         """Get research preferences data for the user."""
         try:
-            research_prefs_service = ResearchPreferencesService()
-            return await research_prefs_service.get_research_preferences(self.user_id)
+            db = next(get_db())
+            research_prefs_service = ResearchPreferencesService(db)
+            # Use the new method that accepts user_id directly
+            result = research_prefs_service.get_research_preferences_by_user_id(self.user_id)
+            db.close()
+            return result
         except Exception as e:
             logger.error(f"Error getting research preferences data: {e}")
             raise

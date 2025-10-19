@@ -120,7 +120,8 @@ async def rate_limit_middleware(request: Request, call_next):
     return await rate_limiter.rate_limit_middleware(request, call_next)
 
 # 3. LAST REGISTERED (runs FIRST) - API key injection
-# API key injection middleware removed - now using environment variables directly
+from middleware.api_key_injection_middleware import api_key_injection_middleware
+app.middleware("http")(api_key_injection_middleware)
 
 # Health check endpoints using modular utilities
 @app.get("/health")

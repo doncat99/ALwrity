@@ -13,6 +13,7 @@ from functools import lru_cache
 from services.database import get_db
 from services.usage_tracking_service import UsageTrackingService
 from services.pricing_service import PricingService
+from middleware.auth_middleware import get_current_user
 from models.subscription_models import (
     APIProvider, SubscriptionPlan, UserSubscription, UsageSummary,
     APIProviderPricing, UsageAlert, SubscriptionTier, BillingCycle, UsageStatus
@@ -30,9 +31,14 @@ _DASHBOARD_CACHE_TTL_SEC = 2.0
 async def get_user_usage(
     user_id: str,
     billing_period: Optional[str] = Query(None, description="Billing period (YYYY-MM)"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Get comprehensive usage statistics for a user."""
+    
+    # Verify user can only access their own data
+    if current_user.get('id') != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     
     try:
         usage_service = UsageTrackingService(db)
@@ -122,9 +128,14 @@ async def get_subscription_plans(
 @router.get("/user/{user_id}/subscription")
 async def get_user_subscription(
     user_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Get user's current subscription information."""
+    
+    # Verify user can only access their own data
+    if current_user.get('id') != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     
     try:
         subscription = db.query(UserSubscription).filter(
@@ -212,9 +223,14 @@ async def get_user_subscription(
 @router.get("/status/{user_id}")
 async def get_subscription_status(
     user_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Get simple subscription status for enforcement checks."""
+
+    # Verify user can only access their own data
+    if current_user.get('id') != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     try:
         subscription = db.query(UserSubscription).filter(

@@ -488,9 +488,9 @@ async def monitoring_middleware(request: Request, call_next):
         # Check for authorization header with user info
         elif 'authorization' in request.headers:
             # Auth middleware should have set request.state.user_id
-            # If not, skip usage limits (unauthenticated or auth will handle)
+            # If not, this indicates an authentication failure that should be logged
             user_id = None
-            logger.debug("Monitoring: Auth header present but no user_id in state - skipping limits")
+            logger.warning("Monitoring: Auth header present but no user_id in state - authentication may have failed")
         
         # For alpha testing, use IP address as user identifier if no other ID found
         # But only if there's no auth header (truly anonymous)

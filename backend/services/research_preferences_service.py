@@ -101,6 +101,32 @@ class ResearchPreferencesService:
             logger.error(f"Error getting research preferences: {e}")
             return None
     
+    def get_research_preferences_by_user_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get research preferences for a user by their Clerk user ID.
+        
+        Args:
+            user_id: Clerk user ID (string)
+            
+        Returns:
+            Research preferences data or None if not found
+        """
+        try:
+            # First get the onboarding session for this user
+            session = self.db.query(OnboardingSession).filter_by(user_id=user_id).first()
+            if not session:
+                logger.warning(f"No onboarding session found for user {user_id}")
+                return None
+            
+            # Then get the research preferences for that session
+            preferences = self.db.query(ResearchPreferences).filter_by(session_id=session.id).first()
+            if preferences:
+                return preferences.to_dict()
+            return None
+        except Exception as e:
+            logger.error(f"Error getting research preferences by user_id: {e}")
+            return None
+    
     def get_style_data_from_analysis(self, session_id: int) -> Optional[Dict[str, Any]]:
         """
         Get style detection data from website analysis for a session.
