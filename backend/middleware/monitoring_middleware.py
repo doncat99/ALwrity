@@ -35,25 +35,25 @@ class DatabaseAPIMonitor:
         # API provider detection patterns - Updated to match actual endpoints
         self.provider_patterns = {
             APIProvider.GEMINI: [
-                r'/api/blog-writer', r'/api/content-planning', r'/api/strategy-copilot',
-                r'/api/brainstorm', r'/api/writing-assistant', r'/api/seo-dashboard',
-                r'/api/onboarding', r'/api/user-data', r'/api/component-logic',
-                r'gemini', r'google.*ai', r'blog.*writer', r'content.*planning'
+                r'gemini', r'google.*ai'
             ],
-            APIProvider.OPENAI: [r'/openai', r'openai', r'gpt', r'chatgpt'],
-            APIProvider.ANTHROPIC: [r'/anthropic', r'claude', r'anthropic'],
-            APIProvider.MISTRAL: [r'/mistral', r'mistral'],
-            APIProvider.TAVILY: [r'/tavily', r'tavily', r'research', r'search'],
-            APIProvider.SERPER: [r'/serper', r'serper', r'google.*search', r'seo'],
-            APIProvider.METAPHOR: [r'/metaphor', r'/exa', r'metaphor', r'exa'],
-            APIProvider.FIRECRAWL: [r'/firecrawl', r'firecrawl', r'crawl'],
-            APIProvider.STABILITY: [r'/stability', r'stable.*diffusion', r'stability', r'image.*generation']
+            APIProvider.OPENAI: [r'openai', r'gpt', r'chatgpt'],
+            APIProvider.ANTHROPIC: [r'anthropic', r'claude'],
+            APIProvider.MISTRAL: [r'mistral'],
+            APIProvider.TAVILY: [r'tavily'],
+            APIProvider.SERPER: [r'serper'],
+            APIProvider.METAPHOR: [r'metaphor', r'/exa'],
+            APIProvider.FIRECRAWL: [r'firecrawl']
         }
     
     def detect_api_provider(self, path: str, user_agent: str = None) -> Optional[APIProvider]:
         """Detect which API provider is being used based on request details."""
         path_lower = path.lower()
         user_agent_lower = (user_agent or '').lower()
+
+        # Permanently ignore internal route families that must not accrue or check provider usage
+        if path_lower.startswith('/api/onboarding/') or path_lower.startswith('/api/subscription/'):
+            return None
         
         for provider, patterns in self.provider_patterns.items():
             for pattern in patterns:
@@ -384,15 +384,25 @@ EXCLUDED_ENDPOINTS = [
     "/api/content-planning/monitoring/cache-stats",
     "/api/content-planning/monitoring/health"
 ]
+# Also exclude whole route families by prefix (e.g., subscription/billing must never be blocked)
+EXCLUDED_PREFIXES = [
+]
+
 
 def should_monitor_endpoint(path: str) -> bool:
     """Check if an endpoint should be monitored."""
-    return not any(path.endswith(excluded) for excluded in EXCLUDED_ENDPOINTS)
+    return not any(path.endswith(excluded) for excluded in EXCLUDED_ENDPOINTS) and not any(path.startswith(prefix) for prefix in EXCLUDED_PREFIXES)
 
 async def check_usage_limits_middleware(request: Request, user_id: str, request_body: str = None) -> Optional[JSONResponse]:
     """Check usage limits before processing request."""
     if not user_id:
         return None
+    
+    # No special whitelist; onboarding/subscription are ignored by provider detection
+    try:
+        path = request.url.path
+    except Exception:
+        pass
     
     try:
         db = next(get_db())

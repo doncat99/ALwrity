@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   
   // Use onboarding context instead of making API calls
   const { 
@@ -21,8 +21,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     clearError 
   } = useOnboarding();
 
-  // Loading state - show spinner
-  if (loading) {
+  // Local fallback (in case context hasn't refreshed yet right after completion)
+  const localComplete = (() => {
+    try { return localStorage.getItem('onboarding_complete') === 'true'; } catch { return false; }
+  })();
+  const allowAccess = isOnboardingComplete || localComplete;
+
+  // Wait for Clerk to load before any redirect decisions
+  if (!isLoaded) {
+    return (
+      <Box display="flex" alignItems="center" justifyContent="center" minHeight="100vh">
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
+
+  // Loading state from context - show spinner unless local flag says complete
+  if (loading && !localComplete) {
     console.log('ProtectedRoute: Loading onboarding state from context...');
     return (
       <Box
@@ -41,8 +56,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // Error state - show error with retry
-  if (error) {
+  // Error state - show error with retry (unless local flag allows pass-through)
+  if (error && !localComplete) {
     console.error('ProtectedRoute: Error from context:', error);
     return (
       <Box
@@ -84,19 +99,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   // Not signed in - redirect to landing
-  if (!isSignedIn) {
+  if (isLoaded && !isSignedIn) {
     console.log('ProtectedRoute: Not signed in, redirecting to landing');
     return <Navigate to="/" replace />;
   }
 
   // Onboarding not complete - redirect to onboarding
-  if (!isOnboardingComplete) {
-    console.log('ProtectedRoute: Onboarding not complete (from context), redirecting');
+  if (!allowAccess) {
+    console.log('ProtectedRoute: Onboarding not complete (context/local), redirecting');
     return <Navigate to="/onboarding" replace />;
   }
 
   // All checks passed - render protected component
-  console.log('ProtectedRoute: Access granted (from context), rendering component');
+  console.log('ProtectedRoute: Access granted (context/local), rendering component');
   return <>{children}</>;
 };
 

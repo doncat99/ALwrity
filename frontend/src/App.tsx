@@ -71,7 +71,7 @@ const InitialRouteHandler: React.FC = () => {
         });
       }
     });
-  }, [checkSubscription]);
+  }, []); // Remove checkSubscription dependency to prevent loop
 
   // Initialize onboarding only after subscription is confirmed
   useEffect(() => {

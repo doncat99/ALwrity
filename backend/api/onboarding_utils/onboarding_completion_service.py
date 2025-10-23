@@ -16,8 +16,8 @@ class OnboardingCompletionService:
     """Service for handling onboarding completion logic."""
     
     def __init__(self):
-        # Only pre-requisite steps; step 6 is the finalization itself
-        self.required_steps = [1, 2, 3]
+        # Pre-requisite steps; step 6 is the finalization itself
+        self.required_steps = [1, 2, 3, 4, 5]
     
     async def complete_onboarding(self, current_user: Dict[str, Any]) -> Dict[str, Any]:
         """Complete the onboarding process with full validation."""
@@ -73,9 +73,15 @@ class OnboardingCompletionService:
             db = None
             db_service = None
 
+        logger.info(f"OnboardingCompletionService: Validating steps for user {user_id}")
+        logger.info(f"OnboardingCompletionService: Current step: {progress.current_step}")
+        logger.info(f"OnboardingCompletionService: Required steps: {self.required_steps}")
+
         for step_num in self.required_steps:
             step = progress.get_step_data(step_num)
+            logger.info(f"OnboardingCompletionService: Step {step_num} - status: {step.status if step else 'None'}")
             if step and step.status in [StepStatus.COMPLETED, StepStatus.SKIPPED]:
+                logger.info(f"OnboardingCompletionService: Step {step_num} already completed/skipped")
                 continue
 
             # DB-aware fallbacks for migration period
@@ -129,6 +135,30 @@ class OnboardingCompletionService:
                             except Exception:
                                 pass
                             continue
+                    if step_num == 4:
+                        # Treat as completed if persona data exists in DB
+                        persona = None
+                        try:
+                            persona = db_service.get_persona_data(user_id, db)
+                        except Exception:
+                            persona = None
+                        if persona and persona.get('corePersona'):
+                            try:
+                                progress.mark_step_completed(4, {'source': 'db-fallback'})
+                            except Exception:
+                                pass
+                            continue
+                    if step_num == 5:
+                        # Treat as completed if integrations data exists in DB
+                        # For now, we'll consider step 5 completed if the user has reached the final step
+                        # This is a simplified approach - in the future, we could check for specific integration data
+                        try:
+                            # Check if user has completed previous steps and is on final step
+                            if progress.current_step >= 6:  # FinalStep is step 6
+                                progress.mark_step_completed(5, {'source': 'final-step-fallback'})
+                                continue
+                        except Exception:
+                            pass
             except Exception:
                 # If DB check fails, fall back to progress status only
                 pass

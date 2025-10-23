@@ -73,39 +73,41 @@ export const WizardNavigation: React.FC<WizardNavigationProps> = ({
         )}
       </Box>
 
-      <Tooltip 
-        title={!isCurrentStepValid ? "Complete the current step requirements to continue" : ""}
-        placement="top"
-      >
-        <span>
-          <Button
-            variant="contained"
-            onClick={onNext}
-            disabled={isLastStep || !isCurrentStepValid}
-            endIcon={isLastStep ? <CheckCircle /> : <ArrowForward />}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                transform: 'translateY(-1px)',
-                boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)',
-              },
-              '&:disabled': {
-                background: 'rgba(0,0,0,0.1)',
-                color: 'rgba(0,0,0,0.4)',
-                boxShadow: 'none',
-                transform: 'none',
-              }
-            }}
-          >
-            {isLastStep ? 'Complete Setup' : 'Continue'}
-          </Button>
-        </span>
-      </Tooltip>
+      {!isLastStep && (
+        <Tooltip 
+          title={!isCurrentStepValid ? "Complete the current step requirements to continue" : ""}
+          placement="top"
+        >
+          <span>
+            <Button
+              variant="contained"
+              onClick={onNext}
+              disabled={!isCurrentStepValid}
+              endIcon={<ArrowForward />}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)',
+                },
+                '&:disabled': {
+                  background: 'rgba(0,0,0,0.1)',
+                  color: 'rgba(0,0,0,0.4)',
+                  boxShadow: 'none',
+                  transform: 'none',
+                }
+              }}
+            >
+              Continue
+            </Button>
+          </span>
+        </Tooltip>
+      )}
     </Box>
   );
 };

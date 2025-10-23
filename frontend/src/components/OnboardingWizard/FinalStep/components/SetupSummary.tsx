@@ -74,12 +74,26 @@ export const SetupSummary: React.FC<SetupSummaryProps> = ({
               size="small"
               icon={<LockOpen />}
             />
-            <Chip 
-              label="1 Missing"
-              color="warning"
-              variant="filled"
-              size="small"
-            />
+            {/* Only show missing chip if there are actually missing items */}
+            {(() => {
+              const missingCount = capabilities.length - unlockedCapabilities.length;
+              return missingCount > 0 ? (
+                <Chip
+                  label={`${missingCount} Missing`}
+                  color="warning"
+                  variant="filled"
+                  size="small"
+                />
+              ) : (
+                <Chip
+                  label="All Complete"
+                  color="success"
+                  variant="filled"
+                  size="small"
+                  icon={<CheckCircle sx={{ fontSize: 16 }} />}
+                />
+              );
+            })()}
           </Box>
         </Box>
 

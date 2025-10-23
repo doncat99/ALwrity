@@ -134,11 +134,11 @@ async def generate_writing_personas_async(
                     "request_data": (PersonaGenerationRequest(**(request if isinstance(request, dict) else request.dict())).dict()) if request else {}
                 }
                 logger.info(f"Cache hit for user {user_id} - returning completed task without regeneration: {task_id}")
-                return {
-                    "task_id": task_id,
-                    "status": "completed",
-                    "message": "Persona loaded from cache"
-                }
+            return {
+                "task_id": task_id,
+                "status": "completed",
+                "message": "Persona loaded from cache"
+            }
 
         # Generate unique task ID
         task_id = str(uuid.uuid4())

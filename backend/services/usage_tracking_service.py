@@ -486,3 +486,26 @@ class UsageTrackingService:
             provider=provider,
             tokens_requested=tokens_requested
         )
+
+    async def reset_current_billing_period(self, user_id: str) -> Dict[str, Any]:
+        """Reset usage status for the current billing period (after plan change)."""
+        try:
+            billing_period = datetime.now().strftime("%Y-%m")
+            summary = self.db.query(UsageSummary).filter(
+                UsageSummary.user_id == user_id,
+                UsageSummary.billing_period == billing_period
+            ).first()
+
+            if not summary:
+                # Nothing to reset
+                return {"reset": False, "reason": "no_summary"}
+
+            # Clear LIMIT_REACHED so the user can resume; keep counters intact
+            summary.usage_status = UsageStatus.ACTIVE
+            summary.updated_at = datetime.utcnow()
+            self.db.commit()
+            return {"reset": True}
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error resetting usage status: {e}")
+            return {"reset": False, "error": str(e)}

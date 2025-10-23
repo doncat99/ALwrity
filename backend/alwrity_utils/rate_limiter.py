@@ -30,12 +30,16 @@ class RateLimiter:
             "/calendar-events",
             "/calendar-generation/progress",
             "/health",
-            "/health/database"
+            "/health/database",
         ]
+        # Prefixes to exempt entire route families (keep empty; rely on specific exemptions only)
+        self.exempt_prefixes = []
     
     def is_exempt_path(self, path: str) -> bool:
         """Check if a path is exempt from rate limiting."""
-        return any(exempt_path in path for exempt_path in self.exempt_paths)
+        return any(exempt_path == path or exempt_path in path for exempt_path in self.exempt_paths) or any(
+            path.startswith(prefix) for prefix in self.exempt_prefixes
+        )
     
     def clean_old_requests(self, client_ip: str, current_time: float) -> None:
         """Clean old requests from the tracking dictionary."""
@@ -77,7 +81,6 @@ class RateLimiter:
             
             # Check if path is exempt from rate limiting
             if self.is_exempt_path(path):
-                # Allow streaming endpoints without rate limiting
                 response = await call_next(request)
                 return response
             

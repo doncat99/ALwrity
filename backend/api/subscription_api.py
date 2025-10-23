@@ -380,6 +380,13 @@ async def subscribe_to_plan(
 
         db.commit()
 
+        # Reset usage status for current billing period so new plan takes effect immediately
+        try:
+            usage_service = UsageTrackingService(db)
+            await usage_service.reset_current_billing_period(user_id)
+        except Exception as reset_err:
+            logger.error(f"Failed to reset usage after subscribe: {reset_err}")
+
         return {
             "success": True,
             "message": f"Successfully subscribed to {plan.name}",

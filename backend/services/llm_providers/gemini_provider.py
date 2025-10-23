@@ -348,6 +348,11 @@ def gemini_structured_json_response(prompt, schema, temperature=0.7, top_p=0.9, 
     try:
         # Get API key with proper error handling
         api_key = get_gemini_api_key()
+        logger.info(f"🔑 Gemini API key loaded: {bool(api_key)} (length: {len(api_key) if api_key else 0})")
+        
+        if not api_key:
+            raise Exception("GEMINI_API_KEY not found in environment variables")
+            
         client = genai.Client(api_key=api_key)
         logger.info("✅ Gemini client initialized for structured JSON response")
 
@@ -383,11 +388,18 @@ def gemini_structured_json_response(prompt, schema, temperature=0.7, top_p=0.9, 
             system_instruction=system_prompt,
         )
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=generation_config,
-        )
+        logger.info("🚀 Making Gemini API call...")
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=generation_config,
+            )
+            logger.info("✅ Gemini API call completed successfully")
+        except Exception as api_error:
+            logger.error(f"❌ Gemini API call failed: {api_error}")
+            logger.error(f"❌ API Error type: {type(api_error).__name__}")
+            raise api_error
 
         # Check for parsed content first (primary method for structured output)
         if hasattr(response, 'parsed'):

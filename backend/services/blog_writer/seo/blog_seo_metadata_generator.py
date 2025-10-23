@@ -157,8 +157,8 @@ class BlogSEOMetadataGenerator:
             
             # Get structured response from Gemini
             ai_response = self.gemini_provider(
-                prompt=prompt,
-                schema=schema,
+                prompt,
+                schema,
                 temperature=0.3,
                 max_tokens=2048
             )
@@ -167,6 +167,8 @@ class BlogSEOMetadataGenerator:
             if not ai_response or not isinstance(ai_response, dict):
                 logger.error("Core metadata generation failed: Invalid response from Gemini")
                 # Return fallback response
+                primary_keywords = ', '.join(keywords_data.get('primary_keywords', ['content']))
+                word_count = len(blog_content.split())
                 return {
                     'seo_title': blog_title,
                     'meta_description': f'Learn about {primary_keywords.split(", ")[0] if primary_keywords else "this topic"}.',
@@ -246,8 +248,8 @@ class BlogSEOMetadataGenerator:
             
             # Get structured response from Gemini
             ai_response = self.gemini_provider(
-                prompt=prompt,
-                schema=schema,
+                prompt,
+                schema,
                 temperature=0.3,
                 max_tokens=2048
             )

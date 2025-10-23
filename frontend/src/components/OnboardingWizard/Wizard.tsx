@@ -324,6 +324,7 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
         });
       } catch (error) {
         console.error('Error initializing onboarding:', error);
+        // Error handling is managed by global API client interceptors
       } finally {
         setLoading(false);
       }
@@ -335,6 +336,7 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
   const handleNext = useCallback(async (rawStepData?: any) => {
     console.log('Wizard: handleNext called');
     console.log('Wizard: Current step:', activeStep);
+    console.log('Wizard: Raw step data:', rawStepData);
     console.log('Wizard: Step data:', stepDataRef.current);
     console.log('Wizard: competitorDataCollector:', competitorDataCollectorRef.current);
     console.log('Wizard: competitorDataCollector type:', typeof competitorDataCollectorRef.current);
@@ -351,6 +353,8 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     let currentStepData = rawStepData && typeof rawStepData === 'object' && 'nativeEvent' in rawStepData
       ? undefined
       : rawStepData;
+    
+    console.log('Wizard: Processed currentStepData:', currentStepData);
 
     // Special handling for CompetitorAnalysisStep (step 2)
     if (activeStep === 2) {
@@ -416,6 +420,9 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
     // Special handling for PersonaStep (step 3)
     if (activeStep === 3) {
       console.log('Wizard: Handling PersonaStep data...');
+      console.log('Wizard: currentStepData for PersonaStep:', currentStepData);
+      console.log('Wizard: currentStepData has corePersona:', !!currentStepData?.corePersona);
+      console.log('Wizard: currentStepData has qualityMetrics:', !!currentStepData?.qualityMetrics);
 
       // If we have data from onContinue, use it
       if (currentStepData && currentStepData.corePersona && currentStepData.qualityMetrics) {
@@ -442,6 +449,8 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
           currentStepData = currentData;
         } else {
           console.warn('Wizard: No valid persona data available for PersonaStep - cannot complete step');
+          console.log('Wizard: Current step data:', currentStepData);
+          console.log('Wizard: Step data ref:', currentData);
           // Don't try to complete the step if we don't have valid persona data
           console.log('Wizard: Aborting step completion - missing valid persona data');
           setLoading(false);
@@ -694,15 +703,17 @@ const Wizard: React.FC<WizardProps> = ({ onComplete }) => {
           </Fade>
         </Box>
 
-        {/* Navigation */}
-        <WizardNavigation
-          activeStep={activeStep}
-          totalSteps={steps.length}
-          onBack={handleBack}
-          onNext={handleNext}
-          isLastStep={activeStep === steps.length - 1}
-          isCurrentStepValid={isCurrentStepValid}
-        />
+        {/* Navigation - Hide on final step */}
+        {activeStep !== steps.length - 1 && (
+          <WizardNavigation
+            activeStep={activeStep}
+            totalSteps={steps.length}
+            onBack={handleBack}
+            onNext={handleNext}
+            isLastStep={activeStep === steps.length - 1}
+            isCurrentStepValid={isCurrentStepValid}
+          />
+        )}
       </Paper>
     </Box>
   );

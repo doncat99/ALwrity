@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+// Global subscription error handler - will be set by the app
+let globalSubscriptionErrorHandler: ((error: any) => boolean) | null = null;
+
+export const setGlobalSubscriptionErrorHandler = (handler: (error: any) => boolean) => {
+  globalSubscriptionErrorHandler = handler;
+};
+
 // Optional token getter installed from within the app after Clerk is available
 let authTokenGetter: (() => Promise<string | null>) | null = null;
 
@@ -141,6 +148,18 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // Check if it's a subscription-related error and handle it globally
+    if (error.response?.status === 429 || error.response?.status === 402) {
+      console.log('API Client: Detected subscription error, triggering global handler');
+      if (globalSubscriptionErrorHandler) {
+        const wasHandled = globalSubscriptionErrorHandler(error);
+        if (wasHandled) {
+          console.log('API Client: Subscription error handled by global handler');
+          return Promise.reject(error);
+        }
+      }
+    }
+
     console.error('API Error:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
@@ -194,6 +213,18 @@ aiApiClient.interceptors.response.use(
       }
     }
     
+    // Check if it's a subscription-related error and handle it globally
+    if (error.response?.status === 429 || error.response?.status === 402) {
+      console.log('AI API Client: Detected subscription error, triggering global handler');
+      if (globalSubscriptionErrorHandler) {
+        const wasHandled = globalSubscriptionErrorHandler(error);
+        if (wasHandled) {
+          console.log('AI API Client: Subscription error handled by global handler');
+          return Promise.reject(error);
+        }
+      }
+    }
+
     console.error('AI API Error:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
@@ -232,6 +263,18 @@ longRunningApiClient.interceptors.response.use(
         console.warn('401 Unauthorized during onboarding - token may need refresh');
       }
     }
+    // Check if it's a subscription-related error and handle it globally
+    if (error.response?.status === 429 || error.response?.status === 402) {
+      console.log('Long-running API Client: Detected subscription error, triggering global handler');
+      if (globalSubscriptionErrorHandler) {
+        const wasHandled = globalSubscriptionErrorHandler(error);
+        if (wasHandled) {
+          console.log('Long-running API Client: Subscription error handled by global handler');
+          return Promise.reject(error);
+        }
+      }
+    }
+
     console.error('Long-running API Error:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
@@ -270,6 +313,18 @@ pollingApiClient.interceptors.response.use(
         console.warn('401 Unauthorized during onboarding - token may need refresh');
       }
     }
+    // Check if it's a subscription-related error and handle it globally
+    if (error.response?.status === 429 || error.response?.status === 402) {
+      console.log('Polling API Client: Detected subscription error, triggering global handler');
+      if (globalSubscriptionErrorHandler) {
+        const wasHandled = globalSubscriptionErrorHandler(error);
+        if (wasHandled) {
+          console.log('Polling API Client: Subscription error handled by global handler');
+          return Promise.reject(error);
+        }
+      }
+    }
+
     console.error('Polling API Error:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }

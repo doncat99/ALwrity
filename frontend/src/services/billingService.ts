@@ -124,29 +124,83 @@ const defaultLimits = {
   features: [],
 };
 
+// Helper to coerce alerts into fully-typed objects expected by Zod
+function coerceAlerts(rawAlerts: any[]): UsageAlert[] {
+  if (!Array.isArray(rawAlerts)) return [];
+  const nowIso = new Date().toISOString();
+  return rawAlerts.map((a: any, idx: number) => ({
+    id: typeof a?.id === 'number' ? a.id : idx,
+    type: typeof a?.type === 'string' ? a.type : 'usage',
+    threshold_percentage: typeof a?.threshold_percentage === 'number' ? a.threshold_percentage : 0,
+    provider: typeof a?.provider === 'string' ? a.provider : undefined,
+    title: typeof a?.title === 'string' ? a.title : 'Usage alert',
+    message: typeof a?.message === 'string' ? a.message : '',
+    severity: a?.severity === 'warning' || a?.severity === 'error' || a?.severity === 'info' ? a.severity : 'info',
+    is_sent: typeof a?.is_sent === 'boolean' ? a.is_sent : true,
+    sent_at: typeof a?.sent_at === 'string' ? a.sent_at : nowIso,
+    is_read: typeof a?.is_read === 'boolean' ? a.is_read : false,
+    read_at: typeof a?.read_at === 'string' ? a.read_at : undefined,
+    billing_period: typeof a?.billing_period === 'string' ? a.billing_period : (a?.period || ''),
+    created_at: typeof a?.created_at === 'string' ? a.created_at : nowIso,
+  }));
+}
+
 function coerceUsageStats(raw: any): UsageStats {
+  const providerBreakdown = raw?.provider_breakdown || {};
+  const defaultLimits = {
+    plan_name: raw?.limits?.plan_name ?? 'free',
+    tier: raw?.limits?.tier ?? 'free',
+    limits: {
+      gemini_calls: raw?.limits?.limits?.gemini_calls ?? 0,
+      openai_calls: raw?.limits?.limits?.openai_calls ?? 0,
+      anthropic_calls: raw?.limits?.limits?.anthropic_calls ?? 0,
+      mistral_calls: raw?.limits?.limits?.mistral_calls ?? 0,
+      tavily_calls: raw?.limits?.limits?.tavily_calls ?? 0,
+      serper_calls: raw?.limits?.limits?.serper_calls ?? 0,
+      metaphor_calls: raw?.limits?.limits?.metaphor_calls ?? 0,
+      firecrawl_calls: raw?.limits?.limits?.firecrawl_calls ?? 0,
+      stability_calls: raw?.limits?.limits?.stability_calls ?? 0,
+      gemini_tokens: raw?.limits?.limits?.gemini_tokens ?? 0,
+      openai_tokens: raw?.limits?.limits?.openai_tokens ?? 0,
+      anthropic_tokens: raw?.limits?.limits?.anthropic_tokens ?? 0,
+      mistral_tokens: raw?.limits?.limits?.mistral_tokens ?? 0,
+      monthly_cost: raw?.limits?.limits?.monthly_cost ?? 0,
+    },
+    features: raw?.limits?.features ?? [],
+  };
+
   const coerced: UsageStats = {
-    billing_period: raw?.billing_period ?? 'unknown',
-    usage_status: (raw?.usage_status ?? 'active') as UsageStats['usage_status'],
-    total_calls: Number(raw?.total_calls ?? 0),
-    total_tokens: Number(raw?.total_tokens ?? 0),
-    total_cost: Number(raw?.total_cost ?? 0),
-    avg_response_time: Number(raw?.avg_response_time ?? 0),
-    error_rate: Number(raw?.error_rate ?? 0),
-    limits: raw?.limits ?? defaultLimits,
-    provider_breakdown: raw?.provider_breakdown ?? defaultProviderBreakdown,
-    alerts: Array.isArray(raw?.alerts) ? raw.alerts : [],
-    usage_percentages: raw?.usage_percentages ?? {
-      gemini_calls: 0,
-      openai_calls: 0,
-      anthropic_calls: 0,
-      mistral_calls: 0,
-      tavily_calls: 0,
-      serper_calls: 0,
-      metaphor_calls: 0,
-      firecrawl_calls: 0,
-      stability_calls: 0,
-      cost: 0,
+    billing_period: raw?.billing_period ?? new Date().toISOString().slice(0,7),
+    usage_status: raw?.usage_status ?? 'active',
+    total_calls: raw?.total_calls ?? 0,
+    total_tokens: raw?.total_tokens ?? 0,
+    total_cost: raw?.total_cost ?? 0,
+    avg_response_time: raw?.avg_response_time ?? 0,
+    error_rate: raw?.error_rate ?? 0,
+    limits: defaultLimits,
+    provider_breakdown: {
+      gemini: providerBreakdown.gemini ?? { calls: 0, tokens: 0, cost: 0 },
+      openai: providerBreakdown.openai ?? { calls: 0, tokens: 0, cost: 0 },
+      anthropic: providerBreakdown.anthropic ?? { calls: 0, tokens: 0, cost: 0 },
+      mistral: providerBreakdown.mistral ?? { calls: 0, tokens: 0, cost: 0 },
+      tavily: providerBreakdown.tavily ?? { calls: 0, tokens: 0, cost: 0 },
+      serper: providerBreakdown.serper ?? { calls: 0, tokens: 0, cost: 0 },
+      metaphor: providerBreakdown.metaphor ?? { calls: 0, tokens: 0, cost: 0 },
+      firecrawl: providerBreakdown.firecrawl ?? { calls: 0, tokens: 0, cost: 0 },
+      stability: providerBreakdown.stability ?? { calls: 0, tokens: 0, cost: 0 },
+    },
+    alerts: coerceAlerts(raw?.alerts),
+    usage_percentages: {
+      gemini_calls: raw?.usage_percentages?.gemini_calls ?? 0,
+      openai_calls: raw?.usage_percentages?.openai_calls ?? 0,
+      anthropic_calls: raw?.usage_percentages?.anthropic_calls ?? 0,
+      mistral_calls: raw?.usage_percentages?.mistral_calls ?? 0,
+      tavily_calls: raw?.usage_percentages?.tavily_calls ?? 0,
+      serper_calls: raw?.usage_percentages?.serper_calls ?? 0,
+      metaphor_calls: raw?.usage_percentages?.metaphor_calls ?? 0,
+      firecrawl_calls: raw?.usage_percentages?.firecrawl_calls ?? 0,
+      stability_calls: raw?.usage_percentages?.stability_calls ?? 0,
+      cost: raw?.usage_percentages?.cost ?? 0,
     },
     last_updated: raw?.last_updated ?? new Date().toISOString(),
   };
@@ -185,7 +239,7 @@ export const billingService = {
           provider_trends: {},
         },
         limits: raw?.limits ?? defaultLimits,
-        alerts: Array.isArray(raw?.alerts) ? raw.alerts : [],
+        alerts: coerceAlerts(raw?.alerts),
         projections: raw?.projections ?? {
           projected_monthly_cost: 0,
           cost_limit: 0,
