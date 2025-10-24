@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from loguru import logger
 
+from services.database import init_database, engine
 
 class DatabaseSetup:
     """Manages database setup for ALwrity backend."""
@@ -24,7 +25,6 @@ class DatabaseSetup:
             print("📊 Setting up essential database tables...")
         
         try:
-            from services.database import init_database, engine
             
             # Initialize database connection
             init_database()
